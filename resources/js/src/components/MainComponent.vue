@@ -1,5 +1,11 @@
 <template>
-	<div>
+	<div class="container">
+		<div class="row">
+			<div class="col">
+				<h2>Magazyny</h2>
+			</div>
+		</div>
+
 		{{ test }}
 	</div>
 </template>
@@ -11,6 +17,7 @@ export default {
 	data() {
 		return {
 			test: 'test 111111111111111',
+			warehouses: [],
 		};
 	},
 
@@ -24,7 +31,7 @@ export default {
 			axios
 				.get('/api/getWarehouse')
 				.then((res) => {
-					vm.test = res.data;
+					vm.warehouses = res.data;
 				})
 				.catch((error) => console.log(error));
 		},

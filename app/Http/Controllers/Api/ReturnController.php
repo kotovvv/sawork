@@ -11,7 +11,14 @@ class ReturnController extends Controller
     public function getWarehouse()
     {
         // return DB::connection()->getDatabaseName();
-        return DB::select("SELECT [Nazwa] FROM [dbo].[Magazyn]")->first();
+        return DB::select('SELECT [IDMagazynu]
+           ,[Nazwa]
+        --    ,[Utworzono]
+        --    ,[Zmodyfikowano]
+           ,[Symbol]
+        --    ,[Hidden]
+        --    ,[NegativeStock]
+       FROM [dbo].[Magazyn]');
     }
     /**
      * Display a listing of the resource.
