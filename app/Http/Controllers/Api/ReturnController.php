@@ -33,8 +33,9 @@ class ReturnController extends Controller
             $order['products'] =
                 DB::select('SELECT [IDOrderLine]
            ,[IDItem]
+           ,tov.[Nazwa]
             ,[Quantity]
-       FROM [dbo].[OrderLines] WHERE [IDOrder] = ' . $ordername);
+       FROM [dbo].[OrderLines] ord LEFT JOIN [dbo].[Towar]  tov ON ord.[IDItem] = tov.[IDTowaru] WHERE [IDOrder] = ' . $ordername);
         }
         return $order;
     }

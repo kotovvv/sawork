@@ -15,7 +15,7 @@
 						:value="m.IDMagazynu"
 						v-model="IDWarehouse"
 					/>
-					<label for="m{{ m.IDMagazynu }}">{{ m.Symbol }}</label>
+					<label for="m{{ m.IDMagazynu }}">{{ m.Nazwa }}</label>
 				</div>
 			</div>
 		</div>
@@ -40,13 +40,56 @@
 		>
 			<div class="col">
 				<div class="my-3">Products</div>
+				<input
+					class="form-control"
+					v-model="imputProduct"
+					id="imputproduct"
+					@keyup.enter="changeProduct()"
+				/>
+				<div class="row">
+					<div class="col-4 qty input-group">
+						<span class="input-group-btn">
+							<button
+								type="button"
+								class="btn btn-default btn-number"
+								data-type="plus"
+								data-field="quant[1]"
+							>
+								<span>-</span>
+							</button>
+						</span>
+						<input
+							class="col quantity form-control"
+							:value="counter"
+							max="10"
+						/>
+						<span class="input-group-btn">
+							<button
+								class="btn btn--plus"
+								@click="changeCounter('1')"
+								type="button"
+								name="button"
+							>
+								<span>+</span>
+							</button>
+						</span>
+					</div>
+
+					<input
+						class="form-control"
+						v-model="message"
+						id="message"
+						@keyup.enter="setMess()"
+					/>
+				</div>
+
 				<div
 					class="products"
 					v-for="p in products"
 					:key="p.IDOrderLine"
 				>
 					<div class="product">
-						{{ p.IDItem + ' ' + p.Quantity }}
+						{{ p.Nazwa + ' ' + p.Quantity }}
 					</div>
 				</div>
 			</div>
@@ -65,6 +108,7 @@ export default {
 			warehouses: [],
 			IDWarehouse: null,
 			products: [],
+			changeProducts: [],
 		};
 	},
 
@@ -100,6 +144,12 @@ export default {
 				})
 				.catch((error) => console.log(error));
 		},
+		changeCounter: function (num) {
+			this.counter += +num;
+			console.log(this.counter);
+			!isNaN(this.counter) && this.counter > 0 ? this.counter : (this.counter = 0);
+		},
+		setMess() {},
 	},
 };
 </script>
