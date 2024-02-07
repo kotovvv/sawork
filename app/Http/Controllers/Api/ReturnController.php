@@ -20,6 +20,24 @@ class ReturnController extends Controller
         --    ,[NegativeStock]
        FROM [dbo].[Magazyn]');
     }
+    public function getOrder($IDWarehouse, $ordername)
+    {
+        // return DB::connection()->getDatabaseName();
+        $order = [];
+        $order['info'] =  DB::select('SELECT [IDOrder]
+           ,[Number]
+            ,[Created]
+            ,[IDOrderType]
+       FROM [dbo].[Orders] WHERE [IDWarehouse] = ' . $IDWarehouse . ' AND [IDOrder] = ' . $ordername);
+        if ($order['info']) {
+            $order['products'] =
+                DB::select('SELECT [IDOrderLine]
+           ,[IDItem]
+            ,[Quantity]
+       FROM [dbo].[OrderLines] WHERE [IDOrder] = ' . $ordername);
+        }
+        return $order;
+    }
     /**
      * Display a listing of the resource.
      */

@@ -19,3 +19,4 @@ use App\Http\Controllers\API\ReturnController;
 //     return $request->user();
 // });
 Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
+Route::get('getOrder/{IDWarehouse}/{ordername}', [ReturnController::class, 'getOrder']);
