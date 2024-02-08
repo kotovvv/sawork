@@ -1,34 +1,28 @@
 <template>
 	<div class="container">
-		<div class="row">
-			<div class="col">
-				<div>Magazyny</div>
-				<div
-					v-for="m in warehouses"
-					:key="m.IDMagazynu"
-					class="form-check form-check-inline mb-4"
-				>
-					<input
-						type="radio"
-						id="i{{m.IDMagazynu}}"
-						name="wh"
-						:value="m.IDMagazynu"
+		<section class="row my-3">
+			<div class="col"
+				>Magazyny
+				<span id="select-magazynu">
+					<select
 						v-model="IDWarehouse"
-						class="form-check-input"
-					/>
-					<label
-						for="m{{ m.IDMagazynu }}"
-						class="form-check-label"
-						>{{ m.Nazwa }}</label
+						class="form-select"
 					>
-				</div>
+						<template
+							v-for="m in warehouses"
+							:key="m.IDMagazynu"
+						>
+							<option :value="m.IDMagazynu">{{ m.Nazwa }}</option>
+						</template>
+					</select>
+				</span>
 			</div>
-		</div>
+		</section>
 		<!-- Order -->
-		<div class="row">
+		<section class="row">
 			<div class="col">
 				<label
-					class="form-check-label"
+					class="form-check-label mb-2"
 					for="getorder"
 					>Order {{ (order.Number ?? '') + ' ' + (order.Created ?? '') }}</label
 				>
@@ -39,19 +33,19 @@
 					@keyup.enter="getOrder()"
 				/>
 			</div>
-		</div>
+		</section>
 		<!-- Products -->
-		<div
+		<section
 			class="row"
 			v-if="order.Number"
 		>
 			<div class="col">
-				<div class="my-3">Products</div>
+				<div class="mb-2 mt-3">Produkty</div>
 				<input
 					class="form-control mb-3"
 					v-model="imputProduct"
-					id="imputproduct"
-					@keyup.enter="changeProduct()"
+					ref="imputproduct"
+					@keyup.enter="findProduct()"
 					placeholder="towar"
 				/>
 				<div class="row mb-3">
@@ -59,7 +53,7 @@
 						class="qty input-group"
 						v-if="edit.id > 0"
 					>
-						<div class="pname">{{ edit.Nazwa }}</div>
+						<div class="col-12 mb-2">{{ edit.Nazwa }}</div>
 						<span class="input-group-btn">
 							<button
 								class="btn btn-light"
@@ -112,15 +106,24 @@
 				>
 					<div
 						class="product"
-						@click="editProduct(p)"
+						@click="editProduct(p, 0)"
 					>
 						{{ p.Nazwa + ' ' + parseInt(p.Quantity) + ' -' + p.qty + ' ' + p.message }}
 					</div>
 				</div>
 			</div>
-		</div>
+		</section>
+		<section
+			class="row"
+			v-if="products.find((e) => e.qty > 0)"
+		>
+			<div class="col">
+				<button class="btn btn-primary my-3">Zapisz dokument</button>
+			</div>
+		</section>
 	</div>
 </template>
+
 <script>
 import axios from 'axios';
 export default {
@@ -175,6 +178,7 @@ export default {
 								e.qty = '';
 								e.message = '';
 							});
+							vm.focusOnProduct();
 						}
 					} else {
 						vm.order = {};
@@ -182,6 +186,16 @@ export default {
 				})
 				.catch((error) => console.log(error));
 		},
+		findProduct() {
+			const product = this.products.find((e) => e.IDOrderLine == this.imputProduct);
+			if (product) {
+				this.editProduct(product, 1);
+			} else {
+				this.edit.id = 0;
+				alert('Нет товара!!!');
+			}
+		},
+
 		changeCounter: function (num) {
 			this.edit.qty += +num;
 			this.edit.qty = this.edit.qty < this.edit.max ? this.edit.qty : this.edit.max;
@@ -190,21 +204,32 @@ export default {
 		saveEdit() {
 			const vm = this;
 			vm.edit.qty = vm.edit.qty < vm.edit.max ? vm.edit.qty : vm.edit.max;
-			vm.edit.qty = vm.edit.qty == 0 ? vm.edit.qty : '';
-			vm.edit.message = vm.edit.qty == 0 ? vm.edit.message : '';
+			vm.edit.qty = vm.edit.qty == 0 ? '' : vm.edit.qty;
+			vm.edit.message = vm.edit.qty == 0 ? '' : vm.edit.message;
 			this.products = this.products.map((x) =>
 				x.IDOrderLine === vm.edit.id ? { ...x, qty: vm.edit.qty, message: vm.edit.message } : x,
 			);
 			// this.products.sort((a.qty, b.qty) => a.qty - b.qty);
 			this.edit.id = 0;
 		},
-		editProduct(product) {
-			console.log(product);
+		editProduct(product, add) {
+			this.edit.Nazwa = product.Nazwa;
 			this.edit.id = product.IDOrderLine;
-			this.edit.qty = product.qty;
+			this.edit.qty = product.qty != '' ? product.qty + add : 1;
 			this.edit.message = product.message;
 			this.edit.max = parseInt(product.Quantity);
+		},
+		focusOnProduct() {
+			this.$nextTick(() => {
+				this.$refs.imputproduct.focus();
+			});
 		},
 	},
 };
 </script>
+<style lang="scss">
+.wrap_product {
+	max-height: 70vh;
+	overflow-y: auto;
+}
+</style>
