@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\API\ReturnController;
+use App\Http\Controllers\Api\ReturnController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,4 +19,4 @@ use App\Http\Controllers\API\ReturnController;
 //     return $request->user();
 // });
 Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
-Route::get('getOrder/{IDWarehouse}/{ordername}', [ReturnController::class, 'getOrder']);
+Route::post('getOrder', [ReturnController::class, 'getOrder']);

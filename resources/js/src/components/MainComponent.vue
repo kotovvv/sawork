@@ -167,11 +167,14 @@ export default {
 		getOrder() {
 			const vm = this;
 			vm.order = {};
+			let data = {};
+			data.warehouse = vm.IDWarehouse;
+			data.ordername = vm.ordername;
 			axios
-				.get('/api/getOrder' + '/' + vm.IDWarehouse + '/' + vm.ordername)
+				.post('/api/getOrder', data)
 				.then((res) => {
 					if (res.status == 200) {
-						vm.order = res.data.info[0];
+						vm.order = res.data.info;
 						vm.products = res.data.products ?? [];
 						if (vm.products.length) {
 							vm.products.map((e) => {
@@ -187,12 +190,17 @@ export default {
 				.catch((error) => console.log(error));
 		},
 		findProduct() {
-			const product = this.products.find((e) => e.IDOrderLine == this.imputProduct);
+			const product = this.products.find(
+				(e) =>
+					e.IDOrderLine == this.imputProduct ||
+					e.KodKreskowy == this.imputProduct ||
+					e['_TowarTempString1'] == this.imputProduct,
+			);
 			if (product) {
 				this.editProduct(product, 1);
 			} else {
 				this.edit.id = 0;
-				alert('Нет товара!!!');
+				alert('Brak produktu!!!');
 			}
 		},
 

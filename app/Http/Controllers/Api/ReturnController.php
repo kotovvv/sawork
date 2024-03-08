@@ -20,22 +20,21 @@ class ReturnController extends Controller
         --    ,[NegativeStock]
        FROM [dbo].[Magazyn]');
     }
-    public function getOrder($IDWarehouse, $ordername)
+    public function getOrder(Request $request)
     {
-        // return DB::connection()->getDatabaseName();
+        $data = $request->all();
+        $orderdata = trim($data['ordername']);
         $order = [];
-        $order['info'] =  DB::select('SELECT [IDOrder]
-           ,[Number]
-            ,[Created]
-            ,[IDOrderType]
-       FROM [dbo].[Orders] WHERE [IDWarehouse] = ' . $IDWarehouse . ' AND [IDOrder] = ' . $ordername);
+        //      $order['info'] =  collect(DB::select('SELECT [IDOrder] ,[Number] ,[Created] ,[IDOrderType] FROM [dbo].[Orders] WHERE [IDWarehouse] = ' . (int) $data['warehouse'] . ' AND ([Number] = \'' . $orderdata . '\' OR [_OrdersTempString3] = \'' . $orderdata . '\' OR [_OrdersTempString2] = \'' . $orderdata . '\' OR [_OrdersTempDecimal1] = \'' . $orderdata . '\''))->first();
+        $order['info'] =  collect(DB::select('SELECT [IDOrder] ,[Number] ,[Created] ,[IDOrderType] FROM [dbo].[Orders] WHERE [IDWarehouse] = ' . (int) $data['warehouse'] . ' AND \'' . $orderdata . '\' IN (_OrdersTempString2, Number, _OrdersTempString1, _OrdersTempString3, CONVERT(NVARCHAR(255), _OrdersTempDecimal1))'))->first();
+
         if ($order['info']) {
             $order['products'] =
                 DB::select('SELECT [IDOrderLine]
            ,[IDItem]
            ,tov.[Nazwa]
             ,[Quantity]
-       FROM [dbo].[OrderLines] ord LEFT JOIN [dbo].[Towar]  tov ON ord.[IDItem] = tov.[IDTowaru] WHERE [IDOrder] = ' . $ordername);
+       FROM [dbo].[OrderLines] ord LEFT JOIN [dbo].[Towar]  tov ON ord.[IDItem] = tov.[IDTowaru] WHERE [IDOrder] = ' . $order['info']->IDOrder);
         }
         return $order;
     }
