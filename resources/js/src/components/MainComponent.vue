@@ -24,7 +24,15 @@
 				<label
 					class="form-check-label mb-2"
 					for="getorder"
-					>Order {{ (order.Number ?? '') + ' ' + (order.Created ?? '') }}</label
+					><b>Order: </b>
+					<span v-if="order.Number">{{
+						(order.Number ?? '') + ' [' + (order.Created ?? '') + '] - ' + order.cName ?? ''
+					}}</span>
+					<span
+						v-if="order_mes"
+						style="color: red"
+						>{{ order_mes }}</span
+					></label
 				>
 				<input
 					class="form-control"
@@ -37,10 +45,10 @@
 		<!-- Products -->
 		<section
 			class="row"
-			v-if="order.Number"
+			v-if="products.length"
 		>
 			<div class="col">
-				<div class="mb-2 mt-3">Produkty</div>
+				<b class="mb-2 mt-3">Produkty</b>
 				<input
 					class="form-control mb-3"
 					v-model="imputProduct"
@@ -101,14 +109,26 @@
 
 				<div
 					class="products"
-					v-for="p in products"
+					v-for="(p, i) in products"
 					:key="p.IDOrderLine"
 				>
 					<div
 						class="product"
 						@click="editProduct(p, 0)"
 					>
-						{{ p.Nazwa + ' ' + parseInt(p.Quantity) + ' -' + p.qty + ' ' + p.message }}
+						{{ i + 1 }}.<img
+							v-if="p.img"
+							:src="'data:image/jpeg;base64,' + p.img"
+							alt="pic"
+							style="height: 3em"
+						/>
+
+						{{ p.Nazwa + ' ' + parseInt(p.Quantity)
+						}}<span
+							v-if="p.qty"
+							style="color: green"
+							>{{ ' -' + p.qty + ' ' + p.message }}</span
+						>
 					</div>
 				</div>
 			</div>
@@ -144,6 +164,7 @@ export default {
 				message: '',
 				max: 0,
 			},
+			order_mes: '',
 		};
 	},
 
@@ -166,6 +187,7 @@ export default {
 		},
 		getOrder() {
 			const vm = this;
+			vm.order_mes = '';
 			vm.order = {};
 			let data = {};
 			data.warehouse = vm.IDWarehouse;
@@ -174,22 +196,33 @@ export default {
 				.post('/api/getOrder', data)
 				.then((res) => {
 					if (res.status == 200) {
-						vm.order = res.data.info;
-						vm.products = res.data.products ?? [];
-						if (vm.products.length) {
-							vm.products.map((e) => {
-								e.qty = '';
-								e.message = '';
-							});
-							vm.focusOnProduct();
+						if (res.data.info) {
+							vm.order = res.data.info;
+							vm.products = res.data.products ?? [];
+							if (vm.products.length) {
+								vm.products.map((e) => {
+									e.qty = '';
+									e.message = '';
+								});
+								vm.focusOnProduct();
+							} else {
+								vm.order_mes = 'Nie ma takiej kolejności';
+								vm.products = [];
+							}
+						} else {
+							vm.order_mes = 'Nie ma takiej kolejności';
+							vm.products = [];
 						}
 					} else {
-						vm.order = {};
+						vm.order_mes = 'Nie ma takiej kolejności';
+						vm.products = [];
 					}
 				})
 				.catch((error) => console.log(error));
 		},
 		findProduct() {
+			// KodKreskowy - штрихкод
+			// [_TowarTempString1] - артикул
 			const product = this.products.find(
 				(e) =>
 					e.IDOrderLine == this.imputProduct ||
@@ -239,5 +272,14 @@ export default {
 .wrap_product {
 	max-height: 70vh;
 	overflow-y: auto;
+}
+.product {
+	cursor: pointer;
+	border-bottom: 1px solid #ccc;
+	display: flex;
+	gap: 1rem;
+}
+.product:hover {
+	background: #ccc;
 }
 </style>
