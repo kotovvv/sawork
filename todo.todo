@@ -1,5 +1,34 @@
-✔ Когда вводишь значение которого нет - становится белій єкран. нужно какое то уведомление и что б остались поля @done (3/16/2024, 10:31:30 PM)
-✔ Товар нужно разместить построчно, с номером строки 1/2/3/4 и тд. @done (3/16/2024, 10:31:27 PM)
-✔ Нужно вывести имя клиента @done (3/16/2024, 9:58:44 PM)
-✔ нужны фотки товара, ссылки находятся в табл. Towar - Zdjecie @done (3/16/2024, 9:48:58 PM)
-☐ по поиску товара: ZO1449/24 - Axent ean 4063276135605 не находит
+☐ 1. Поиск товара по WZ
+по id order в таблице dbo.DocumentRelations по ID2 = id order and IDType1 = 2 получить ID1
+получив id1 в таблице dbo.ElementRuchuMagazynowego находим товари по IDRuchuMagazynowego
+☐ 2. Создание KWZ
+при нажатии кнопки "возврат"
+в таблице dbo.RuchMagazynowy создаем строку
+[Data] текущая дата/время
+Utworzono текущая дата/время
+Zmodyfikowano текущая дата/время
+IDRodzajuRuchuMagazynowego=4
+IDMagazynu = из шапки
+NrDokumentu = номер/год
+IDKontrahenta
+IDUzytkownika = пользователь БД
+Operator = 1
+IDCompany = из WZ
+WartoscDokumentu = сумма товаров * кол
+запись самого товара
+в dbo.ElementRuchuMagazynowego
+Ilosc = количество товара
+Uwagi = комментарий
+CenaJednostkowa = цена за 1шт из WZ
+IDRuchuMagazynowego = таблица dbo.RuchMagazynowy столбец IDRuchuMagazynowego
+IDTowaru
+Utworzono = текущая дата/время
+Zmodyfikowano = текущая дата/время
+Uzytkownik = пользователь БД
+IDUserCreated = пользователь БД
+следующая таблица
+dbo.DocumentRelations
+ID1 = таблица dbo.RuchMagazynowy столбец IDRuchuMagazynowego
+IDType1 = 4
+ID2 = Id WZ
+☐ IDType2 = 2
