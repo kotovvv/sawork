@@ -189,6 +189,13 @@ export default {
 				.post('/api/doWz', data)
 				.then((res) => {
 					if (res.status == 200) {
+						vm.order = {};
+						vm.wz = {};
+						vm.products = [];
+						vm.ordername = '';
+						vm.order_mes = res.data;
+					} else {
+						vm.order_mes = res.data;
 					}
 				})
 				.catch((error) => console.log(error));
