@@ -110,7 +110,7 @@
 				<div
 					class="products"
 					v-for="(p, i) in products"
-					:key="p.IDOrderLine"
+					:key="p.IDTowaru"
 				>
 					<div
 						class="product"
@@ -138,7 +138,11 @@
 			v-if="products.find((e) => e.qty > 0)"
 		>
 			<div class="col">
-				<button class="btn btn-primary my-3">Zapisz dokument</button>
+				<button
+					class="btn btn-primary my-3"
+					@click="doWz()"
+					>Tworzenie dokumentu zwrotu</button
+				>
 			</div>
 		</section>
 	</div>
@@ -153,6 +157,7 @@ export default {
 		return {
 			ordername: '',
 			order: {},
+			wz: {},
 			warehouses: [],
 			IDWarehouse: null,
 			products: [],
@@ -173,6 +178,21 @@ export default {
 	},
 
 	methods: {
+		doWz() {
+			const vm = this;
+			let data = {};
+			data.magazin = vm.warehouses.filter((m) => m.IDMagazynu == vm.IDWarehouse)[0];
+			data.wz = vm.wz;
+			data.products = vm.products.filter((e) => e.qty > 0);
+			data.order = vm.order;
+			axios
+				.post('/api/doWz', data)
+				.then((res) => {
+					if (res.status == 200) {
+					}
+				})
+				.catch((error) => console.log(error));
+		},
 		getWarehouse() {
 			const vm = this;
 			axios
@@ -196,8 +216,9 @@ export default {
 				.post('/api/getOrder', data)
 				.then((res) => {
 					if (res.status == 200) {
-						if (res.data.info) {
-							vm.order = res.data.info;
+						if (res.data.wz) {
+							vm.order = res.data.order ?? {};
+							vm.wz = res.data.wz ?? {};
 							vm.products = res.data.products ?? [];
 							if (vm.products.length) {
 								vm.products.map((e) => {
@@ -225,7 +246,7 @@ export default {
 			// [_TowarTempString1] - артикул
 			const product = this.products.find(
 				(e) =>
-					e.IDOrderLine == this.imputProduct ||
+					e.IDTowaru == this.imputProduct ||
 					e.KodKreskowy == this.imputProduct ||
 					e['_TowarTempString1'] == this.imputProduct,
 			);
@@ -248,14 +269,14 @@ export default {
 			vm.edit.qty = vm.edit.qty == 0 ? '' : vm.edit.qty;
 			vm.edit.message = vm.edit.qty == 0 ? '' : vm.edit.message;
 			this.products = this.products.map((x) =>
-				x.IDOrderLine === vm.edit.id ? { ...x, qty: vm.edit.qty, message: vm.edit.message } : x,
+				x.IDTowaru === vm.edit.id ? { ...x, qty: vm.edit.qty, message: vm.edit.message } : x,
 			);
 			// this.products.sort((a.qty, b.qty) => a.qty - b.qty);
 			this.edit.id = 0;
 		},
 		editProduct(product, add) {
 			this.edit.Nazwa = product.Nazwa;
-			this.edit.id = product.IDOrderLine;
+			this.edit.id = product.IDTowaru;
 			this.edit.qty = product.qty != '' ? product.qty + add : 1;
 			this.edit.message = product.message;
 			this.edit.max = parseInt(product.Quantity);

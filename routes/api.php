@@ -20,3 +20,4 @@ use App\Http\Controllers\Api\ReturnController;
 // });
 Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
 Route::post('getOrder', [ReturnController::class, 'getOrder']);
+Route::post('doWz', [ReturnController::class, 'doWz']);
