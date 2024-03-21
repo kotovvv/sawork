@@ -1,34 +1,29 @@
-☐ 1. Поиск товара по WZ
-по id order в таблице dbo.DocumentRelations по ID2 = id order and IDType1 = 2 получить ID1
-получив id1 в таблице dbo.ElementRuchuMagazynowego находим товари по IDRuchuMagazynowego
-☐ 2. Создание KWZ
-при нажатии кнопки "возврат"
-в таблице dbo.RuchMagazynowy создаем строку
-[Data] текущая дата/время
-Utworzono текущая дата/время
-Zmodyfikowano текущая дата/время
-IDRodzajuRuchuMagazynowego=4
-IDMagazynu = из шапки
-NrDokumentu = номер/год
-IDKontrahenta
-IDUzytkownika = пользователь БД
-Operator = 1
-IDCompany = из WZ
-WartoscDokumentu = сумма товаров * кол
-запись самого товара
-в dbo.ElementRuchuMagazynowego
-Ilosc = количество товара
-Uwagi = комментарий
-CenaJednostkowa = цена за 1шт из WZ
-IDRuchuMagazynowego = таблица dbo.RuchMagazynowy столбец IDRuchuMagazynowego
-IDTowaru
-Utworzono = текущая дата/время
-Zmodyfikowano = текущая дата/время
-Uzytkownik = пользователь БД
-IDUserCreated = пользователь БД
-следующая таблица
-dbo.DocumentRelations
-ID1 = таблица dbo.RuchMagazynowy столбец IDRuchuMagazynowego
-IDType1 = 4
-ID2 = Id WZ
-☐ IDType2 = 2
+☐ 1. из dbo.Orders
+Remarks в fulstor.dbo.RuchMagazynowy - Uwagi
+2. из dbo.Orders
+[_OrdersTempDecimal2] в fulstor.dbo.RuchMagazynowy - [_RuchMagazynowyTempDecimal1]
+3. из dbo.Orders
+[_OrdersTempString1] в fulstor.dbo.RuchMagazynowy - [_RuchMagazynowyTempString2]
+4. из dbo.Orders
+[_OrdersTempString2] в fulstor.dbo.RuchMagazynowy - [_RuchMagazynowyTempString1]
+5. из dbo.Orders
+[_OrdersTempString4] в fulstor.dbo.RuchMagazynowy -
+_RuchMagazynowyTempString4
+6. из dbo.Orders
+[_OrdersTempString5] в fulstor.dbo.RuchMagazynowy -
+_RuchMagazynowyTempString5
+7. радоибатон "Niepełnowartościowe" да/нет по умолчанию "нет"
+писать в fulstor.dbo.RuchMagazynowy -
+_RuchMagazynowyTempBool1
+
+☐ dbo.ElementRuchuMagazynowego - IDWarehouseLocation = для idmagazynu 10=148 , для 11=731 для 17=954 для 16=953
+для каждого товара
+
+✔ не брать товар если в таблице товар Usluga = 1 @done (3/21/2024, 9:18:58 PM)
+
+☐ при каждом выборе склада и/или поиске заказа по ШК/номеру и дт - все нужно перерисовать, что б не оставались куски от прошлых заказов на экране
+
+✔ 1. Поиск товара по WZ @done (3/21/2024, 8:38:29 PM) по id order в таблице dbo.DocumentRelations по ID2 = id order and IDType1 = 2 получить ID1 получив id1 в таблице dbo.ElementRuchuMagazynowego находим товари по IDRuchuMagazynowego
+✔ 2. Создание KWZ @done (3/21/2024, 8:39:02 PM) при нажатии кнопки "возврат" в таблице dbo.RuchMagazynowy создаем строку \ [Data] текущая дата/время \ Utworzono текущая дата/время \ Zmodyfikowano текущая дата/время \ IDRodzajuRuchuMagazynowego=4 \ IDMagazynu = из шапки \ NrDokumentu = номер/год \ IDKontrahenta \ IDUzytkownika = пользователь БД \ Operator = 1 \ IDCompany = из WZ \ WartoscDokumentu = сумма товаров * кол \ запись самого товара \ в dbo.ElementRuchuMagazynowego \ Ilosc = количество товара \ Uwagi = комментарий \ CenaJednostkowa = цена за 1шт из WZ \ IDRuchuMagazynowego = таблица dbo.RuchMagazynowy столбец IDRuchuMagazynowego \ IDTowaru \ Utworzono = текущая дата/время \ Zmodyfikowano = текущая дата/время \ Uzytkownik = пользователь БД \ IDUserCreated = пользователь БД
+
+✔ dbo.DocumentRelations \ ID1 = таблица dbo.RuchMagazynowy столбец IDRuchuMagazynowego \ IDType1 = 4 \ ID2 = Id WZ \ IDType2 = 2 @done (3/21/2024, 8:52:54 PM)

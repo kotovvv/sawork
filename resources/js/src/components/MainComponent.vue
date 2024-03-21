@@ -7,6 +7,7 @@
 					<select
 						v-model="IDWarehouse"
 						class="form-select"
+						@change="clear()"
 					>
 						<template
 							v-for="m in warehouses"
@@ -138,6 +139,23 @@
 			v-if="products.find((e) => e.qty > 0)"
 		>
 			<div class="col">
+				<p>Niepełnowartościowe</p>
+				<label
+					><input
+						type="radio"
+						v-model="full"
+						value="0"
+					/>Nie</label
+				><br />
+				<label
+					><input
+						type="radio"
+						v-model="full"
+						value="1"
+					/>Tak</label
+				>
+			</div>
+			<div class="col">
 				<button
 					class="btn btn-primary my-3"
 					@click="doWz()"
@@ -155,6 +173,7 @@ export default {
 
 	data() {
 		return {
+			full: 0,
 			ordername: '',
 			order: {},
 			wz: {},
@@ -178,21 +197,32 @@ export default {
 	},
 
 	methods: {
+		clear() {
+			this.order = {};
+			this.wz = {};
+			this.products = [];
+			this.ordername = '';
+		},
 		doWz() {
 			const vm = this;
 			let data = {};
+			let ps = vm.products.filter((e) => e.qty > 0);
+			ps = ps.map((t) => {
+				return ['IDTowaru', 'CenaJednostkowa', 'IDTowaru', 'message', 'qty'].reduce(
+					(a, e) => ((a[e] = t[e]), a),
+					{},
+				);
+			});
 			data.magazin = vm.warehouses.filter((m) => m.IDMagazynu == vm.IDWarehouse)[0];
 			data.wz = vm.wz;
-			data.products = vm.products.filter((e) => e.qty > 0);
-			data.order = vm.order;
+			data.products = ps;
+			data.order_id = vm.order.IDOrder;
+			data.full = vm.full;
 			axios
 				.post('/api/doWz', data)
 				.then((res) => {
 					if (res.status == 200) {
-						vm.order = {};
-						vm.wz = {};
-						vm.products = [];
-						vm.ordername = '';
+						vm.clear();
 						vm.order_mes = res.data;
 					} else {
 						vm.order_mes = res.data;
@@ -215,7 +245,7 @@ export default {
 		getOrder() {
 			const vm = this;
 			vm.order_mes = '';
-			vm.order = {};
+			vm.clear();
 			let data = {};
 			data.warehouse = vm.IDWarehouse;
 			data.ordername = vm.ordername;
@@ -235,15 +265,12 @@ export default {
 								vm.focusOnProduct();
 							} else {
 								vm.order_mes = 'Nie ma takiej kolejności';
-								vm.products = [];
 							}
 						} else {
-							vm.order_mes = 'Nie ma takiej kolejności';
-							vm.products = [];
+							vm.order_mes = 'Nie WZ';
 						}
 					} else {
-						vm.order_mes = 'Nie ma takiej kolejności';
-						vm.products = [];
+						vm.order_mes = 'Error getOrder()';
 					}
 				})
 				.catch((error) => console.log(error));

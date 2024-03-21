@@ -25,9 +25,23 @@ class ReturnController extends Controller
         $data = $request->all();
         $orderdata = trim($data['ordername']);
         $res = [];
-        //      $res['info'] =  collect(DB::select('SELECT [IDOrder] ,[Number] ,[Created] ,[IDOrderType] FROM [dbo].[Orders] WHERE [IDWarehouse] = ' . (int) $data['warehouse'] . ' AND ([Number] = \'' . $orderdata . '\' OR [_OrdersTempString3] = \'' . $orderdata . '\' OR [_OrdersTempString2] = \'' . $orderdata . '\' OR [_OrdersTempDecimal1] = \'' . $orderdata . '\''))->first();
 
-        $res['order'] =  collect(DB::select('SELECT [IDOrder] ,[Number] ,cast ([Created] as date) Created ,[IDOrderType],con.[Nazwa] cName, [IDAccount] FROM [dbo].[Orders] ord
+
+        $res['order'] =  collect(DB::select('SELECT
+        [IDOrder]
+        , [Number]
+        , cast ([Created] as date) Created
+        , con.[Nazwa] cName
+        -- , [IDOrderType]
+        -- , [IDAccount]
+        -- , [Remarks]
+        -- , [_OrdersTempDecimal2]
+        -- , [_OrdersTempString1]
+        -- , [_OrdersTempString2]
+        -- , [_OrdersTempString3]
+        -- , [_OrdersTempString4]
+        -- , [_OrdersTempString5]
+        FROM [dbo].[Orders] ord
         LEFT JOIN [dbo].[Kontrahent] con ON con.[IDKontrahenta] = ord.[IDAccount]
          WHERE [IDWarehouse] = ' . (int) $data['warehouse'] . ' AND \'' . $orderdata . '\' IN (_OrdersTempString2, Number, _OrdersTempString1, _OrdersTempString3, CONVERT(NVARCHAR(255), _OrdersTempDecimal1))'))->first();
 
@@ -46,8 +60,8 @@ class ReturnController extends Controller
            ,tov.[_TowarTempString1]
            ,tov.[Zdjecie] img
        FROM [dbo].[ElementRuchuMagazynowego] wz
-       LEFT JOIN [dbo].[Towar]  tov ON wz.[IDTowaru] = tov.[IDTowaru]
-       WHERE [IDRuchuMagazynowego] = ' . $res['wz']->ID);
+       LEFT JOIN [dbo].[Towar] tov ON wz.[IDTowaru] = tov.[IDTowaru]
+       WHERE tov.[Usluga] != 1 AND [IDRuchuMagazynowego] = ' . $res['wz']->ID);
 
             foreach ($res['products'] as $key => $product) {
                 if ($product->img) {
@@ -61,18 +75,28 @@ class ReturnController extends Controller
     public function doWz(Request $request)
     {
         $data = $request->all();
-
+        $magazin_id = $data['magazin']['IDMagazynu'];
+        $IDWarehouseLocation = [10 => 148, 11 => 731, 17 => 954, 16 => 953][$magazin_id];
+        $order =  collect(DB::select("SELECT * FROM [dbo].[Orders] WHERE [IDOrder] = " . (int) $data['order_id']))->first();
 
         $creat_wz = [];
         $creat_wz['Data'] = date('Y/m/d H:i:s');
         // $creat_wz['Utworzono'] = Now();
         // $creat_wz['Zmodyfikowano'] = Now();
         $creat_wz['IDRodzajuRuchuMagazynowego'] = 4;
-        $creat_wz['IDMagazynu'] = $data['magazin']['IDMagazynu'];
-        $creat_wz['IDKontrahenta'] = (int) $data['order']['IDAccount'];
+        $creat_wz['IDMagazynu'] = $magazin_id;
         $creat_wz['IDUzytkownika'] = 1;
         $creat_wz['Operator'] = 1;
         $creat_wz['IDCompany'] = 1;
+        $creat_wz['IDKontrahenta'] = (int) $order->IDAccount;
+        $creat_wz['Uwagi'] = $order->Remarks;
+        $creat_wz['_RuchMagazynowyTempDecimal1'] = $order->_OrdersTempDecimal2;
+        $creat_wz['_RuchMagazynowyTempString2'] = $order->_OrdersTempString1;
+        $creat_wz['_RuchMagazynowyTempString1'] = $order->_OrdersTempString2;
+        $creat_wz['_RuchMagazynowyTempString4'] = $order->_OrdersTempString4;
+        $creat_wz['_RuchMagazynowyTempString5'] = $order->_OrdersTempString5;
+
+        $creat_wz['_RuchMagazynowyTempBool1'] = $data['full'];
 
         // в таблице dbo.RuchMagazynowy создаем строку
         // [Data] текущая дата/время
@@ -85,14 +109,8 @@ class ReturnController extends Controller
         // IDUzytkownika = пользователь БД
         // Operator = 1
         // IDCompany = из WZ
-        // WartoscDokumentu = сумма товаров * кол
-        // $sum = 0;
-        // foreach ($data['products'] as $product) {
-        //     $sum += $product['Quantity'] * $product['CenaJednostkowa'];
-        // }
 
-        // $creat_wz['WartoscDokumentu'] = $sum;
-        $ndoc = DB::select("SELECT COUNT(*) n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '4' AND IDMagazynu = " . $data['magazin']['IDMagazynu'] . " AND year( Utworzono ) = " . date('Y'));
+        $ndoc = DB::select("SELECT COUNT(*) n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '4' AND IDMagazynu = " . $magazin_id . " AND year( Utworzono ) = " . date('Y'));
         $creat_wz['NrDokumentu'] = 'WZk' . $ndoc[0]->n + 1 . '/' . date('y') . ' - ' . $data["magazin"]["Symbol"];
         $wz = DB::table('dbo.RuchMagazynowy')->insert($creat_wz);
         if ($wz) {
@@ -120,7 +138,8 @@ class ReturnController extends Controller
                     // 'Utworzono' => GETDATE(),
                     // 'Zmodyfikowano' => GETDATE(),
                     'Uzytkownik' => 1,
-                    'IDUserCreated' => 1
+                    'IDUserCreated' => 1,
+                    'IDWarehouseLocation' => $IDWarehouseLocation
                 ];
             }
             DB::table('dbo.ElementRuchuMagazynowego')->insert($tov);
