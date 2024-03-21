@@ -64,7 +64,7 @@ class ReturnController extends Controller
 
 
         $creat_wz = [];
-        $creat_wz['Data'] = date('d/m/Y H:i:s');
+        $creat_wz['Data'] = date('Y/m/d H:i:s');
         // $creat_wz['Utworzono'] = Now();
         // $creat_wz['Zmodyfikowano'] = Now();
         $creat_wz['IDRodzajuRuchuMagazynowego'] = 4;
