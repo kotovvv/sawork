@@ -244,7 +244,10 @@ export default {
 		},
 		getOrder() {
 			const vm = this;
-			if (vm.ordername == '') return;
+			if (vm.ordername == '') {
+				vm.clear();
+				return;
+			}
 			vm.order_mes = '';
 			vm.order = {};
 			let data = {};
