@@ -266,12 +266,15 @@ export default {
 								vm.focusOnProduct();
 							} else {
 								vm.order_mes = 'Nie ma takiej kolejności';
+								vm.clear();
 							}
 						} else {
 							vm.order_mes = 'Nie WZ';
+							vm.clear();
 						}
 					} else {
 						vm.order_mes = 'Error getOrder()';
+						vm.clear();
 					}
 				})
 				.catch((error) => console.log(error));

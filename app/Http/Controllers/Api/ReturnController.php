@@ -43,7 +43,7 @@ class ReturnController extends Controller
         -- , [_OrdersTempString5]
         FROM [dbo].[Orders] ord
         LEFT JOIN [dbo].[Kontrahent] con ON con.[IDKontrahenta] = ord.[IDAccount]
-         WHERE [IDWarehouse] = ' . (int) $data['warehouse'] . ' AND \'' . $orderdata . '\' IN (_OrdersTempString2, Number, _OrdersTempString1, _OrdersTempString3, CONVERT(NVARCHAR(255), _OrdersTempDecimal1))'))->first();
+         WHERE [IDWarehouse] = ' . (int) $data['warehouse'] . ' AND \'' . $orderdata . '\' IN (_OrdersTempString2, Number, _OrdersTempString1,_OrdersTempString3,_OrdersTempString4, _OrdersTempDecimal2, CONVERT(NVARCHAR(255), _OrdersTempDecimal1))'))->first();
         if ($res['order']) {
             $res['wz'] = collect(
                 DB::select('SELECT [ID1] as ID FROM [dbo].[DocumentRelations] WHERE [ID2] = ' . $res['order']->IDOrder . ' AND [IDType1] = 2')
