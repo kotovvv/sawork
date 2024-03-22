@@ -44,14 +44,14 @@ class ReturnController extends Controller
         FROM [dbo].[Orders] ord
         LEFT JOIN [dbo].[Kontrahent] con ON con.[IDKontrahenta] = ord.[IDAccount]
          WHERE [IDWarehouse] = ' . (int) $data['warehouse'] . ' AND \'' . $orderdata . '\' IN (_OrdersTempString2, Number, _OrdersTempString1, _OrdersTempString3, CONVERT(NVARCHAR(255), _OrdersTempDecimal1))'))->first();
+        if ($res['order']) {
+            $res['wz'] = collect(
+                DB::select('SELECT [ID1] as ID FROM [dbo].[DocumentRelations] WHERE [ID2] = ' . $res['order']->IDOrder . ' AND [IDType1] = 2')
+            )->first();
 
-        $res['wz'] = collect(
-            DB::select('SELECT [ID1] as ID FROM [dbo].[DocumentRelations] WHERE [ID2] = ' . $res['order']->IDOrder . ' AND [IDType1] = 2')
-        )->first();
-
-        if ($res['wz']) {
-            $res['products'] =
-                DB::select('SELECT tov.[IDTowaru]
+            if ($res['wz']) {
+                $res['products'] =
+                    DB::select('SELECT tov.[IDTowaru]
             ,[Ilosc] Quantity
             ,[Wydano]
            ,[CenaJednostkowa]
@@ -63,9 +63,10 @@ class ReturnController extends Controller
        LEFT JOIN [dbo].[Towar] tov ON wz.[IDTowaru] = tov.[IDTowaru]
        WHERE tov.[Usluga] != 1 AND [IDRuchuMagazynowego] = ' . $res['wz']->ID);
 
-            foreach ($res['products'] as $key => $product) {
-                if ($product->img) {
-                    $res['products'][$key]->img =  base64_encode($product->img);
+                foreach ($res['products'] as $key => $product) {
+                    if ($product->img) {
+                        $res['products'][$key]->img =  base64_encode($product->img);
+                    }
                 }
             }
         }

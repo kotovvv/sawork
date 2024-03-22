@@ -244,8 +244,9 @@ export default {
 		},
 		getOrder() {
 			const vm = this;
+			if (vm.ordername == '') return;
 			vm.order_mes = '';
-			vm.clear();
+			vm.order = {};
 			let data = {};
 			data.warehouse = vm.IDWarehouse;
 			data.ordername = vm.ordername;
