@@ -92,14 +92,14 @@ class ReturnController extends Controller
         //get tovs
         $tovs = collect(DB::select('SELECT "Ilosc" qty,   "CenaJednostkowa" price,   "IDTowaru" cod,     "IDOrderLine" nl FROM "dbo"."ElementRuchuMagazynowego" WHERE IDRuchuMagazynowego = ' . (int) $doc_wz['ID'] . ' ORDER BY "CenaJednostkowa"'))->toArray();
 
-        //         пока о.кол
-        //         ищем е.код == о.код
+        // пока о.кол
+        // ищем е.код == о.код
         // если е.кол >= о.кол
         // е.кол = е.кол - о.кол
         // о.кол= о.кол - е.кол
         // отдаём по е.price
         // если е.кол == 0 удалить строку
-        dd($tovs);
+        dd($tovs[0]->qty);
         $order =  collect(DB::select("SELECT * FROM [dbo].[Orders] WHERE [IDOrder] = " . (int) $data['order_id']))->first();
 
         $creat_wz = [];
@@ -153,20 +153,41 @@ class ReturnController extends Controller
 
 
             $tov = [];
-            foreach ($data['products'] as $product) {
-                $tov[] = [
-                    'Ilosc' => $product['qty'],
-                    'CenaJednostkowa' => $product['CenaJednostkowa'],
-                    'Uwagi' => $product['message'],
-                    'IDRuchuMagazynowego' => $wz->IDRuchuMagazynowego,
-                    'IDTowaru' => $product['IDTowaru'],
-                    // 'Utworzono' => GETDATE(),
-                    // 'Zmodyfikowano' => GETDATE(),
-                    'Uzytkownik' => 1,
-                    'IDUserCreated' => 1,
-                    'IDWarehouseLocation' => $IDWarehouseLocation
-                ];
+            //for each product return
+            foreach ($data['products'] as $key => $product) {
+                $ocol = $product->qty; //how many need return
+
+                while ($ocol) {
+                    //find cod in all products
+                    foreach ($tovs as $key => $ep) {
+                        if ($ep->cod == $product->IDTowaru && $ep->qty > 0 && $ocol > 0) {
+                            //$qty = 0;
+
+                            if ($ocol <= $ep->qty) {
+
+                                $qty = $ocol;
+                                $ocol = 0;
+                            } else {
+                                $ocol = $ocol - $ep->qty;
+                                $qty = $ep->qty;
+                            }
+
+                            $tov[] = [
+                                'IDTowaru' => $product->IDTowaru,
+                                'Ilosc' => $qty,
+                                'CenaJednostkowa' => $ep->price,
+                                'Uwagi' => $product['message'],
+                                'IDRuchuMagazynowego' => $wz->IDRuchuMagazynowego,
+                                'Uzytkownik' => 1,
+                                'IDUserCreated' => 1,
+                                'IDWarehouseLocation' => $IDWarehouseLocation
+                            ];
+                            $tovs[$key]->qty = 0;
+                        }
+                    }
+                }
             }
+
             DB::table('dbo.ElementRuchuMagazynowego')->insert($tov);
 
             // dbo.DocumentRelations
