@@ -10,7 +10,7 @@ class ReturnController extends Controller
 {
     public function getWarehouse()
     {
-        // return DB::connection()->getDatabaseName();
+
         return DB::select('SELECT [IDMagazynu]
            ,[Nazwa]
         --    ,[Utworzono]
@@ -44,6 +44,7 @@ class ReturnController extends Controller
         FROM [dbo].[Orders] ord
         LEFT JOIN [dbo].[Kontrahent] con ON con.[IDKontrahenta] = ord.[IDAccount]
          WHERE [IDWarehouse] = ' . (int) $data['warehouse'] . ' AND \'' . $orderdata . '\' IN (Number, _OrdersTempString1,_OrdersTempString2, _OrdersTempString3, _OrdersTempString4, CONVERT(NVARCHAR(255), _OrdersTempDecimal1),  CONVERT(NVARCHAR(255), CONVERT(INT, _OrdersTempDecimal2)))'))->first();
+
         if ($res['order']) {
             $res['wz'] = collect(
                 DB::select('SELECT [ID1] as ID FROM [dbo].[DocumentRelations] WHERE [ID2] = ' . $res['order']->IDOrder . ' AND [IDType1] = 2')
@@ -52,8 +53,8 @@ class ReturnController extends Controller
             if ($res['wz']) {
                 $res['products'] =
                     DB::select('SELECT tov.[IDTowaru]
-            ,[Ilosc] Quantity
-            ,[Wydano]
+            , [Ilosc] Quantity
+            , [Wydano] Wydano
            ,[CenaJednostkowa]
            ,tov.[Nazwa]
            ,tov.[KodKreskowy]
@@ -62,12 +63,20 @@ class ReturnController extends Controller
        FROM [dbo].[ElementRuchuMagazynowego] wz
        LEFT JOIN [dbo].[Towar] tov ON wz.[IDTowaru] = tov.[IDTowaru]
        WHERE tov.[Usluga] != 1 AND [IDRuchuMagazynowego] = ' . $res['wz']->ID);
-
+                $products = [];
                 foreach ($res['products'] as $key => $product) {
-                    if ($product->img) {
-                        $res['products'][$key]->img =  base64_encode($product->img);
+
+                    $code = $product->IDTowaru;
+                    if (!isset($products[$code])) {
+                        if ($product->img) {
+                            $res['products'][$key]->img =  base64_encode($product->img);
+                        }
+                        $products[$code] = $product;
+                    } else {
+                        $products[$code]->Quantity += $product->Quantity;
                     }
                 }
+                $res['products'] = $products;
             }
         }
         return response($res);
@@ -76,8 +85,21 @@ class ReturnController extends Controller
     public function doWz(Request $request)
     {
         $data = $request->all();
+        $doc_wz = $data['wz'];
         $magazin_id = $data['magazin']['IDMagazynu'];
         $IDWarehouseLocation = [10 => 148, 11 => 731, 17 => 954, 16 => 953][$magazin_id];
+
+        //get tovs
+        $tovs = collect(DB::select('SELECT "Ilosc" qty,   "CenaJednostkowa" price,   "IDTowaru" cod,     "IDOrderLine" nl FROM "dbo"."ElementRuchuMagazynowego" WHERE IDRuchuMagazynowego = ' . (int) $doc_wz['ID'] . ' ORDER BY "CenaJednostkowa"'))->toArray();
+
+        //         пока о.кол
+        //         ищем е.код == о.код
+        // если е.кол >= о.кол
+        // е.кол = е.кол - о.кол
+        // о.кол= о.кол - е.кол
+        // отдаём по е.price
+        // если е.кол == 0 удалить строку
+        dd($tovs);
         $order =  collect(DB::select("SELECT * FROM [dbo].[Orders] WHERE [IDOrder] = " . (int) $data['order_id']))->first();
 
         $creat_wz = [];
@@ -127,6 +149,8 @@ class ReturnController extends Controller
             // Zmodyfikowano = текущая дата/время
             // Uzytkownik = пользователь БД
             // IDUserCreated = пользователь БД
+
+
 
             $tov = [];
             foreach ($data['products'] as $product) {

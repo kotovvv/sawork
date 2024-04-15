@@ -124,11 +124,13 @@
 							style="height: 3em"
 						/>
 
-						{{ p.Nazwa + ' ' + parseInt(p.Quantity)
-						}}<span
+						<!-- {{ p.Nazwa + ' [' + parseInt(p.Quantity) + ']' }} -->
+						{{ p.Nazwa }}<b>[ {{ parseInt(p.Quantity) }} ]</b>
+						<span
 							v-if="p.qty"
 							style="color: green"
-							>{{ ' -' + p.qty + ' ' + p.message }}</span
+						>
+							<b>[ -{{ p.qty }} ]</b> {{ p.message }}</span
 						>
 					</div>
 				</div>
@@ -208,10 +210,7 @@ export default {
 			let data = {};
 			let ps = vm.products.filter((e) => e.qty > 0);
 			ps = ps.map((t) => {
-				return ['IDTowaru', 'CenaJednostkowa', 'IDTowaru', 'message', 'qty'].reduce(
-					(a, e) => ((a[e] = t[e]), a),
-					{},
-				);
+				return ['IDTowaru', 'CenaJednostkowa', 'message', 'qty'].reduce((a, e) => ((a[e] = t[e]), a), {});
 			});
 			data.magazin = vm.warehouses.filter((m) => m.IDMagazynu == vm.IDWarehouse)[0];
 			data.wz = vm.wz;
@@ -260,7 +259,7 @@ export default {
 						if (res.data.wz) {
 							vm.order = res.data.order ?? {};
 							vm.wz = res.data.wz ?? {};
-							vm.products = res.data.products ?? [];
+							vm.products = Object.values(res.data.products) ?? [];
 							if (vm.products.length) {
 								vm.products.map((e) => {
 									e.qty = '';
@@ -301,6 +300,9 @@ export default {
 
 		changeCounter: function (num) {
 			this.edit.qty += +num;
+			if (this.edit.qty > this.edit.max) {
+				alert('Для этого заказа максимальное количество данного товара = ' + this.edit.max);
+			}
 			this.edit.qty = this.edit.qty < this.edit.max ? this.edit.qty : this.edit.max;
 			!isNaN(this.edit.qty) && this.edit.qty > 0 ? this.edit.qty : (this.edit.qty = 0);
 		},
