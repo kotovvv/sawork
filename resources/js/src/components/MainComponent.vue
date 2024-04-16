@@ -115,7 +115,10 @@
 				>
 					<div
 						class="product"
-						@click="editProduct(p, 0)"
+						@click="
+							edit.qty = p.qty > 0 ? p.qty : 1;
+							editProduct(p, 0);
+						"
 					>
 						{{ i + 1 }}.<img
 							v-if="p.img"
@@ -188,7 +191,7 @@ export default {
 				Nazwa: '',
 				qty: 0,
 				message: '',
-				max: 0,
+				max: 1,
 			},
 			order_mes: '',
 		};
@@ -302,7 +305,7 @@ export default {
 		changeCounter: function (num) {
 			this.edit.qty += +num;
 			if (this.edit.qty > this.edit.max) {
-				alert('Для этого заказа максимальное количество данного товара = ' + this.edit.max);
+				alert('Dla tego zamówienia maksymalna ilość tego produktu wynosi = ' + this.edit.max);
 			}
 			this.edit.qty = this.edit.qty < this.edit.max ? this.edit.qty : this.edit.max;
 			!isNaN(this.edit.qty) && this.edit.qty > 0 ? this.edit.qty : (this.edit.qty = 0);
@@ -317,11 +320,17 @@ export default {
 			);
 			// this.products.sort((a.qty, b.qty) => a.qty - b.qty);
 			this.edit.id = 0;
+			this.imputProduct = '';
 		},
 		editProduct(product, add) {
 			this.edit.Nazwa = product.Nazwa;
 			this.edit.id = product.IDTowaru;
-			this.edit.qty = product.qty != '' ? product.qty + add : 1;
+
+			this.edit.qty += add;
+			if (this.edit.qty > this.edit.max) {
+				this.edit.qty = this.edit.max;
+				alert('Dla tego zamówienia maksymalna ilość tego produktu wynosi = ' + this.edit.max);
+			}
 			this.edit.message = product.message;
 			this.edit.max = parseInt(product.Quantity);
 		},
