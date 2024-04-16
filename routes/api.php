@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ReturnController;
+use App\Http\Controllers\Api\sendPDF;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,3 +22,4 @@ use App\Http\Controllers\Api\ReturnController;
 Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
 Route::post('getOrder', [ReturnController::class, 'getOrder']);
 Route::post('doWz', [ReturnController::class, 'doWz']);
+Route::get('sendPDF', [sendPDF::class, 'index']);
