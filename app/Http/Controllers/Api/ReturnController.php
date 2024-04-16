@@ -99,7 +99,6 @@ class ReturnController extends Controller
         // о.кол= о.кол - е.кол
         // отдаём по е.price
         // если е.кол == 0 удалить строку
-        dd($tovs[0]->qty);
         $order =  collect(DB::select("SELECT * FROM [dbo].[Orders] WHERE [IDOrder] = " . (int) $data['order_id']))->first();
 
         $creat_wz = [];
