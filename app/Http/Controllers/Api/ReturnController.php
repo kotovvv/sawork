@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+
 class ReturnController extends Controller
 {
     public function getWarehouse()
@@ -154,12 +155,12 @@ class ReturnController extends Controller
             $tov = [];
             //for each product return
             foreach ($data['products'] as $key => $product) {
-                $ocol = $product->qty; //how many need return
+                $ocol = $product['qty']; //how many need return
 
                 while ($ocol) {
                     //find cod in all products
                     foreach ($tovs as $key => $ep) {
-                        if ($ep->cod == $product->IDTowaru && $ep->qty > 0 && $ocol > 0) {
+                        if ($ep->cod == $product['IDTowaru'] && $ep->qty > 0 && $ocol > 0) {
                             //$qty = 0;
 
                             if ($ocol <= $ep->qty) {
@@ -172,7 +173,7 @@ class ReturnController extends Controller
                             }
 
                             $tov[] = [
-                                'IDTowaru' => $product->IDTowaru,
+                                'IDTowaru' => $product['IDTowaru'],
                                 'Ilosc' => $qty,
                                 'CenaJednostkowa' => $ep->price,
                                 'Uwagi' => $product['message'],

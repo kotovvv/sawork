@@ -204,6 +204,7 @@ export default {
 			this.wz = {};
 			this.products = [];
 			this.ordername = '';
+			this.imputProduct = '';
 		},
 		doWz() {
 			const vm = this;
