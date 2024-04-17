@@ -1,30 +1,37 @@
 <template>
-	<div class="container">
-		<section class="row my-3">
-			<div class="col"
-				>Magazyny
-				<span id="select-magazynu">
-					<select
-						v-model="IDWarehouse"
-						class="form-select"
-						@change="clear()"
-					>
-						<template
-							v-for="m in warehouses"
-							:key="m.IDMagazynu"
-						>
-							<option :value="m.IDMagazynu">{{ m.Nazwa }}</option>
-						</template>
-					</select>
-				</span>
-			</div>
-		</section>
+	<v-container>
+		<v-row>
+			<v-col
+				md="6"
+				sm="12"
+			>
+				<v-select
+					label="Magazyn"
+					v-model="IDWarehouse"
+					:items="warehouses"
+					item-title="Nazwa"
+					item-value="IDMagazynu"
+					@change="clear()"
+					hide-details="auto"
+				></v-select>
+			</v-col>
+			<v-col
+				md="6"
+				sm="12"
+				><v-text-field
+					label="Dokument"
+					v-model="ordername"
+					id="getorder"
+					@keyup.enter="getOrder()"
+					hide-details="auto"
+				></v-text-field
+			></v-col>
+		</v-row>
+
 		<!-- Order -->
-		<section class="row">
-			<div class="col">
-				<label
-					class="form-check-label mb-2"
-					for="getorder"
+		<v-row>
+			<v-col cols="12">
+				<label for="getorder"
 					><b>Order: </b>
 					<span v-if="order.Number">{{
 						(order.Number ?? '') + ' [' + (order.Created ?? '') + '] - ' + order.cName ?? ''
@@ -34,29 +41,21 @@
 						style="color: red"
 						>{{ order_mes }}</span
 					></label
-				>
-				<input
-					class="form-control"
-					v-model="ordername"
-					id="getorder"
-					@keyup.enter="getOrder()"
-				/>
-			</div>
-		</section>
+				></v-col
+			>
+		</v-row>
+
 		<!-- Products -->
-		<section
-			class="row"
-			v-if="products.length"
-		>
-			<div class="col">
-				<b class="mb-2 mt-3">Produkty</b>
-				<input
-					class="form-control mb-3"
+		<v-row v-if="products.length">
+			<v-col>
+				<!-- <b class="mb-2 mt-3">Produkty</b> -->
+				<v-text-field
+					label="Towar"
 					v-model="imputProduct"
 					ref="imputproduct"
 					@keyup.enter="findProduct()"
-					placeholder="towar"
-				/>
+				></v-text-field>
+
 				<div class="row mb-3">
 					<div
 						class="qty input-group"
@@ -97,13 +96,7 @@
 							placeholder="message"
 						/>
 						<span class="input-group-btn">
-							<button
-								class="btn btn-primary"
-								@click="saveEdit()"
-								type="button"
-							>
-								<span>Save</span>
-							</button>
+							<v-btn @click="saveEdit()">Zapisz</v-btn>
 						</span>
 					</div>
 				</div>
@@ -137,8 +130,8 @@
 						>
 					</div>
 				</div>
-			</div>
-		</section>
+			</v-col>
+		</v-row>
 		<section
 			class="row"
 			v-if="products.find((e) => e.qty > 0)"
@@ -168,7 +161,26 @@
 				>
 			</div>
 		</section>
-	</div>
+		<v-dialog
+			v-model="dialog"
+			width="auto"
+		>
+			<v-card
+				max-width="400"
+				prepend-icon="mdi-alert-outline"
+				:text="dialog_text"
+				:title="dialog_title"
+			>
+				<template v-slot:actions>
+					<v-btn
+						class="ms-auto"
+						text="Ok"
+						@click="dialog = false"
+					></v-btn>
+				</template>
+			</v-card>
+		</v-dialog>
+	</v-container>
 </template>
 
 <script>
@@ -178,6 +190,9 @@ export default {
 
 	data() {
 		return {
+			dialog: false,
+			dialog_text: '',
+			dialog_title: '',
 			full: 0,
 			ordername: '',
 			order: {},
@@ -298,14 +313,17 @@ export default {
 				this.editProduct(product, 1);
 			} else {
 				this.edit.id = 0;
-				alert('Brak produktu!!!');
+
+				this.dialog_text = 'Brak produktu!!!';
+				this.dialog = true;
 			}
 		},
 
 		changeCounter: function (num) {
 			this.edit.qty += +num;
 			if (this.edit.qty > this.edit.max) {
-				alert('Dla tego zamówienia maksymalna ilość tego produktu wynosi = ' + this.edit.max);
+				this.dialog_text = 'Dla tego zamówienia maksymalna ilość tego produktu wynosi = ' + this.edit.max;
+				this.dialog = true;
 			}
 			this.edit.qty = this.edit.qty < this.edit.max ? this.edit.qty : this.edit.max;
 			!isNaN(this.edit.qty) && this.edit.qty > 0 ? this.edit.qty : (this.edit.qty = 0);
@@ -329,7 +347,8 @@ export default {
 			this.edit.qty += add;
 			if (this.edit.qty > this.edit.max) {
 				this.edit.qty = this.edit.max;
-				alert('Dla tego zamówienia maksymalna ilość tego produktu wynosi = ' + this.edit.max);
+				this.dialog_text = 'Dla tego zamówienia maksymalna ilość tego produktu wynosi = ' + this.edit.max;
+				this.dialog = true;
 			}
 			this.edit.message = product.message;
 			this.edit.max = parseInt(product.Quantity);
