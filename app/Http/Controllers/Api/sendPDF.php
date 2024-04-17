@@ -15,9 +15,14 @@ class sendPDF extends Controller
 {
     function index(Request $request)
     {
-
-        $data['username'] = 'Кому-то';
-        $data['email'] = 'kotovvv@ukr.net';
+$data=[
+    'username' => 'Кому-то',
+    'email' => 'kotovvv@ukr.net',
+'title' => 'Zwrot od odbiorcy',
+];
+        // $data['username'] = 'Кому-то';
+        // $data['email'] = 'kotovvv@ukr.net';
+        // $data['title'] = 'Zwrot od odbiorcy';
         //generating pdf with user data
         $pdf = Pdf::loadView('mail', $data);
         //send mail to user
