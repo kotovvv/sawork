@@ -25,7 +25,7 @@ body { font-family: 'DejaVu Sans', sans-serif; }
 <p><span class="font1">{{ $my->UlicaLokal }}</span></p>
 <p><span class="font1">{{$my->KodPocztowy}} {{$my->Miejscowosc}}</span></p>
 <p><span class="font1">{{$my->Telefon}}</span></p>
-<p><span class="font0">{{ $docWZk->Uwagi}}Nr zamowienia w BaseLinker: 46869883</span></p>
+<p><span class="font0">{{ $docWZk->Uwagi}}</span></p>
 </td>
 <td style="vertical-align: top;">
 <p><span class="font0" style="font-style: italic;">Kontrahent:</span></p>

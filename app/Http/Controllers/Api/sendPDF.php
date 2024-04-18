@@ -17,12 +17,12 @@ class sendPDF extends Controller
     {
         $data = [
             'username' => 'Кому-то',
-            'email' => 'kotovvv@ukr.net',
+            'email' => 'khanenko.igor@gmail.com',
         ];
         $forpdf = [];
         $my = DB::selectOne("SELECT  k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.Kontrahent k WHERE k.IDKontrahenta = 1");
 
-        $docsWZk = DB::select("SELECT TOP 3 rm.IDRuchuMagazynowego, rm.Data, rm.Uwagi , rm.IDMagazynu, rm.NrDokumentu, rm.IDKontrahenta, rm.IDUzytkownika, rm.WartoscDokumentu, k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.RuchMagazynowy rm left JOIN dbo.Kontrahent k ON (k.IDKontrahenta = rm.IDKontrahenta) WHERE NrDokumentu LIKE '%WZk%' ORDER BY IDRuchuMagazynowego DESC ,Data ASC");
+        $docsWZk = DB::select("SELECT  rm.IDRuchuMagazynowego, rm.Data, rm.Uwagi , rm.IDMagazynu, rm.NrDokumentu, rm.IDKontrahenta, rm.IDUzytkownika, rm.WartoscDokumentu, k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.RuchMagazynowy rm left JOIN dbo.Kontrahent k ON (k.IDKontrahenta = rm.IDKontrahenta) WHERE cast(Data AS date) >= DATEADD(day, DATEDIFF(day, 0, GETDATE()), 0) AND NrDokumentu LIKE '%WZk%' ORDER BY IDRuchuMagazynowego DESC , Data ASC");
 
         foreach ($docsWZk as $key => $docWZk) {
             if ($docWZk->IDUzytkownika != 1) {
@@ -43,7 +43,8 @@ class sendPDF extends Controller
                 $message->subject($data['title']);
                 $message->attachData($pdf->output(), $docWZk->NrDokumentu . '.pdf'); //attached pdf file
             });
-            sleep(30);
+            sleep(10);
         }
+        return response("Zwroty wysłane: " . count($docsWZk), '200');
     }
 }
