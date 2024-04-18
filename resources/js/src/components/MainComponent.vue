@@ -112,6 +112,7 @@
 							edit.qty = p.qty > 0 ? p.qty : 1;
 							editProduct(p, 0);
 						"
+						id="p.IDTowaru"
 					>
 						{{ i + 1 }}.<img
 							v-if="p.img"
