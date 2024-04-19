@@ -36,7 +36,7 @@ class ReturnController extends Controller
         -- , [IDOrderType]
         -- , [IDAccount]
         -- , [Remarks]
-        -- , [_OrdersTempDecimal2]
+        , CAST([_OrdersTempDecimal2] AS INT) as pk
         -- , [_OrdersTempString1]
         -- , [_OrdersTempString2]
         -- , [_OrdersTempString3]

@@ -34,7 +34,8 @@
 				<label for="getorder"
 					><b>Order: </b>
 					<span v-if="order.Number">{{
-						(order.Number ?? '') + ' [' + (order.Created ?? '') + '] - ' + order.cName ?? ''
+						(order.Number ?? '') + ' - ' + order.pk + ' (' + (order.Created ?? '') + ') - ' + order.cName ??
+						''
 					}}</span>
 					<span
 						v-if="order_mes"
