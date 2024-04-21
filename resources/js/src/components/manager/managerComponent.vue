@@ -1,0 +1,84 @@
+<template>
+	<v-app id="inspire">
+		<v-navigation-drawer
+			:location="$vuetify.display.mobile ? 'bottom' : undefined"
+			:rail="rail"
+			permanent
+			@click="rail = false"
+		>
+			<!-- menu -->
+
+			<v-list
+				:lines="false"
+				density="compact"
+				nav
+			>
+				<v-list-item
+					nav
+					prepend-avatar="/img/logo.webp"
+				>
+					<template v-slot:append>
+						<v-btn
+							icon="mdi-chevron-left"
+							variant="text"
+							@click.stop="rail = !rail"
+						></v-btn>
+					</template>
+				</v-list-item>
+				<v-list-item
+					v-for="(item, i) in items"
+					:key="i"
+					color="primary"
+					@click="theMenu = item.name"
+					:title="item.text"
+					:prepend-icon="item.icon"
+				>
+				</v-list-item>
+			</v-list>
+			<v-divider></v-divider>
+			<v-list
+				density="compact"
+				nav
+			>
+				<v-list-item
+					@click="$emit('login', {})"
+					prepend-icon="mdi-logout"
+					title="Wyjście"
+				>
+				</v-list-item>
+			</v-list>
+		</v-navigation-drawer>
+
+		<v-main>
+			<v-container fluid>
+				<component
+					:user="user"
+					:is="setComponent"
+				/>
+			</v-container>
+		</v-main>
+	</v-app>
+</template>
+
+<script>
+import refunds from './refundsComponent.vue';
+
+export default {
+	name: 'Refunds',
+	components: [refunds],
+	props: ['user'],
+	data: () => ({
+		drawer: true,
+		rail: true,
+		selectedItem: 0,
+		theMenu: 'refunds',
+
+		items: [{ text: 'Zwroty', name: 'refunds', icon: 'mdi-restore' }],
+	}),
+	computed: {
+		setComponent() {
+			if (this.theMenu == 'refunds') return refunds;
+		},
+	},
+};
+</script>
