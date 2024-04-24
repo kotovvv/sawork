@@ -1,10 +1,18 @@
 <template>
-	<v-content class="container align-center px-1">
+	<v-container class="container align-center px-1">
 		<h2 class="font-weight-light mb-2"> Magazyn - email </h2>
+		<v-col cols="12">
+			<v-btn
+				@click="dialog = !dialog"
+				color="surface-variant"
+				text="Nowość"
+				variant="flat"
+			></v-btn>
+		</v-col>
 		<v-card>
 			<v-data-table
 				:headers="headers"
-				:items="items"
+				:items="magazyns"
 				mobile-breakpoint="800"
 				class="elevation-0"
 			>
@@ -18,122 +26,93 @@
 						>
 							mdi-pencil
 						</v-icon>
-						<v-icon
+						<!-- <v-icon
 							small
 							@click="deleteMagEmail(item)"
 							color="pink"
 						>
 							mdi-delete
-						</v-icon>
-					</div>
-				</template>
-				<template v-slot:item.details="{ item }">
-					<div
-						class="text-truncate"
-						style="width: 180px"
-					>
-						{{ item.Details }}
-					</div>
-				</template>
-				<template v-slot:item.url="{ item }">
-					<div
-						class="text-truncate"
-						style="width: 180px"
-					>
-						<a
-							:href="item.URL"
-							target="_new"
-							>{{ item.URL }}</a
-						>
+						</v-icon> -->
 					</div>
 				</template>
 			</v-data-table>
+
 			<!-- this dialog is used for both create and update -->
 			<v-dialog
+				max-width="500"
 				v-model="dialog"
-				max-width="500px"
 			>
-				<template v-slot:activator="{ on }">
-					<div class="d-flex">
-						<v-btn
-							color="primary"
-							dark
-							class="ml-auto ma-3"
-							v-on="on"
-						>
-							New
-							<v-icon small>mdi-plus-circle-outline</v-icon>
-						</v-btn>
-					</div>
+				<template v-slot:default="{ isActive }">
+					<v-card>
+						<v-card-title>
+							<span v-if="editedItem.id">Edytuj {{ editedItem.name }}</span>
+							<span v-else>Create</span>
+						</v-card-title>
+						<v-card-text>
+							<v-row>
+								<v-col>
+									<v-select
+										v-model="editedItem.IDMagazynu"
+										:items="warehouses"
+										item-title="Nazwa"
+										item-value="IDMagazynu"
+										label="Nazwa"
+										persistent-hint
+										single-line
+									></v-select>
+								</v-col>
+								<v-col cols="12">
+									<v-text-field
+										v-model="editedItem.eMailAddress"
+										label="eMailAddress"
+									></v-text-field>
+								</v-col>
+
+								<v-col cols="12">
+									<v-select
+										v-model="editedItem.cod"
+										:items="cod"
+										label="Cod"
+										persistent-hint
+										single-line
+									></v-select>
+								</v-col>
+							</v-row>
+						</v-card-text>
+
+						<v-card-actions>
+							<v-spacer></v-spacer>
+							<v-btn
+								color="blue darken-1"
+								text
+								@click="isActive.value = false"
+								>Anuluj</v-btn
+							>
+							<v-btn
+								color="blue darken-1"
+								text
+								@click="saveMagEmail(editedItem)"
+								>Zapisz</v-btn
+							>
+						</v-card-actions>
+					</v-card>
 				</template>
-				<v-card>
-					<v-card-title>
-						<span v-if="editedItem.id">Edit {{ editedItem.id }}</span>
-						<span v-else>Create</span>
-					</v-card-title>
-					<v-card-text>
-						<v-row>
-							<v-col
-								cols="12"
-								sm="4"
-							>
-								<v-text-field
-									v-model="editedItem.Name"
-									label="Name"
-								></v-text-field>
-							</v-col>
-							<v-col
-								cols="12"
-								sm="8"
-							>
-								<v-text-field
-									v-model="editedItem.Details"
-									label="Details"
-								></v-text-field>
-							</v-col>
-							<v-col
-								cols="12"
-								sm="12"
-							>
-								<v-text-field
-									v-model="editedItem.URL"
-									label="URL"
-								></v-text-field>
-							</v-col>
-						</v-row>
-					</v-card-text>
-					<v-card-actions>
-						<v-spacer></v-spacer>
-						<v-btn
-							color="blue darken-1"
-							text
-							@click="showEditDialog()"
-							>Cancel</v-btn
-						>
-						<v-btn
-							color="blue darken-1"
-							text
-							@click="saveMagEmail(editedItem)"
-							>Save</v-btn
-						>
-					</v-card-actions>
-				</v-card>
 			</v-dialog>
 		</v-card>
-	</v-content>
+	</v-container>
 </template>
 
 <script>
 import axios from 'axios';
 export default {
 	name: 'DictionaryComponent',
+
 	data() {
 		return {
 			magazyns: [],
 			headers: [
-				{ text: 'Id', value: 'id' },
-				{ text: 'IDMagazyn', value: 'id' },
-				{ text: 'Magazyn', value: 'name' },
+				{ text: 'IDMagazyn', value: 'IDMagazynu' },
+				{ text: 'Magazyn', value: 'Nazwa' },
 				{ text: 'Details', value: 'eMailAddress' },
 				{ text: 'Dokument Cod', value: 'cod', name: 'cod', width: '180' },
 				{ text: 'Action', value: 'actions', sortable: false },
@@ -141,11 +120,13 @@ export default {
 			magEmail: [],
 			dialog: false,
 			editedItem: {},
+			warehouses: [],
+			cod: ['WZk'],
 		};
 	},
 	mounted() {
-		this.getMagazyns();
 		this.loadMagEmail();
+		this.getWarehouse();
 	},
 	methods: {
 		loadMagEmail() {
@@ -159,39 +140,24 @@ export default {
 					console.log(error);
 				});
 		},
-		getMagazyns() {
-			const self = this;
+		getWarehouse() {
+			const vm = this;
 			axios
-				.get('/api/getMagazyns')
-				.then((response) => {
-					self.magazyns = response.data;
+				.get('/api/getWarehouse')
+				.then((res) => {
+					if (res.status == 200) {
+						vm.warehouses = res.data;
+						// vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+					}
 				})
-				.catch((error) => {
-					console.log(error);
-				});
+				.catch((error) => console.log(error));
 		},
 		showEditDialog(item) {
+			console.log(item.Nazwa);
 			this.editedItem = item || {};
 			this.dialog = !this.dialog;
 		},
-		loadItems() {
-			this.items = [];
-			axios
-				.get(`https://api.airtable.com/v0/${airTableApp}/${airTableName}`, {
-					headers: { Authorization: 'Bearer ' + apiToken },
-				})
-				.then((response) => {
-					this.items = response.data.records.map((item) => {
-						return {
-							id: item.id,
-							...item.fields,
-						};
-					});
-				})
-				.catch((error) => {
-					console.log(error);
-				});
-		},
+
 		saveMagEmail(item) {
 			/* this is used for both creating and updating API records
          the default method is POST for creating a new item */

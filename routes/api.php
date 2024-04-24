@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ReturnController;
+use App\Http\Controllers\Api\MagazynController;
 use App\Http\Controllers\Api\sendPDF;
 
 /*
@@ -20,6 +21,7 @@ use App\Http\Controllers\Api\sendPDF;
 //     return $request->user();
 // });
 Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
+Route::get('loadMagEmail', [MagazynController::class, 'loadMagEmail']);
 Route::post('getOrder', [ReturnController::class, 'getOrder']);
 Route::post('doWz', [ReturnController::class, 'doWz']);
 Route::get('sendPDF', [sendPDF::class, 'index']);
