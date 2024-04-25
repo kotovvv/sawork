@@ -19,10 +19,16 @@ class sendPDF extends Controller
             'title' => 'Zwrot od odbiorcy ' . date('Y-m-d'),
         ];
 
+        $curent_date = '2024-04-12'; //date('Y-m-d');
+
         $magazin = [];
         $my = DB::selectOne("SELECT  k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.Kontrahent k WHERE k.IDKontrahenta = 1");
 
-        $docsWZk = DB::select("SELECT top 20 rm.IDRuchuMagazynowego, rm.Data, rm.Uwagi , rm.IDMagazynu, rm.NrDokumentu, rm.IDKontrahenta, rm.IDUzytkownika, rm.WartoscDokumentu, k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.RuchMagazynowy rm left JOIN dbo.Kontrahent k ON (k.IDKontrahenta = rm.IDKontrahenta) WHERE NrDokumentu LIKE '%WZk%' ORDER BY IDRuchuMagazynowego DESC , Data ASC");
+        $docsWZk = DB::select("SELECT rm.IDRuchuMagazynowego, rm.Data, rm.Uwagi, rm.IDMagazynu, rm.NrDokumentu, rm.IDKontrahenta, rm.IDUzytkownika, rm.WartoscDokumentu, k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon
+FROM dbo.RuchMagazynowy rm
+LEFT JOIN dbo.Kontrahent k ON (k.IDKontrahenta = rm.IDKontrahenta)
+WHERE NrDokumentu LIKE 'WZk%' AND cast(Data AS date) = '$curent_date' AND rm.IDRuchuMagazynowego NOT IN (SELECT IDRuchuMagazynowego FROM dbo.EMailLog WHERE CAST(Data AS date) = '$curent_date')
+ORDER BY IDRuchuMagazynowego DESC, DATA ASC");
         // $docsWZk = DB::select("SELECT  rm.IDRuchuMagazynowego, rm.Data, rm.Uwagi , rm.IDMagazynu, rm.NrDokumentu, rm.IDKontrahenta, rm.IDUzytkownika, rm.WartoscDokumentu, k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.RuchMagazynowy rm left JOIN dbo.Kontrahent k ON (k.IDKontrahenta = rm.IDKontrahenta) WHERE cast(Data AS date) >= DATEADD(day, DATEDIFF(day, 0, GETDATE()), 0) AND NrDokumentu LIKE '%WZk%' ORDER BY IDRuchuMagazynowego DESC , Data ASC");
 
         foreach ($docsWZk as $key => $docWZk) {
@@ -41,6 +47,17 @@ class sendPDF extends Controller
             $magazin[$forpdf['Magazyn']->Nazwa]['pdfs'][] = $pdf;
             $magazin[$forpdf['Magazyn']->Nazwa]['ndoc'][] = $docWZk->NrDokumentu;
             $magazin[$forpdf['Magazyn']->Nazwa]['email'] = env('MAIL_TEST');
+
+            //for log email
+            $email_log = [
+                'Data' => date('Y-m-d H:i:s'),
+                'IDMagazynu' => $docWZk->IDMagazynu,
+                'NrDokumentu' => $docWZk->NrDokumentu,
+                'IDRuchuMagazynowego' => $docWZk->IDRuchuMagazynowego
+
+            ];
+
+            DB::table('dbo.EMailLog')->insert($email_log);
             //sleep(10);
         }
 
