@@ -26,13 +26,13 @@
 						>
 							mdi-pencil
 						</v-icon>
-						<!-- <v-icon
+						<v-icon
 							small
 							@click="deleteMagEmail(item)"
 							color="pink"
 						>
 							mdi-delete
-						</v-icon> -->
+						</v-icon>
 					</div>
 				</template>
 			</v-data-table>
@@ -85,7 +85,10 @@
 							<v-btn
 								color="blue darken-1"
 								text
-								@click="isActive.value = false"
+								@click="
+									isActive.value = false;
+									editedItem = {};
+								"
 								>Anuluj</v-btn
 							>
 							<v-btn
@@ -159,63 +162,41 @@ export default {
 		},
 
 		saveMagEmail(item) {
-			/* this is used for both creating and updating API records
-         the default method is POST for creating a new item */
-
-			let method = 'post';
-			let url = `https://api.airtable.com/v0/${airTableApp}/${airTableName}`;
-			let id = item.id;
-
-			// airtable API needs the data to be placed in fields object
-			let data = {
-				fields: item,
-			};
-
-			if (id) {
-				// if the item has an id, we're updating an existing item
-				method = 'patch';
-				url = `https://api.airtable.com/v0/${airTableApp}/${airTableName}/${id}`;
-
-				// must remove id from the data for airtable patch to work
-				delete data.fields.id;
-			}
+			let data = {};
+			data.id = item.ID;
+			data.IDMagazynu = item.IDMagazynu;
+			data.eMailAddress = item.eMailAddress;
+			data.cod = item.cod;
 
 			// save the record
-			axios[method](url, data, {
-				headers: {
-					'Authorization': 'Bearer ' + apiToken,
-					'Content-Type': 'application/json',
-				},
-			}).then((response) => {
-				if (response.data && response.data.id) {
-					console.log(response.data);
-					// add new item to state
-					this.editedItem.id = response.data.id;
-					if (!id) {
-						// add the new item to items state
-						this.items.push(this.editedItem);
+			axios
+				.post('api/saveMagEmail', data, {
+					// headers: {
+					// 	'Authorization': 'Bearer ' + apiToken,
+					// 	'Content-Type': 'application/json',
+					// },
+				})
+				.then((response) => {
+					if (response.data > 0) {
+						console.log(response.data);
+						this.magazyns.push(this.editedItem);
+					} else {
+						this.editedItem.ID = response.data;
 					}
 					this.editedItem = {};
-				}
-				this.dialog = !this.dialog;
-			});
+					this.dialog = !this.dialog;
+				});
 		},
 		deleteMagEmail(item) {
-			//console.log('deleteMagEmail', item)
-			let id = item.id;
-			let idx = this.items.findIndex((item) => item.id === id);
-			if (confirm('Are you sure you want to delete this?')) {
-				/* not really deleting in API for demo */
-				/*
-            axios.delete(`https://api.airtable.com/v0/${airTableApp}/${airTableName}/${id}`,
-                { headers: {
-                    Authorization: "Bearer " + apiToken,
-                    "Content-Type": "application/json"
-                }
-            }).then((response) => {
-                this.items.splice(idx, 1)
-            })*/
-				this.items.splice(idx, 1);
+			let data = {};
+			data.ID = item.ID;
+
+			let idx = this.magazyns.findIndex((i) => i.ID === item.ID);
+			// save the record
+			if (confirm('Czy na pewno chcesz to usunąć??')) {
+				axios.post('api/deleteMagEmail', data, {}).then((response) => {
+					this.magazyns.splice(idx, 1);
+				});
 			}
 		},
 	},

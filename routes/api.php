@@ -22,6 +22,8 @@ use App\Http\Controllers\Api\sendPDF;
 // });
 Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
 Route::get('loadMagEmail', [MagazynController::class, 'loadMagEmail']);
+Route::post('saveMagEmail', [MagazynController::class, 'saveMagEmail']);
+Route::post('deleteMagEmail', [MagazynController::class, 'deleteMagEmail']);
 Route::post('getOrder', [ReturnController::class, 'getOrder']);
 Route::post('doWz', [ReturnController::class, 'doWz']);
 Route::get('sendPDF', [sendPDF::class, 'index']);
