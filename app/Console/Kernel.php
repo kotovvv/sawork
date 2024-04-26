@@ -4,15 +4,18 @@ namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use App\Http\Controllers\Api\SendPDF;
 
 class Kernel extends ConsoleKernel
 {
-    /**
-     * Define the application's command schedule.
-     */
-    protected function schedule(Schedule $schedule): void
+
+    protected function schedule(Schedule $schedule)
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->call(function () {
+            // Instantiate and call the index function of the SendPDF controller
+            $sendPDFController = new SendPDF();
+            $sendPDFController->index();
+        })->everyFiveMinutes()->dailyAt('17:00')->dailyAt('23:50'); // Adjust this as per your requirement (e.g., hourly(), weekly(), etc.)
     }
 
     /**
@@ -20,7 +23,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands(): void
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }

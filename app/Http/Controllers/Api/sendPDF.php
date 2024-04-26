@@ -13,13 +13,13 @@ use Illuminate\Mail\Mailable;
 
 class sendPDF extends Controller
 {
-    function index(Request $request)
+    function index()
     {
         $data = [
             'title' => 'Zwrot od odbiorcy ' . date('Y-m-d'),
         ];
 
-        $curent_date = '2024-04-12'; //date('Y-m-d');
+        $curent_date = date('Y-m-d');
 
         $magazin = [];
         $my = DB::selectOne("SELECT  k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.Kontrahent k WHERE k.IDKontrahenta = 1");
@@ -50,7 +50,7 @@ ORDER BY IDRuchuMagazynowego DESC, DATA ASC");
 
             //for log email
             $email_log = [
-                'Data' => date('Y-m-d H:i:s'),
+                // 'Data' => date('Y-m-d H:i:s'),
                 'IDMagazynu' => $docWZk->IDMagazynu,
                 'NrDokumentu' => $docWZk->NrDokumentu,
                 'IDRuchuMagazynowego' => $docWZk->IDRuchuMagazynowego
