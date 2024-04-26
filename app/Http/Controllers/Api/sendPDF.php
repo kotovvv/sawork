@@ -40,13 +40,14 @@ ORDER BY IDRuchuMagazynowego DESC, DATA ASC");
             }
             $forpdf['docWZk'] = $docWZk;
             $forpdf['Magazyn'] = DB::selectOne("SELECT Nazwa FROM dbo.Magazyn WHERE IDMagazynu = " . $docWZk->IDMagazynu);
+            $email = DB::selectOne("SELECT eMailAddress FROM dbo.EMailMagazyn WHERE IDMagazyn = " . $docWZk->IDMagazynu);
             $forpdf['products'] = DB::select("SELECT t.Nazwa, t.KodKreskowy, erm.Uwagi, erm.Ilosc, erm.CenaJednostkowa, jm.Nazwa ed FROM ElementRuchuMagazynowego erm LEFT JOIN dbo.Towar t ON (erm.IDTowaru = t.IDTowaru) left JOIN JednostkaMiary jm ON (t.IDJednostkiMiary =  jm.IDJednostkiMiary) WHERE IDRuchuMagazynowego = " . $docWZk->IDRuchuMagazynowego);
             //generating pdf with user data
             $pdf = Pdf::loadView('mail', $forpdf);
 
             $magazin[$forpdf['Magazyn']->Nazwa]['pdfs'][] = $pdf;
             $magazin[$forpdf['Magazyn']->Nazwa]['ndoc'][] = $docWZk->NrDokumentu;
-            $magazin[$forpdf['Magazyn']->Nazwa]['email'] = env('MAIL_TEST');
+            $magazin[$forpdf['Magazyn']->Nazwa]['email'] = $email;
 
             //for log email
             $email_log = [
