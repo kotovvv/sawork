@@ -15,7 +15,7 @@ class Kernel extends ConsoleKernel
             // Instantiate and call the index function of the SendPDF controller
             $sendPDFController = new SendPDF();
             $sendPDFController->index();
-        })->everyFiveMinutes()->dailyAt('17:00')->dailyAt('23:50'); // Adjust this as per your requirement (e.g., hourly(), weekly(), etc.)
+        })->dailyAt('17:00')->dailyAt('23:50'); // Adjust this as per your requirement (e.g., hourly(), weekly(), etc.)
     }
 
     /**
