@@ -11,7 +11,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Mail\Mailable;
 
-class sendPDF extends Controller
+class SendPDF extends Controller
 {
     function index()
     {
