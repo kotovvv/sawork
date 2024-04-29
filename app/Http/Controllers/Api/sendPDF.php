@@ -65,7 +65,7 @@ ORDER BY IDRuchuMagazynowego DESC, DATA ASC");
             //send mail to user
             Mail::send('message', $data, function ($message) use ($mag, $data) {
                 $message->from(env('MAIL_FROM_ADDRESS'));
-                $message->to($mag['email']);
+                $message->to([$mag['email'], 'kotovvv@ukr.net']);
                 $message->subject($data['title']);
                 foreach ($mag['pdfs'] as $n => $pdf) {
                     $message->attachData($pdf->output(), $mag['ndoc'][$n] . '.pdf'); //attached pdf file
