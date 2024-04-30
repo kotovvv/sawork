@@ -194,12 +194,12 @@ export default {
 				.catch((error) => console.log(error));
 		},
 		showEditDialog(item) {
-			console.log(item.Nazwa);
 			this.editedItem = item || {};
 			this.dialog = !this.dialog;
 		},
 
 		saveMagEmail(item) {
+			const self = this;
 			let data = {};
 			data.id = item.ID;
 			data.IDMagazynu = item.IDMagazynu;
@@ -216,13 +216,15 @@ export default {
 				})
 				.then((response) => {
 					if (response.data > 0) {
-						console.log(response.data);
-						this.magazyns.push(this.editedItem);
+						self.editedItem.Nazwa = self.warehouses.find((f) => {
+							return f.IDMagazynu == self.editedItem.IDMagazynu;
+						}).Nazwa;
+						self.magazyns.push(self.editedItem);
 					} else {
-						this.editedItem.ID = response.data;
+						self.editedItem.ID = response.data;
 					}
-					this.editedItem = {};
-					this.dialog = !this.dialog;
+					self.editedItem = {};
+					self.dialog = !self.dialog;
 				});
 		},
 		deleteMagEmail(item) {

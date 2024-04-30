@@ -19,6 +19,7 @@ class SendPDF extends Controller
             'title' => 'Zwrot od odbiorcy ' . date('Y-m-d'),
         ];
 
+
         $magazin = [];
         $my = DB::selectOne("SELECT  k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.Kontrahent k WHERE k.IDKontrahenta = 1");
 
@@ -62,20 +63,16 @@ ORDER BY IDRuchuMagazynowego DESC, DATA ASC");
 
         foreach ($magazin as $key => $mag) {
             //send mail to user
-
-            $emails = explode(',', $mag['email']->eMailAddress);
-
-            if ($mag['email']) {
-                Mail::send('message', $data, function ($message) use ($mag, $data, $emails) {
-                    $message->from(env('MAIL_FROM_ADDRESS'));
-                    $message->to($emails);
-                    $message->subject($data['title']);
-                    foreach ($mag['pdfs'] as $n => $pdf) {
-                        $message->attachData($pdf->output(), $mag['ndoc'][$n] . '.pdf'); //attached pdf file
-                    }
-                });
-            }
+            Mail::send('message', $data, function ($message) use ($mag, $data) {
+                $message->from(env('MAIL_FROM_ADDRESS'));
+                $message->to([$mag['email'], 'kotovvv@ukr.net']);
+                $message->subject($data['title']);
+                foreach ($mag['pdfs'] as $n => $pdf) {
+                    $message->attachData($pdf->output(), $mag['ndoc'][$n] . '.pdf'); //attached pdf file
+                }
+            });
         }
+
 
         return response("Zwroty wysłane: " . count($docsWZk), '200');
     }
