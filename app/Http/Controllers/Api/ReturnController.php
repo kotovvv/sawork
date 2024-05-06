@@ -133,8 +133,9 @@ class ReturnController extends Controller
         // Operator = 1
         // IDCompany = из WZ
 
-        $ndoc = DB::select("SELECT COUNT(*) n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '4' AND IDMagazynu = " . $magazin_id . " AND year( Utworzono ) = " . date('Y'));
-        $creat_wz['NrDokumentu'] = 'WZk' . $ndoc[0]->n + 1 . '/' . date('y') . ' - ' . $data["magazin"]["Symbol"];
+        $ndoc = DB::selectOne("SELECT TOP 1 NrDokumentu n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '4' AND IDMagazynu = " . $magazin_id . " AND year( Utworzono ) = " . date('Y') . " ORDER BY Data DESC");
+        preg_match('/^WZk(.*)\/.*/', $ndoc->n, $a_ndoc);
+        $creat_wz['NrDokumentu'] = 'WZk' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $data["magazin"]["Symbol"];
         $wz = DB::table('dbo.RuchMagazynowy')->insert($creat_wz);
         if ($wz) {
             $wz = DB::select("select * from dbo.RuchMagazynowy where NrDokumentu = '" . $creat_wz['NrDokumentu'] . "'")[0];
