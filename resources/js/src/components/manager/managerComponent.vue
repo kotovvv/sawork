@@ -62,22 +62,27 @@
 
 <script>
 import refunds from './refundsComponent.vue';
+import refunds2 from './refunds2Component.vue';
 
 export default {
 	name: 'Refunds',
-	components: [refunds],
+	components: [refunds, refunds2],
 	props: ['user'],
 	data: () => ({
 		drawer: true,
 		rail: true,
 		selectedItem: 0,
-		theMenu: 'refunds',
+		theMenu: 'refunds2',
 
-		items: [{ text: 'Zwroty', name: 'refunds', icon: 'mdi-restore' }],
+		items: [
+			{ text: 'Zwroty', name: 'refunds', icon: 'mdi-restore' },
+			{ text: 'Zwroty2', name: 'refunds2', icon: 'mdi-database-plus' },
+		],
 	}),
 	computed: {
 		setComponent() {
 			if (this.theMenu == 'refunds') return refunds;
+			if (this.theMenu == 'refunds2') return refunds2;
 		},
 	},
 };
