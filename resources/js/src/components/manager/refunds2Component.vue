@@ -184,9 +184,11 @@
 		</v-dialog>
 		<v-dialog
 			id="dialogProduct"
+			ref="dProduct"
 			v-model="dialogProduct"
 			transition="dialog-bottom-transition"
 			fullscreen
+			@keyup="handleKeypress"
 		>
 			<v-card>
 				<v-toolbar>
@@ -265,33 +267,34 @@ export default {
 			order_mes: '',
 			draft: '',
 			text: '',
+			el: {},
 		};
 	},
 
 	mounted() {
 		this.getWarehouse();
+		this.el = this.$refs.dProduct;
+		console.log(this.el);
 	},
 
 	methods: {
-		openDialogProduct() {
-			const el = document.getElementById('dialogProduct');
-			console.log(el);
-			el.addEventListener('keyup', this.onKeyup);
-			this.dialogProduct = true;
-		},
-		closeDialogProduct() {
-			const el = document.getElementById('dialogProduct');
-			el.removeEventListener('keyup', this.onKeyup);
-			this.dialogProduct = false;
-		},
-		onKeyup(event) {
+		handleKeypress(event) {
+			// Check if the Enter key was pressed
 			if (event.key === 'Enter') {
-				this.text = this.draft + '';
-				this.draft = '';
+				// Execute the function with the accumulated input
+				this.handleInput();
+				// Clear the input field
+				this.input = '';
 			} else {
-				this.draft += event.key;
+				// Append the current keystroke to the input
+				this.input += event.key;
 			}
 		},
+		handleInput() {
+			// Perform actions based on the accumulated input
+			console.log('Accumulated input:', this.input);
+		},
+
 		clear() {
 			this.order = {};
 			this.wz = {};
@@ -359,7 +362,7 @@ export default {
 									e.qty = '';
 									e.message = '';
 								});
-								vm.openDialogProduct();
+								vm.dialogProduct = true;
 
 								// vm.focusOnProduct();
 							} else {
