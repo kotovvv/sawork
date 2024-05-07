@@ -190,48 +190,54 @@
 			fullscreen
 			@keyup="handleKeypress"
 		>
-			<v-card>
-				<v-toolbar>
-					<v-toolbar-title>
-						<b>Order: </b>
-						<span v-if="order.Number">{{
-							(order.Number ?? '') +
-								' - ' +
-								order.pk +
-								' (' +
-								(order.Created ?? '') +
-								') - ' +
-								order.cName ?? ''
-						}}</span>
-						<span
-							v-if="order_mes"
-							style="color: red"
-							>{{ order_mes }}</span
-						></v-toolbar-title
-					>
+			<v-container>
+				<v-card>
+					<v-toolbar>
+						<v-toolbar-title>
+							<b>Order: </b>
+							<span v-if="order.Number">{{
+								(order.Number ?? '') +
+									' - ' +
+									order.pk +
+									' (' +
+									(order.Created ?? '') +
+									') - ' +
+									order.cName ?? ''
+							}}</span>
+							<span
+								v-if="order_mes"
+								style="color: red"
+								>{{ order_mes }}</span
+							></v-toolbar-title
+						>
 
-					<v-spacer></v-spacer>
+						<v-spacer></v-spacer>
 
-					<v-toolbar-items>
+						<v-toolbar-items>
+							<v-btn
+								icon="mdi-close"
+								@click="
+									dialogProduct = false;
+									text = '';
+								"
+							></v-btn>
+						</v-toolbar-items>
+					</v-toolbar>
+					<v-card-text>
+						<label>Draft: Press enter when done.</label>
+
+						<label>Text:</label>
+						<pre>{{ text }}</pre>
+					</v-card-text>
+					<template v-slot:actions>
 						<v-btn
-							icon="mdi-close"
-							@click="closeDialogProduct()"
+							large
+							class="btn primary ms-auto"
+							text="Ok"
 						></v-btn>
-					</v-toolbar-items>
-				</v-toolbar>
-				<v-card-text>
-					<label>Draft: Press enter when done.</label>
-					<pre>{{ draft }}</pre>
-					<label>Text:</label>
-					<pre>{{ text }}</pre>
-				</v-card-text>
-				<template v-slot:actions>
-					<v-btn
-						class="ms-auto"
-						text="Ok"
-					></v-btn>
-				</template>
-			</v-card>
+					</template>
+				</v-card>
+			</v-container>
 		</v-dialog>
 	</v-container>
 </template>
@@ -265,16 +271,13 @@ export default {
 				max: 1,
 			},
 			order_mes: '',
-			draft: '',
+			input: '',
 			text: '',
-			el: {},
 		};
 	},
 
 	mounted() {
 		this.getWarehouse();
-		this.el = this.$refs.dProduct;
-		console.log(this.el);
 	},
 
 	methods: {
@@ -292,7 +295,7 @@ export default {
 		},
 		handleInput() {
 			// Perform actions based on the accumulated input
-			console.log('Accumulated input:', this.input);
+			this.text = this.input;
 		},
 
 		clear() {
