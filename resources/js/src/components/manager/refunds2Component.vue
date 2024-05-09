@@ -108,35 +108,38 @@
 					</v-card-title>
 
 					<v-card-text>
-						<v-row
-							class="product_line border"
-							v-for="p in products"
-							:key="p.IDTowaru"
-						>
-							<v-col>
-								<h5
-									><img
-										v-if="p.img"
-										:src="'data:image/jpeg;base64,' + p.img"
-										alt="pic"
-										style="height: 3em"
-									/>
-									{{ p.Nazwa }}</h5
-								>
-							</v-col>
-							<v-col>
-								<div class="d-flex justify-end">
-									<v-btn>-</v-btn>
-									<div
-										:id="p.IDTowaru"
-										class="border qty text-h5 text-center"
+						<div class="d-flex flex-column">
+							<v-row
+								class="product_line border"
+								v-for="p in products"
+								:key="p.IDTowaru"
+								:class="{ active: p.IDTowaru == edit.IDTowaru, error: p.qty > edit.Quantity }"
+							>
+								<v-col>
+									<h5
+										><img
+											v-if="p.img"
+											:src="'data:image/jpeg;base64,' + p.img"
+											alt="pic"
+											style="height: 3em"
+										/>
+										{{ p.Nazwa }}<br />{{ p.KodKreskowy }}</h5
 									>
-										{{ p.qty }} z {{ parseInt(p.Quantity) }}</div
-									>
-									<v-btn>+</v-btn>
-								</div>
-							</v-col>
-						</v-row>
+								</v-col>
+								<v-col>
+									<div class="d-flex justify-end">
+										<v-btn @click="changeCounter(p, -1)">-</v-btn>
+										<div
+											:id="p.IDTowaru"
+											class="border qty text-h5 text-center"
+										>
+											{{ p.qty }} z {{ parseInt(p.Quantity) }}</div
+										>
+										<v-btn @click="changeCounter(p, 1)">+</v-btn>
+									</div>
+								</v-col>
+							</v-row>
+						</div>
 					</v-card-text>
 					<template v-slot:actions>
 						<v-btn
@@ -180,7 +183,7 @@ export default {
 				max: 1,
 			},
 			order_mes: '',
-			input: '',
+			imputCod: '',
 			text: '',
 		};
 	},
@@ -194,17 +197,13 @@ export default {
 			// Check if the Enter key was pressed
 			if (event.key === 'Enter') {
 				// Execute the function with the accumulated input
-				this.handleInput();
+				this.findProduct();
 				// Clear the input field
-				this.input = '';
+				this.imputCod = '';
 			} else {
 				// Append the current keystroke to the input
-				this.input += event.key;
+				this.imputCod += event.key;
 			}
-		},
-		handleInput() {
-			// Perform actions based on the accumulated input
-			this.text = this.input;
 		},
 
 		clear() {
@@ -212,7 +211,7 @@ export default {
 			this.wz = {};
 			this.products = [];
 			this.ordername = '';
-			this.imputProduct = '';
+			this.imputCod = '';
 		},
 		doWz() {
 			const vm = this;
@@ -297,28 +296,22 @@ export default {
 			// [_TowarTempString1] - артикул
 			const product = this.products.find(
 				(e) =>
-					e.IDTowaru == this.imputProduct ||
-					e.KodKreskowy == this.imputProduct ||
-					e['_TowarTempString1'] == this.imputProduct,
+					e.IDTowaru == this.imputCod ||
+					e.KodKreskowy == this.imputCod ||
+					e['_TowarTempString1'] == this.imputCod,
 			);
 			if (product) {
-				this.editProduct(product, 1);
+				this.edit = product;
+				this.changeCounter(product, 1);
 			} else {
-				this.edit.id = 0;
-
 				this.dialog_text = 'Brak produktu!!!';
 				this.dialog = true;
 			}
 		},
 
-		changeCounter: function (num) {
-			this.edit.qty += +num;
-			if (this.edit.qty > this.edit.max) {
-				this.dialog_text = 'Dla tego zamówienia maksymalna ilość tego produktu wynosi = ' + this.edit.max;
-				this.dialog = true;
-			}
-			this.edit.qty = this.edit.qty < this.edit.max ? this.edit.qty : this.edit.max;
-			!isNaN(this.edit.qty) && this.edit.qty > 0 ? this.edit.qty : (this.edit.qty = 0);
+		changeCounter: function (item, num) {
+			item.qty += +num;
+			if (item.qty < 0) item.qty = 0;
 		},
 		saveEdit() {
 			const vm = this;
@@ -330,7 +323,7 @@ export default {
 			);
 			// this.products.sort((a.qty, b.qty) => a.qty - b.qty);
 			this.edit.id = 0;
-			this.imputProduct = '';
+			this.imputCod = '';
 		},
 		editProduct(product, add) {
 			this.edit.Nazwa = product.Nazwa;
@@ -345,16 +338,17 @@ export default {
 			this.edit.message = product.message;
 			this.edit.max = parseInt(product.Quantity);
 		},
-		focusOnProduct() {
-			this.$nextTick(() => {
-				this.$refs.imputproduct.focus();
-			});
-		},
 	},
 };
 </script>
 <style lang="scss">
 .qty {
 	width: 150px;
+}
+.active .qty {
+	background: #e0e0e0;
+}
+.error .qty {
+	background: #ffcdd2;
 }
 </style>
