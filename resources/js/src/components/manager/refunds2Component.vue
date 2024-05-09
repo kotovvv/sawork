@@ -47,12 +47,40 @@
 		</v-row>
 
 		<!-- Products -->
+		<ConfirmDlg ref="confirm" />
+		<v-dialog
+			v-model="dialogMessageQty"
+			width="auto"
+		>
+			<v-card
+				width="600"
+				prepend-icon="mdi-pencil"
+			>
+				<v-card-text>
+					<v-text-field
+						label="Wiadomość"
+						v-model="edit.message"
+					></v-text-field>
+					<v-text-field
+						label="Ilość"
+						v-model="edit.qty"
+					></v-text-field>
+				</v-card-text>
+				<template v-slot:actions>
+					<v-btn
+						class="ms-auto"
+						text="Ok"
+						@click="dialogMessageQty = false"
+					></v-btn>
+				</template>
+			</v-card>
+		</v-dialog>
 		<v-dialog
 			v-model="dialog"
 			width="auto"
 		>
 			<v-card
-				max-width="400"
+				max-width="600"
 				prepend-icon="mdi-alert-outline"
 				:text="dialog_text"
 				:title="dialog_title"
@@ -116,16 +144,26 @@
 								:class="{ active: p.IDTowaru == edit.IDTowaru, error: p.qty > edit.Quantity }"
 							>
 								<v-col>
-									<h5
-										><img
+									<div class="d-flex">
+										<img
 											v-if="p.img"
 											:src="'data:image/jpeg;base64,' + p.img"
 											alt="pic"
 											style="height: 3em"
 										/>
-										{{ p.Nazwa }}<br />{{ p.KodKreskowy }}</h5
-									>
+										<span
+											><h5>{{ p.Nazwa }}<br />{{ p.KodKreskowy }}</h5>
+										</span>
+										<v-btn
+											@click="
+												edit = p;
+												dialogMessageQty = true;
+											"
+											><v-icon>mdi-pencil</v-icon></v-btn
+										>
+									</div>
 								</v-col>
+
 								<v-col>
 									<div class="d-flex justify-end">
 										<v-btn @click="changeCounter(p, -1)">-</v-btn>
@@ -142,11 +180,35 @@
 						</div>
 					</v-card-text>
 					<template v-slot:actions>
-						<v-btn
-							large
-							class="btn primary ms-auto"
-							text="Ok"
-						></v-btn>
+						<v-spacer></v-spacer>
+						<section
+							class="row"
+							v-if="products.find((e) => e.qty > 0)"
+						>
+							<div class="col">
+								<p>Niepełnowartościowe</p>
+								<label
+									><input
+										type="radio"
+										v-model="full"
+										value="0"
+									/>Nie</label
+								><br />
+								<label
+									><input
+										type="radio"
+										v-model="full"
+										value="1"
+									/>Tak</label
+								>
+							</div>
+						</section>
+						<button
+							class="btn btn-primary my-3"
+							v-if="products.find((e) => e.qty > 0)"
+							@click="checkFullOrder()"
+							>Tworzenie dokumentu zwrotu</button
+						>
 					</template>
 				</v-card>
 			</v-container>
@@ -156,17 +218,20 @@
 
 <script>
 import axios from 'axios';
+import ConfirmDlg from '../UI/ConfirmDlg.vue';
 export default {
 	name: 'Refund',
-
+	components: {
+		ConfirmDlg,
+	},
 	data() {
 		return {
 			dialog: false,
+			dialogProduct: false,
+			dialogMessageQty: false,
 			dialog_text: '',
 			dialog_title: '',
-			dialogProduct: false,
-			dialogProduct_text: '',
-			dialogProduct_title: '',
+
 			full: 0,
 			ordername: '',
 			order: {},
@@ -213,6 +278,23 @@ export default {
 			this.ordername = '';
 			this.imputCod = '';
 		},
+		async ConfirmFullOrder() {
+			if (await this.$refs.confirm.open('Zwrot jest niekompletny!', 'Czy zwrot jest na pewno niekompletny?')) {
+				this.doWz();
+			} else {
+				this.dialogProduct = true;
+			}
+		},
+		checkFullOrder() {
+			let sQty = this.products.reduce((acc, el) => acc + parseInt(el.qty), 0);
+			let sQua = this.products.reduce((acc, el) => acc + parseInt(el.Quantity), 0);
+			if (sQty != sQua) {
+				this.dialogProduct = false;
+				this.ConfirmFullOrder();
+			} else {
+				this.doWz();
+			}
+		},
 		doWz() {
 			const vm = this;
 			let data = {};
@@ -231,6 +313,7 @@ export default {
 					if (res.status == 200) {
 						vm.clear();
 						vm.order_mes = res.data;
+						vm.dialogProduct = false;
 					} else {
 						vm.order_mes = res.data;
 					}
@@ -324,19 +407,6 @@ export default {
 			// this.products.sort((a.qty, b.qty) => a.qty - b.qty);
 			this.edit.id = 0;
 			this.imputCod = '';
-		},
-		editProduct(product, add) {
-			this.edit.Nazwa = product.Nazwa;
-			this.edit.id = product.IDTowaru;
-
-			this.edit.qty += add;
-			if (this.edit.qty > this.edit.max) {
-				this.edit.qty = this.edit.max;
-				this.dialog_text = 'Dla tego zamówienia maksymalna ilość tego produktu wynosi = ' + this.edit.max;
-				this.dialog = true;
-			}
-			this.edit.message = product.message;
-			this.edit.max = parseInt(product.Quantity);
 		},
 	},
 };
