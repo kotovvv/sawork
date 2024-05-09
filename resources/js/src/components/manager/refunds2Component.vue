@@ -46,123 +46,7 @@
 			>
 		</v-row>
 
-		<!-- Products products.length-->
-		<v-row v-if="false">
-			<v-col>
-				<!-- <b class="mb-2 mt-3">Produkty</b> -->
-				<v-text-field
-					label="Towar"
-					v-model="imputProduct"
-					ref="imputproduct"
-					@keyup.enter="findProduct()"
-				></v-text-field>
-
-				<div class="row mb-3">
-					<div
-						class="qty input-group"
-						v-if="edit.id > 0"
-					>
-						<div class="col-12 mb-2">{{ edit.Nazwa }}</div>
-						<span class="input-group-btn">
-							<button
-								class="btn btn-light"
-								@click="changeCounter('-1')"
-								type="button"
-								name="button"
-							>
-								<span>-</span>
-							</button>
-						</span>
-						<input
-							class="text-center"
-							v-model.number="edit.qty"
-							min="0"
-							:max="edit.max"
-							style="max-width: 3rem"
-						/>
-						<span class="input-group-btn">
-							<button
-								class="btn btn-light"
-								@click="changeCounter('1')"
-								type="button"
-								name="button"
-							>
-								<span>+</span>
-							</button>
-						</span>
-						<input
-							class="col-7 form-control"
-							v-model="edit.message"
-							id="message"
-							placeholder="message"
-						/>
-						<span class="input-group-btn">
-							<v-btn @click="saveEdit()">Zapisz</v-btn>
-						</span>
-					</div>
-				</div>
-
-				<div
-					class="products"
-					v-for="(p, i) in products"
-					:key="p.IDTowaru"
-				>
-					<div
-						class="product"
-						@click="
-							edit.qty = p.qty > 0 ? p.qty : 1;
-							editProduct(p, 0);
-						"
-						id="p.IDTowaru"
-					>
-						{{ i + 1 }}.<img
-							v-if="p.img"
-							:src="'data:image/jpeg;base64,' + p.img"
-							alt="pic"
-							style="height: 3em"
-						/>
-
-						<!-- {{ p.Nazwa + ' [' + parseInt(p.Quantity) + ']' }} -->
-						{{ p.Nazwa }}<b>[ {{ parseInt(p.Quantity) }} ]</b>
-						<span
-							v-if="p.qty"
-							style="color: green"
-						>
-							<b>[ -{{ p.qty }} ]</b> {{ p.message }}</span
-						>
-					</div>
-				</div>
-			</v-col>
-		</v-row>
-		<section
-			class="row"
-			v-if="products.find((e) => e.qty > 0)"
-		>
-			<div class="col">
-				<p>Niepełnowartościowe</p>
-				<label
-					><input
-						type="radio"
-						v-model="full"
-						value="0"
-					/>Nie</label
-				><br />
-				<label
-					><input
-						type="radio"
-						v-model="full"
-						value="1"
-					/>Tak</label
-				>
-			</div>
-			<div class="col">
-				<button
-					class="btn btn-primary my-3"
-					@click="doWz()"
-					>Tworzenie dokumentu zwrotu</button
-				>
-			</div>
-		</section>
+		<!-- Products -->
 		<v-dialog
 			v-model="dialog"
 			width="auto"
@@ -192,42 +76,67 @@
 		>
 			<v-container>
 				<v-card>
-					<v-toolbar>
-						<v-toolbar-title>
-							<b>Order: </b>
-							<span v-if="order.Number">{{
-								(order.Number ?? '') +
-									' - ' +
-									order.pk +
-									' (' +
-									(order.Created ?? '') +
-									') - ' +
-									order.cName ?? ''
-							}}</span>
-							<span
-								v-if="order_mes"
-								style="color: red"
-								>{{ order_mes }}</span
-							></v-toolbar-title
-						>
+					<v-card-title class="mb-5 bg-grey-lighten-3">
+						<v-row>
+							<v-col>
+								<b>Order: </b>
+								<span v-if="order.Number">{{
+									(order.Number ?? '') +
+										' - ' +
+										order.pk +
+										' (' +
+										(order.Created ?? '') +
+										') - ' +
+										order.cName ?? ''
+								}}</span>
+								<span
+									v-if="order_mes"
+									style="color: red"
+									>{{ order_mes }}</span
+								></v-col
+							>
+							<v-spacer></v-spacer>
 
-						<v-spacer></v-spacer>
-
-						<v-toolbar-items>
 							<v-btn
 								icon="mdi-close"
 								@click="
 									dialogProduct = false;
 									text = '';
 								"
-							></v-btn>
-						</v-toolbar-items>
-					</v-toolbar>
-					<v-card-text>
-						<label>Draft: Press enter when done.</label>
+							></v-btn
+						></v-row>
+					</v-card-title>
 
-						<label>Text:</label>
-						<pre>{{ text }}</pre>
+					<v-card-text>
+						<v-row
+							class="product_line border"
+							v-for="p in products"
+							:key="p.IDTowaru"
+						>
+							<v-col>
+								<h5
+									><img
+										v-if="p.img"
+										:src="'data:image/jpeg;base64,' + p.img"
+										alt="pic"
+										style="height: 3em"
+									/>
+									{{ p.Nazwa }}</h5
+								>
+							</v-col>
+							<v-col>
+								<div class="d-flex justify-end">
+									<v-btn>-</v-btn>
+									<div
+										:id="p.IDTowaru"
+										class="border qty text-h5 text-center"
+									>
+										{{ p.qty }} z {{ parseInt(p.Quantity) }}</div
+									>
+									<v-btn>+</v-btn>
+								</div>
+							</v-col>
+						</v-row>
 					</v-card-text>
 					<template v-slot:actions>
 						<v-btn
@@ -245,7 +154,7 @@
 <script>
 import axios from 'axios';
 export default {
-	name: 'MainComponent',
+	name: 'Refund',
 
 	data() {
 		return {
@@ -362,7 +271,7 @@ export default {
 							vm.products = Object.values(res.data.products) ?? [];
 							if (vm.products.length) {
 								vm.products.map((e) => {
-									e.qty = '';
+									e.qty = 0;
 									e.message = '';
 								});
 								vm.dialogProduct = true;
@@ -445,17 +354,7 @@ export default {
 };
 </script>
 <style lang="scss">
-.wrap_product {
-	max-height: 70vh;
-	overflow-y: auto;
-}
-.product {
-	cursor: pointer;
-	border-bottom: 1px solid #ccc;
-	display: flex;
-	gap: 1rem;
-}
-.product:hover {
-	background: #ccc;
+.qty {
+	width: 150px;
 }
 </style>
