@@ -152,7 +152,10 @@
 											style="height: 3em"
 										/>
 										<span
-											><h5>{{ p.Nazwa }}<br />{{ p.KodKreskowy }}</h5>
+											><h5
+												>{{ p.Nazwa }}<br />cod: {{ p.KodKreskowy }}, sku:
+												{{ p._TowarTempString1 }}</h5
+											>
 										</span>
 										<v-btn
 											@click="
@@ -376,7 +379,7 @@ export default {
 		},
 		findProduct() {
 			// KodKreskowy - штрихкод
-			// [_TowarTempString1] - артикул
+			// [_TowarTempString1] - артикул, sku
 			const product = this.products.find(
 				(e) =>
 					e.IDTowaru == this.imputCod ||
