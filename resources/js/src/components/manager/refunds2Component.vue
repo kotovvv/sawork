@@ -398,6 +398,7 @@ export default {
 		changeCounter: function (item, num) {
 			item.qty += +num;
 			if (item.qty < 0) item.qty = 0;
+			this.$refs.dProduct.focus();
 		},
 		saveEdit() {
 			const vm = this;
