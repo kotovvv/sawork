@@ -89,7 +89,10 @@
 					<v-btn
 						class="ms-auto"
 						text="Ok"
-						@click="dialog = false"
+						@click="
+							dialog = false;
+							$refs.dProduct.focus;
+						"
 					></v-btn>
 				</template>
 			</v-card>
@@ -138,10 +141,17 @@
 					<v-card-text>
 						<div class="d-flex flex-column">
 							<v-row
-								class="product_line border"
+								class="product_line border my-0"
 								v-for="p in products"
 								:key="p.IDTowaru"
-								:class="{ active: p.IDTowaru == edit.IDTowaru, error: p.qty > edit.Quantity }"
+								:class="{
+									'active': p.IDTowaru == edit.IDTowaru,
+									'error': p.qty > p.Quantity,
+									'order-1': p.IDTowaru == edit.IDTowaru,
+									'order-4': p.qty == p.Quantity,
+									'order-0': p.qty > p.Quantity,
+									'order-3': p.qty == 0,
+								}"
 							>
 								<v-col>
 									<div class="d-flex">
@@ -184,10 +194,8 @@
 					</v-card-text>
 					<template v-slot:actions>
 						<v-spacer></v-spacer>
-						<section
-							class="row"
-							v-if="products.find((e) => e.qty > 0)"
-						>
+						<!-- v-if="products.find((e) => e.qty > 0)" -->
+						<section class="row">
 							<div class="col">
 								<p>Niepełnowartościowe</p>
 								<label
@@ -208,7 +216,11 @@
 						</section>
 						<button
 							class="btn btn-primary my-3"
-							v-if="products.find((e) => e.qty > 0)"
+							:class="{
+								disabled:
+									products.find((e) => e.qty > e.Quantity) ||
+									products.reduce((ak, el) => ak + el.qty, 0) == 0,
+							}"
 							@click="checkFullOrder()"
 							>Tworzenie dokumentu zwrotu</button
 						>
@@ -398,7 +410,7 @@ export default {
 		changeCounter: function (item, num) {
 			item.qty += +num;
 			if (item.qty < 0) item.qty = 0;
-			this.$refs.dProduct.focus();
+			this.$refs.dProduct.focus;
 		},
 		saveEdit() {
 			const vm = this;
