@@ -41,10 +41,11 @@
 
 <script>
 import dictionaryComponent from './dictionaryComponent.vue';
+import test from './test.vue';
 
 export default {
 	name: 'dictionaryComponent',
-	components: [dictionaryComponent],
+	components: [dictionaryComponent, test],
 	props: ['user'],
 	data: () => ({
 		drawer: true,
@@ -52,10 +53,12 @@ export default {
 		theMenu: 'dictionaryComponent',
 
 		items: [{ text: 'Podręczniki', name: 'dictionaryComponent', icon: 'mdi-list-box-outline' }],
+		items: [{ text: 'Test', name: 'test', icon: 'mdi-barcode-scan' }],
 	}),
 	computed: {
 		setComponent() {
 			if (this.theMenu == 'dictionaryComponent') return dictionaryComponent;
+			if (this.theMenu == 'test') return test;
 		},
 	},
 };

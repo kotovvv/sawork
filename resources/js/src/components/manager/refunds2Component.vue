@@ -147,6 +147,7 @@
 								:class="{
 									'active': p.IDTowaru == edit.IDTowaru,
 									'error': p.qty > p.Quantity,
+									'green-lighten-4': p.qty == p.Quantity,
 									'order-1': p.IDTowaru == edit.IDTowaru,
 									'order-4': p.qty == p.Quantity,
 									'order-0': p.qty > p.Quantity,

@@ -61,12 +61,12 @@
 </template>
 
 <script>
-import refunds from './refundsComponent.vue';
+// import refunds from './refundsComponent.vue';
 import refunds2 from './refunds2Component.vue';
 
 export default {
 	name: 'Refunds',
-	components: [refunds, refunds2],
+	components: [refunds2],
 	props: ['user'],
 	data: () => ({
 		drawer: true,
@@ -75,13 +75,13 @@ export default {
 		theMenu: 'refunds2',
 
 		items: [
-			{ text: 'Zwroty', name: 'refunds', icon: 'mdi-restore' },
-			{ text: 'Zwroty2', name: 'refunds2', icon: 'mdi-database-plus' },
+			// { text: 'Zwroty', name: 'refunds', icon: 'mdi-restore' },
+			{ text: 'Zwroty', name: 'refunds2', icon: 'mdi-database-plus' },
 		],
 	}),
 	computed: {
 		setComponent() {
-			if (this.theMenu == 'refunds') return refunds;
+			// if (this.theMenu == 'refunds') return refunds;
 			if (this.theMenu == 'refunds2') return refunds2;
 		},
 	},
