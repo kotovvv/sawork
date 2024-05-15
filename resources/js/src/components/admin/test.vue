@@ -2,19 +2,10 @@
 	<div
 		ref="focusTarget"
 		tabindex="0"
-		@keydown="handleKeyDown"
+		@keypress="handleKeyDown"
 	>
 		<v-card height="100vh">
-			<v-card-text>
-				<v-text-field
-					v-model="inputCod"
-					ref="cod"
-					@change="makeAny"
-					clearable
-					class="d-none"
-				></v-text-field>
-				You enter: {{ text }}<br />
-			</v-card-text>
+			<v-card-text> You enter: {{ text }}<br /> </v-card-text>
 		</v-card>
 	</div>
 </template>
@@ -34,7 +25,7 @@ export default {
 
 	methods: {
 		makeAny() {
-			this.text = this.inputCod;
+			this.text = this.inputCod.replace('undefined', '');
 		},
 		setFocus() {
 			this.text = '';
@@ -48,10 +39,12 @@ export default {
 			if (event.key === 'Enter') {
 				// Execute the function with the accumulated input
 				this.text = this.imputCod.replace('undefined', '');
+
 				// Clear the input field
 				this.imputCod = '';
 			} else {
 				// Append the current keystroke to the input
+
 				this.imputCod += event.key;
 			}
 		},
