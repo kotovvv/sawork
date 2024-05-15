@@ -4,7 +4,7 @@
 			:location="$vuetify.display.mobile ? 'bottom' : undefined"
 			:rail="rail"
 			permanent
-			@click="rail = !rail"
+			@click.stop="rail = !rail"
 		>
 			<!-- menu -->
 			<v-list
@@ -28,10 +28,7 @@
 					v-for="(item, i) in items"
 					:key="i"
 					color="primary"
-					@click="
-						theMenu = item.name;
-						rail = true;
-					"
+					@click.stop="theMenu = item.name"
 					:title="item.text"
 					:prepend-icon="item.icon"
 				>
