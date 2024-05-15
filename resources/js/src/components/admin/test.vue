@@ -1,77 +1,61 @@
 <template>
-	<v-container>
-		<v-card>
+	<div
+		ref="focusTarget"
+		tabindex="0"
+		@keydown="handleKeyDown"
+	>
+		<v-card height="100vh">
 			<v-card-text>
 				<v-text-field
-					v-model="imputCod"
-					label="Cod"
+					v-model="inputCod"
 					ref="cod"
+					@change="makeAny"
+					clearable
+					class="d-none"
 				></v-text-field>
-				Enter: {{ text }}<br />
+				You enter: {{ text }}<br />
 			</v-card-text>
 		</v-card>
-		<!-- @keyup.capture="handleKeypress" -->
-		<v-dialog
-			id="dialogProduct"
-			ref="dProduct"
-			v-model="dialogProduct"
-			transition="dialog-bottom-transition"
-			fullscreen
-			@paste="eventPaste"
-		>
-			<v-container>
-				<v-card>
-					<v-card-title class="mb-5 bg-grey-lighten-3">
-						<v-row>
-							<v-col> </v-col>
-							<v-spacer></v-spacer>
-
-							<v-btn
-								icon="mdi-close"
-								@click="dialogProduct = false"
-							></v-btn
-						></v-row>
-					</v-card-title>
-
-					<v-card-text>
-						<v-text-field label="Cod"></v-text-field>
-
-						Enter: {{ dialog_text }}<br />
-						Input: {{ imputCod }}
-					</v-card-text>
-					<template v-slot:actions>
-						<v-spacer></v-spacer>
-						<!-- v-if="products.find((e) => e.qty > 0)" -->
-						<v-btn
-							@click="
-								imputCod = '';
-								dialog_text = '';
-							"
-						>
-							clear</v-btn
-						>
-					</template>
-				</v-card>
-			</v-container>
-		</v-dialog>
-	</v-container>
+	</div>
 </template>
 
 <script>
 export default {
 	name: 'Test',
-
 	data() {
 		return {
 			text: '',
-
-			imputCod: '',
+			inputCod: '',
 		};
 	},
+	mounted() {
+		this.setFocus();
+	},
 
-	mounted() {},
+	methods: {
+		makeAny() {
+			this.text = this.inputCod;
+		},
+		setFocus() {
+			this.text = '';
+			this.inputCod = '';
+			this.$refs.focusTarget.focus(); // Focus the target element
+		},
+		handleKeyDown(event) {
+			// Prevent default behavior (e.g., scrolling) if necessary
+			event.preventDefault();
 
-	methods: {},
+			if (event.key === 'Enter') {
+				// Execute the function with the accumulated input
+				this.text = this.imputCod.replace('undefined', '');
+				// Clear the input field
+				this.imputCod = '';
+			} else {
+				// Append the current keystroke to the input
+				this.imputCod += event.key;
+			}
+		},
+	},
 };
 </script>
 <style lang="scss">
