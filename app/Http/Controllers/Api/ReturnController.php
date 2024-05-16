@@ -175,7 +175,7 @@ class ReturnController extends Controller
 
                             $tov[] = [
                                 'IDTowaru' => $product['IDTowaru'],
-                                'Ilosc' => $qty,
+                                'Ilosc' => (int) $qty,
                                 'CenaJednostkowa' => $ep->price,
                                 'Uwagi' => $product['message'],
                                 'IDRuchuMagazynowego' => $wz->IDRuchuMagazynowego,
