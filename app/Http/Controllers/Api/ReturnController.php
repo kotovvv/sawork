@@ -58,7 +58,7 @@ class ReturnController extends Controller
                     DB::select('SELECT [ID1] as ID FROM [dbo].[DocumentRelations] WHERE [ID2] = ' . $res['wz']->ID . ' AND [IDType2] = 2 AND [IDType1] = 4')
                 )->first();
                 if ($wzk) {
-                    return response('Zwrot został już przetworzony', 302);
+                    return response('Zwrot został już przetworzony dla ' . $orderdata, 202);
                 }
                 $res['products'] =
                     DB::select('SELECT tov.[IDTowaru]
