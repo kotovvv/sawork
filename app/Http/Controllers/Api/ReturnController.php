@@ -21,6 +21,7 @@ class ReturnController extends Controller
         --    ,[NegativeStock]
        FROM [dbo].[Magazyn]');
     }
+
     public function getOrder(Request $request)
     {
         $data = $request->all();
@@ -52,6 +53,13 @@ class ReturnController extends Controller
             )->first();
 
             if ($res['wz']) {
+                // check if wzk done
+                $wzk = collect(
+                    DB::select('SELECT [ID1] as ID FROM [dbo].[DocumentRelations] WHERE [ID2] = ' . $res['wz']->ID . ' AND [IDType2] = 2 AND [IDType1] = 4')
+                )->first();
+                if ($wzk) {
+                    return response('Zwrot został już przetworzony', 302);
+                }
                 $res['products'] =
                     DB::select('SELECT tov.[IDTowaru]
             , [Ilosc] Quantity

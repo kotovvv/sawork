@@ -383,6 +383,9 @@ export default {
 							vm.order_mes = 'Nie WZ';
 							vm.clear();
 						}
+					} else if (res.status == 302) {
+						vm.order_mes = res.data;
+						vm.clear();
 					} else {
 						vm.order_mes = 'Error getOrder()';
 						vm.clear();
