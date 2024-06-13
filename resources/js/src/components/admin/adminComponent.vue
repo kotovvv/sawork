@@ -58,11 +58,12 @@
 
 <script>
 import dictionaryComponent from './dictionaryComponent.vue';
+import locationComponent from './locationComponent.vue';
 import test from './test.vue';
 
 export default {
 	name: 'dictionaryComponent',
-	components: [dictionaryComponent, test],
+	components: [dictionaryComponent, locationComponent, test],
 	props: ['user'],
 	data: () => ({
 		drawer: true,
@@ -72,12 +73,14 @@ export default {
 
 		items: [
 			{ text: 'Podręczniki', name: 'dictionaryComponent', icon: 'mdi-list-box-outline' },
+			{ text: 'Lokalizacja', name: 'locationComponent', icon: 'mdi-forklift' },
 			{ text: 'Test', name: 'test', icon: 'mdi-barcode-scan' },
 		],
 	}),
 	computed: {
 		setComponent() {
 			if (this.theMenu == 'dictionaryComponent') return dictionaryComponent;
+			if (this.theMenu == 'locationComponent') return locationComponent;
 			if (this.theMenu == 'test') return test;
 		},
 	},

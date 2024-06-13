@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ReturnController;
 use App\Http\Controllers\Api\MagazynController;
 use App\Http\Controllers\Api\SendPDF;
+use App\Http\Controllers\Api\LocationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,3 +28,4 @@ Route::post('deleteMagEmail', [MagazynController::class, 'deleteMagEmail']);
 Route::post('getOrder', [ReturnController::class, 'getOrder']);
 Route::post('doWz', [ReturnController::class, 'doWz']);
 Route::get('sendPDF', [SendPDF::class, 'index']);
+Route::post('TowarLocationTipTab', [LocationController::class, 'TowarLocationTipTab']);
