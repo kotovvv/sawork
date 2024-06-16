@@ -21,7 +21,7 @@ class LocationController extends Controller
 
         DB::table('TowarLocationTipTab')->delete();
         // Выполнение первого блока запросов
-        $towarItems = DB::table('Towar')->select('IDTowaru', 'IDMagazynu')->get();
+        $towarItems = DB::table('Towar')->select('IDTowaru', 'IDMagazynu')->where('IDMagazynu', $idMag)->get();
 
 
         $sql = '';

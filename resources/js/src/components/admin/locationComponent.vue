@@ -43,6 +43,7 @@
 				><v-data-table
 					:items="dataTowarLocationTipTab"
 					:loading="loading"
+					@click:row="clickRow"
 				></v-data-table
 			></v-col>
 		</v-row>
@@ -80,6 +81,10 @@ export default {
 		this.getWarehouse();
 	},
 	methods: {
+		clickRow(event, row) {
+			console.log(row.item);
+		},
+
 		TowarLocationTipTab() {
 			const vm = this;
 			if (!vm.IDWarehouse) return;
