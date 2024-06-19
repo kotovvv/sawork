@@ -11,7 +11,7 @@
 		</v-col>
 		<v-card>
 			<v-data-table
-				:headers="headers"
+				:headers="name_headers"
 				:items="magazyns"
 				mobile-breakpoint="800"
 				class="elevation-0"
@@ -77,6 +77,12 @@
 										single-line
 									></v-select>
 								</v-col>
+								<v-col cols="12">
+									<v-text-field
+										v-model="editedItem.IDLokalizaciiZwrot"
+										label="IDLokalizaciiZwrot"
+									></v-text-field>
+								</v-col>
 							</v-row>
 						</v-card-text>
 
@@ -137,12 +143,13 @@ export default {
 	data() {
 		return {
 			magazyns: [],
-			headers: [
-				{ text: 'IDMagazyn', value: 'IDMagazynu' },
-				{ text: 'Magazyn', value: 'Nazwa' },
-				{ text: 'Details', value: 'eMailAddress' },
-				{ text: 'Dokument Cod', value: 'cod', name: 'cod', width: '180' },
-				{ text: 'Action', value: 'actions', sortable: false },
+			name_headers: [
+				{ title: 'IDMagazyn', value: 'IDMagazynu' },
+				{ title: 'IDLokalizaciiZwrot', value: 'IDLokalizaciiZwrot' },
+				{ title: 'Magazyn', value: 'Nazwa' },
+				{ title: 'Details', value: 'eMailAddress' },
+				{ title: 'Dokument Cod', value: 'cod', name: 'cod', width: '180' },
+				{ title: 'Action', value: 'actions', sortable: false },
 			],
 			magEmail: [],
 			dialog: false,
