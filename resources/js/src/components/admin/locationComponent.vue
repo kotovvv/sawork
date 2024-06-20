@@ -60,14 +60,14 @@
 					<v-card-title class="mb-5 bg-grey-lighten-3">
 						<v-row>
 							<v-col>
-								<b>Локация: </b>
+								<b>Локация: {{ selected_item.LocationCode }}</b>
 							</v-col>
 							<v-spacer></v-spacer>
 
 							<v-btn
 								icon="mdi-close"
 								@click="
-									dialogProduct = false;
+									dialogLocation = false;
 									text = '';
 								"
 							></v-btn
@@ -75,6 +75,13 @@
 					</v-card-title>
 
 					<v-card-text>
+						<!-- step 1 -->
+						<h3
+							class="text-red"
+							v-if="step == 0"
+						>
+							Подтвердите локацию!
+						</h3>
 						<div class="d-flex flex-column"> </div>
 					</v-card-text>
 					<template v-slot:actions>
@@ -114,17 +121,37 @@ export default {
 			loading: false,
 			dialogLocation: false,
 			location: '',
+			selected_item: {},
+			step: 0,
+			imputCod: '',
 		};
 	},
 	mounted() {
 		this.getWarehouse();
 	},
 	methods: {
+		steps() {
+			if (this.step == 0) {
+				if (this.imputCod == this.selected_item.LocationCode) {
+					this.step = 1;
+          // get product this.selected_item.IDTowaru
+
+					return;
+				}
+			}
+			if (this.step == 1) {
+				if (this.imputCod == this.selected_item.KodKreskowy) {
+					this.step = 2;
+
+					return;
+				}
+			}
+		},
 		handleKeypress(event) {
 			// Check if the Enter key was pressed
 			if (event.key === 'Enter') {
 				// Execute the function with the accumulated input
-				this.findProduct();
+				this.steps();
 				// Clear the input field
 				this.imputCod = '';
 			} else {
@@ -133,7 +160,8 @@ export default {
 			}
 		},
 		clickRow(event, row) {
-			console.log(row.item);
+			this.selected_item = row.item;
+			this.dialogLocation = true;
 		},
 
 		TowarLocationTipTab() {
