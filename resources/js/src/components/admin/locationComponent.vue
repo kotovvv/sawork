@@ -47,6 +47,43 @@
 				></v-data-table
 			></v-col>
 		</v-row>
+		<v-dialog
+			id="dialogLocation"
+			ref="dLocation"
+			v-model="dialogLocation"
+			transition="dialog-bottom-transition"
+			fullscreen
+			@keyup="handleKeypress"
+		>
+			<v-container>
+				<v-card>
+					<v-card-title class="mb-5 bg-grey-lighten-3">
+						<v-row>
+							<v-col>
+								<b>Локация: </b>
+							</v-col>
+							<v-spacer></v-spacer>
+
+							<v-btn
+								icon="mdi-close"
+								@click="
+									dialogProduct = false;
+									text = '';
+								"
+							></v-btn
+						></v-row>
+					</v-card-title>
+
+					<v-card-text>
+						<div class="d-flex flex-column"> </div>
+					</v-card-text>
+					<template v-slot:actions>
+						<v-spacer></v-spacer>
+						<section class="row"> </section>
+					</template>
+				</v-card>
+			</v-container>
+		</v-dialog>
 	</v-container>
 </template>
 
@@ -75,12 +112,26 @@ export default {
 			snackbar: false,
 			message: '',
 			loading: false,
+			dialogLocation: false,
+			location: '',
 		};
 	},
 	mounted() {
 		this.getWarehouse();
 	},
 	methods: {
+		handleKeypress(event) {
+			// Check if the Enter key was pressed
+			if (event.key === 'Enter') {
+				// Execute the function with the accumulated input
+				this.findProduct();
+				// Clear the input field
+				this.imputCod = '';
+			} else {
+				// Append the current keystroke to the input
+				this.imputCod += event.key;
+			}
+		},
 		clickRow(event, row) {
 			console.log(row.item);
 		},
