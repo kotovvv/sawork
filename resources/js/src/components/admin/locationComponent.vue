@@ -3,32 +3,32 @@
 		<v-row>
 			<v-col
 				md="6"
-				sm="12"
+				cols="12"
 			>
-				<v-select
-					label="Magazyn"
-					v-model="IDWarehouse"
-					:items="warehouses"
-					item-title="Nazwa"
-					item-value="IDMagazynu"
+				<v-number-input
+					v-model="days"
+					controlVariant="default"
+					label="liczba dni"
 					hide-details="auto"
-				></v-select>
+					:hideInput="false"
+					:inset="false"
+					:max="20"
+					:min="3"
+				></v-number-input>
 			</v-col>
 			<v-col
 				md="6"
-				sm="12"
+				cols="12"
 			>
 				<div class="d-flex">
-					<v-number-input
-						v-model="days"
-						controlVariant="default"
-						label="liczba dni"
+					<v-select
+						label="Magazyn"
+						v-model="IDWarehouse"
+						:items="warehouses"
+						item-title="Nazwa"
+						item-value="IDMagazynu"
 						hide-details="auto"
-						:hideInput="false"
-						:inset="false"
-						:max="20"
-						:min="3"
-					></v-number-input>
+					></v-select>
 					<v-btn
 						size="x-large"
 						class="btn primary"
@@ -39,9 +39,10 @@
 			</v-col>
 		</v-row>
 		<v-row>
+			<!--  -->
 			<v-col cols="12"
 				><v-data-table
-					:items="dataTowarLocationTipTab"
+					:items="dataTowarLocationTipTab.filter((l) => l.peremestit > 0)"
 					:loading="loading"
 					@click:row="clickRow"
 				></v-data-table
@@ -60,7 +61,14 @@
 					<v-card-title class="mb-5 bg-grey-lighten-3">
 						<v-row>
 							<v-col>
-								<b>Z lokalizacji: {{ selected_item.LocationCode }}</b>
+								<b
+									>Z lokalizacji: {{ selected_item.LocationCode }}
+									<span v-if="step == 1"
+										><v-icon
+											icon="mdi-checkbox-marked-circle-outline"
+											color="green"
+										></v-icon></span
+								></b>
 							</v-col>
 							<v-spacer></v-spacer>
 
@@ -81,7 +89,7 @@
 							class="text-red"
 							v-if="step == 0"
 						>
-							Подтвердите локацию!
+							Potwierdź lokalizację!
 						</h3>
 						<v-row
 							class="product_line border my-0"
@@ -102,6 +110,7 @@
 										>
 									</span>
 									<v-btn
+										class="d-none"
 										@click="
 											edit = product;
 											dialogMessageQty = true;
@@ -126,24 +135,36 @@
 						</v-row>
 					</v-card-text>
 					<template v-slot:actions>
-						<b>Do lokalizacji</b>
-						<v-spacer></v-spacer>
-						<section
-							class="row"
-							v-if="product"
-						>
+						<v-row v-if="product">
 							<v-col cols="6">
-								<div
-									v-for="l in dataTowarLocationTipTab.filter(
-										(l) =>
-											l.KodKreskowy == product.KodKreskowy &&
-											l.LocationCode != selected_item.LocationCode,
-									)"
-									:key="l.IDTowaru + l.LocationCode"
-									>{{ l.LocationCode }}</div
+								<b>Do lokalizacji</b>
+								<v-table density="compact">
+									<thead>
+										<tr>
+											<th class="text-left"> LocationCode </th>
+											<th class="text-left"> Quantity </th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr
+											v-for="l in toLocations"
+											:key="l.idLocationCode"
+										>
+											<td>{{ l.LocationCode }}</td>
+											<td>{{ l.Quantity }}</td>
+										</tr>
+									</tbody>
+								</v-table>
+							</v-col>
+							<v-col>
+								<v-btn
+									v-if="step == 3"
+									class="btn primary"
+									variant="tonal"
+									>Relokacja</v-btn
 								>
 							</v-col>
-						</section>
+						</v-row>
 					</template>
 				</v-card>
 			</v-container>
@@ -207,6 +228,7 @@ export default {
 			dialog_text: '',
 			dialog: false,
 			product: null,
+			toLocations: [],
 		};
 	},
 	mounted() {
@@ -226,11 +248,18 @@ export default {
 			this.$refs.dLocation.focus;
 		},
 		steps() {
-			this.imputCod = this.imputCod.toLocaleUpperCase();
 			const vm = this;
+			//this.imputCod = this.imputCod.toLocaleUpperCase();
+
 			if (this.step == 0) {
 				if (this.imputCod == this.selected_item.LocationCode) {
 					this.step = 1;
+					this.toLocations = this.dataTowarLocationTipTab.filter(
+						(l) =>
+							l.KodKreskowy == this.selected_item.KodKreskowy &&
+							//l.LocationCode != this.selected_item.LocationCode &&
+							l.TypLocations != 2,
+					);
 					vm.loading = true;
 					// get product this.selected_item.IDTowaru
 					axios
@@ -249,10 +278,12 @@ export default {
 				}
 			}
 			if (this.step == 1) {
-				if (this.imputCod == this.selected_item.KodKreskowy) {
-					this.step = 2;
-					this.changeCounter(this.product, 1);
+				if (this.toLocations.find((f) => f.LocationCode == this.imputCod)) {
+					this.step = 3;
 					return;
+				}
+				if (this.imputCod == this.selected_item.KodKreskowy) {
+					this.changeCounter(this.product, 1);
 				} else {
 					this.dialog_text = 'Brak produktu!!!';
 					this.dialog = true;
@@ -268,7 +299,7 @@ export default {
 				this.imputCod = '';
 			} else {
 				// Append the current keystroke to the input
-				this.imputCod += event.key;
+				this.imputCod += event.which > 46 ? event.key : '';
 			}
 		},
 		clickRow(event, row) {
