@@ -73,4 +73,20 @@ class LocationController extends Controller
         unset($tempResultsCollection);
         return DB::table('TowarLocationTipTab')->get();
     }
+
+    public function getProduct($id)
+    {
+
+        $product =   DB::table('dbo.Towar')->where('IDTowaru', $id)->select(
+            'IDTowaru',
+            'Nazwa',
+            'KodKreskowy',
+            '_TowarTempString1',
+            'Zdjecie',
+            DB::raw("0 as qty")
+        )->first();
+
+        $product->Zdjecie = base64_encode($product->Zdjecie);
+        return $product;
+    }
 }

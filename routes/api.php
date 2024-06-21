@@ -26,6 +26,7 @@ Route::get('loadMagEmail', [MagazynController::class, 'loadMagEmail']);
 Route::post('saveMagEmail', [MagazynController::class, 'saveMagEmail']);
 Route::post('deleteMagEmail', [MagazynController::class, 'deleteMagEmail']);
 Route::post('getOrder', [ReturnController::class, 'getOrder']);
+Route::get('getProduct/{id}', [LocationController::class, 'getProduct']);
 Route::post('doWz', [ReturnController::class, 'doWz']);
 Route::get('sendPDF', [SendPDF::class, 'index']);
 Route::post('TowarLocationTipTab', [LocationController::class, 'TowarLocationTipTab']);
