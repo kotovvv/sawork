@@ -244,6 +244,8 @@ export default {
 						.catch((error) => console.log(error));
 					return;
 				} else {
+					this.dialog_text = 'Błąd lokalizacji (';
+					this.dialog = true;
 				}
 			}
 			if (this.step == 1) {
