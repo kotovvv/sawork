@@ -291,9 +291,9 @@ export default {
 			}
 		},
 		handleKeypress(event) {
-			if (event.key === 'Shift') {
-				return;
-			}
+			// if (event.key === 'Shift') {
+			// 	return;
+			// }
 			if (event.key === 'Enter') {
 				this.steps();
 				this.imputCod = '';
