@@ -48,6 +48,7 @@
 				></v-data-table
 			></v-col>
 		</v-row>
+		<!-- contenteditable="true" -->
 		<v-dialog
 			id="dialogLocation"
 			ref="dLocation"
@@ -63,7 +64,7 @@
 							<v-col>
 								<b
 									>Z lokalizacji: {{ selected_item.LocationCode }}
-									<span v-if="step == 1"
+									<span v-if="step >= 1"
 										><v-icon
 											icon="mdi-checkbox-marked-circle-outline"
 											color="green"
@@ -136,7 +137,7 @@
 					</v-card-text>
 					<template v-slot:actions>
 						<v-row v-if="product">
-							<v-col cols="6">
+							<v-col cols="12">
 								<b>Do lokalizacji</b>
 								<v-table density="compact">
 									<thead>
@@ -150,7 +151,7 @@
 											v-for="l in toLocations"
 											:key="l.idLocationCode"
 											:class="{
-												'green-lighten-4': l.LocationCode == toLocation,
+												'bg-green-lighten-4': l.LocationCode == toLocation,
 											}"
 										>
 											<td>{{ l.LocationCode }}</td>
@@ -239,6 +240,11 @@ export default {
 		this.getWarehouse();
 	},
 	methods: {
+		setFocus() {
+			this.$nextTick(() => {
+				this.$refs.dLocation.focus();
+			});
+		},
 		clear() {
 			this.step = 0;
 			this.loading = false;
@@ -249,11 +255,12 @@ export default {
 		changeCounter: function (item, num) {
 			item.qty = parseInt(item.qty) + parseInt(+num);
 			if (item.qty < 0) item.qty = 0;
-			this.$refs.dLocation.focus;
+			this.setFocus();
 		},
 		steps() {
 			const vm = this;
 			//this.imputCod = this.imputCod.toLocaleUpperCase();
+			this.imputCod = this.imputCod.replaceAll(/Shift(.)/g, (_, p1) => p1.toUpperCase());
 
 			if (this.step == 0) {
 				if (this.imputCod == this.selected_item.LocationCode) {
@@ -300,15 +307,12 @@ export default {
 			}
 		},
 		handleKeypress(event) {
-			// Check if the Enter key was pressed
 			if (event.key === 'Enter') {
-				// Execute the function with the accumulated input
 				this.steps();
-				// Clear the input field
 				this.imputCod = '';
 			} else {
-				// Append the current keystroke to the input
-				this.imputCod += event.which > 46 ? event.key : '';
+				let key = event.key;
+				this.imputCod += key;
 			}
 		},
 		clickRow(event, row) {
