@@ -73,18 +73,23 @@
 							</v-col>
 							<v-spacer></v-spacer>
 
-							<v-btn
-								icon="mdi-close"
+							<div
+								class="btn border"
 								@click="
 									dialogLocation = false;
 									clear();
 									text = '';
 								"
-							></v-btn
+								><v-icon icon="mdi-close"></v-icon></div
 						></v-row>
 					</v-card-title>
 
 					<v-card-text>
+						<h5
+							class="text-red"
+							v-if="message"
+							>{{ message }}</h5
+						>
 						<!-- step 1 -->
 						<h3
 							class="text-red"
@@ -110,27 +115,35 @@
 											{{ product._TowarTempString1 }}</h5
 										>
 									</span>
-									<v-btn
+									<!-- <v-btn
 										class="d-none"
 										@click="
 											edit = product;
 											dialogMessageQty = true;
 										"
 										><v-icon>mdi-pencil</v-icon></v-btn
-									>
+									> -->
 								</div>
 							</v-col>
 
 							<v-col>
 								<div class="d-flex justify-end">
-									<v-btn @click="changeCounter(product, -1)">-</v-btn>
+									<div
+										class="btn border"
+										@click="changeCounter(product, -1)"
+										>-</div
+									>
 									<div
 										:id="product.IDTowaru"
 										class="border qty text-h5 text-center"
 									>
 										{{ product.qty }} z {{ parseInt(selected_item.Quantity) }}</div
 									>
-									<v-btn @click="changeCounter(product, 1)">+</v-btn>
+									<div
+										class="btn border"
+										@click="changeCounter(product, 1)"
+										>+</div
+									>
 								</div>
 							</v-col>
 						</v-row>
@@ -173,28 +186,6 @@
 				</v-card>
 			</v-container>
 		</v-dialog>
-		<v-dialog
-			v-model="dialog"
-			width="auto"
-		>
-			<v-card
-				max-width="600"
-				prepend-icon="mdi-alert-outline"
-				:text="dialog_text"
-				:title="dialog_title"
-			>
-				<template v-slot:actions>
-					<v-btn
-						class="ms-auto"
-						text="Ok"
-						@click="
-							dialog = false;
-							$refs.dLocation.focus;
-						"
-					></v-btn>
-				</template>
-			</v-card>
-		</v-dialog>
 	</v-container>
 </template>
 
@@ -228,9 +219,7 @@ export default {
 			selected_item: {},
 			step: 0,
 			imputCod: '',
-			dialog_title: '',
-			dialog_text: '',
-			dialog: false,
+			message: '',
 			product: null,
 			toLocations: [],
 			toLocation: null,
@@ -240,25 +229,22 @@ export default {
 		this.getWarehouse();
 	},
 	methods: {
-		setFocus() {
-			this.$nextTick(() => {
-				this.$refs.dLocation.focus();
-			});
-		},
 		clear() {
 			this.step = 0;
 			this.loading = false;
 			this.imputCod = '';
 			this.selected_item = {};
 			this.product = null;
+			this.message = '';
 		},
 		changeCounter: function (item, num) {
 			item.qty = parseInt(item.qty) + parseInt(+num);
 			if (item.qty < 0) item.qty = 0;
-			this.setFocus();
+			//this.setFocus();
 		},
 		steps() {
 			const vm = this;
+			this.message = '';
 			//this.imputCod = this.imputCod.toLocaleUpperCase();
 			this.imputCod = this.imputCod.replaceAll(/Shift(.)/g, (_, p1) => p1.toUpperCase());
 
@@ -284,8 +270,7 @@ export default {
 						.catch((error) => console.log(error));
 					return;
 				} else {
-					this.dialog_text = 'Błąd lokalizacji (';
-					this.dialog = true;
+					this.message = 'Błąd lokalizacji (';
 				}
 			}
 			if (this.step == 1) {
@@ -298,15 +283,17 @@ export default {
 					this.changeCounter(this.product, 1);
 				} else {
 					if (/[a-zA-Z]+/.test(this.imputCod)) {
-						this.dialog_text = 'Błąd lokalizacji (';
+						this.message = 'Błąd lokalizacji (';
 					} else {
-						this.dialog_text = 'Brak produktu!!!';
+						this.message = 'Brak produktu!!!';
 					}
-					this.dialog = true;
 				}
 			}
 		},
 		handleKeypress(event) {
+			if (event.key === 'Shift') {
+				return;
+			}
 			if (event.key === 'Enter') {
 				this.steps();
 				this.imputCod = '';
