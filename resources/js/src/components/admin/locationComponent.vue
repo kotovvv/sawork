@@ -149,6 +149,9 @@
 										<tr
 											v-for="l in toLocations"
 											:key="l.idLocationCode"
+											:class="{
+												'green-lighten-4': l.LocationCode == toLocation,
+											}"
 										>
 											<td>{{ l.LocationCode }}</td>
 											<td>{{ l.Quantity }}</td>
@@ -229,6 +232,7 @@ export default {
 			dialog: false,
 			product: null,
 			toLocations: [],
+			toLocation: null,
 		};
 	},
 	mounted() {
@@ -280,12 +284,17 @@ export default {
 			if (this.step == 1) {
 				if (this.toLocations.find((f) => f.LocationCode == this.imputCod)) {
 					this.step = 3;
+					this.toLocation = this.imputCod;
 					return;
 				}
 				if (this.imputCod == this.selected_item.KodKreskowy) {
 					this.changeCounter(this.product, 1);
 				} else {
-					this.dialog_text = 'Brak produktu!!!';
+					if (/[a-zA-Z]+/.test(this.imputCod)) {
+						this.dialog_text = 'Błąd lokalizacji (';
+					} else {
+						this.dialog_text = 'Brak produktu!!!';
+					}
 					this.dialog = true;
 				}
 			}
