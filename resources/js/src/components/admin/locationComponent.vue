@@ -184,6 +184,7 @@
 						</v-row>
 					</template>
 				</v-card>
+				{{ test }}
 			</v-container>
 		</v-dialog>
 	</v-container>
@@ -223,6 +224,7 @@ export default {
 			product: null,
 			toLocations: [],
 			toLocation: null,
+			test: '',
 		};
 	},
 	mounted() {
@@ -245,7 +247,7 @@ export default {
 		steps() {
 			const vm = this;
 			this.message = '';
-			//this.imputCod = this.imputCod.toLocaleUpperCase();
+			this.test = this.imputCod;
 			this.imputCod = this.imputCod.replaceAll(/Shift(.)/g, (_, p1) => p1.toUpperCase());
 
 			if (this.step == 0) {
@@ -291,9 +293,9 @@ export default {
 			}
 		},
 		handleKeypress(event) {
-			// if (event.key === 'Shift') {
-			// 	return;
-			// }
+			if (event.key === 'Shift') {
+				return;
+			}
 			if (event.key === 'Enter') {
 				this.steps();
 				this.imputCod = '';
