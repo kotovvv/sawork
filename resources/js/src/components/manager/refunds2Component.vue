@@ -138,7 +138,7 @@
 						></v-row>
 					</v-card-title>
 
-					<v-card-text>
+					<v-card-text class="vscroll">
 						<div class="d-flex flex-column">
 							<v-row
 								class="product_line border my-0"
@@ -440,5 +440,9 @@ export default {
 }
 .error .qty {
 	background: #ffcdd2;
+}
+.vscroll {
+	max-height: 70vh;
+	overflow-y: auto;
 }
 </style>
