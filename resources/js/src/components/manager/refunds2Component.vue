@@ -431,6 +431,7 @@ export default {
 	},
 };
 </script>
+
 <style lang="scss">
 .qty {
 	width: 150px;
