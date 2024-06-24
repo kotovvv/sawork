@@ -183,8 +183,8 @@
 							</v-col>
 						</v-row>
 					</template>
+					{{ test }}
 				</v-card>
-				{{ test }}
 			</v-container>
 		</v-dialog>
 	</v-container>
@@ -247,7 +247,8 @@ export default {
 		steps() {
 			const vm = this;
 			this.message = '';
-			this.test = this.imputCod;
+
+			console.log(this.imputCod);
 			this.imputCod = this.imputCod.replaceAll(/Shift(.)/g, (_, p1) => p1.toUpperCase());
 
 			if (this.step == 0) {
@@ -301,7 +302,9 @@ export default {
 				this.imputCod = '';
 			} else {
 				let key = event.key;
+				console.log(event);
 				this.imputCod += key;
+				this.test = this.imputCod;
 			}
 		},
 		clickRow(event, row) {
