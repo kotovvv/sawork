@@ -183,6 +183,7 @@
 							</v-col>
 						</v-row>
 					</template>
+					<QrcodeStream @decode="onDecode"></QrcodeStream>
 					{{ test }}
 				</v-card>
 			</v-container>
@@ -193,9 +194,13 @@
 <script>
 import { VNumberInput } from 'vuetify/labs/VNumberInput';
 import axios from 'axios';
+import { QrcodeStream, QrcodeDropZone, QrcodeCapture } from 'vue-qrcode-reader';
 export default {
 	components: {
 		VNumberInput,
+		QrcodeStream,
+		QrcodeDropZone,
+		QrcodeCapture,
 	},
 	name: 'locationComponent',
 
@@ -231,6 +236,10 @@ export default {
 		this.getWarehouse();
 	},
 	methods: {
+		onDecode(decodedString) {
+			this.test = decodedString;
+			console.log(decodedString);
+		},
 		clear() {
 			this.step = 0;
 			this.loading = false;
@@ -249,7 +258,7 @@ export default {
 			this.message = '';
 
 			console.log(this.imputCod);
-			this.imputCod = this.imputCod.replaceAll(/Shift(.)/g, (_, p1) => p1.toUpperCase());
+			//this.imputCod = this.imputCod.replaceAll(/Shift(.)/g, (_, p1) => p1.toUpperCase());
 
 			if (this.step == 0) {
 				if (this.imputCod == this.selected_item.LocationCode) {
