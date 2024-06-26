@@ -249,7 +249,8 @@ export default {
 			this.message = '';
 
 			console.log(this.imputCod);
-			this.imputCod = this.imputCod.replaceAll(/Shift(.)/g, (_, p1) => p1.toUpperCase());
+			// this.imputCod = this.imputCod.replaceAll(/Shift(.)/g, (_, p1) => p1.toUpperCase());
+			this.imputCod = this.imputCod.replace('Unidentified', '');
 
 			if (this.step == 0) {
 				if (this.imputCod == this.selected_item.LocationCode) {

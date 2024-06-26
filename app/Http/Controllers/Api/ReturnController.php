@@ -145,6 +145,10 @@ class ReturnController extends Controller
         $ndoc = DB::selectOne("SELECT TOP 1 NrDokumentu n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '4' AND IDMagazynu = " . $magazin_id . " AND year( Utworzono ) = " . date('Y') . " ORDER BY Data DESC");
         preg_match('/^WZk(.*)\/.*/', $ndoc->n, $a_ndoc);
         $creat_wz['NrDokumentu'] = 'WZk' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $data["magazin"]["Symbol"];
+        // check if NrDokumentu exist in base
+        if (DB::select("select * from dbo.RuchMagazynowy where NrDokumentu = '" . $creat_wz['NrDokumentu'] . "'")) {
+            return response($creat_wz['NrDokumentu'] . ' Został już utworzony', 200);
+        }
         $wz = DB::table('dbo.RuchMagazynowy')->insert($creat_wz);
         if ($wz) {
             $wz = DB::select("select * from dbo.RuchMagazynowy where NrDokumentu = '" . $creat_wz['NrDokumentu'] . "'")[0];
