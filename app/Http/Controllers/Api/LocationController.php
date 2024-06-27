@@ -96,4 +96,35 @@ class LocationController extends Controller
             'LocationCode',
         )->get();
     }
+
+    public function getPZ($idTov, $LocationCode)
+    {
+        $date = Carbon::now()->format('Ymd');
+
+        $results = DB::table('dbo.ElementRuchuMagazynowego as e')
+            ->join('dbo.RuchMagazynowy as r', 'r.IDRuchuMagazynowego', '=', 'e.IDRuchuMagazynowego')
+            ->join('dbo.Towar as t', 't.IDTowaru', '=', 'e.IDTowaru')
+            ->join('dbo.WarehouseLocations as l', 'l.IDWarehouseLocation', '=', 'e.IDWarehouseLocation')
+            ->join(DB::raw('dbo.MostRecentOBDate(?) as BO'), function ($join) use ($date) {
+                $join->on('t.IDMagazynu', '=', 'BO.IDMagazynu')
+                    ->addBinding($date);
+            })
+            ->whereRaw('e.ilosc * r.Operator > 0')
+            ->where('r.Data', '>=', DB::raw('BO.MinDate'))
+            ->where('e.IDTowaru', $idTov)
+            ->where('l.LocationCode', $LocationCode)
+            ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
+            ->select(
+                'e.IDElementuRuchuMagazynowego',
+                'e.IDTowaru',
+                'e.ilosc',
+                'e.Wydano',
+                'e.IDWarehouseLocation',
+                'l.LocationCode',
+                'r.Operator',
+                'r.Data'
+            )
+            ->get();
+        return         $results;
+    }
 }
