@@ -152,6 +152,7 @@
 						<v-row v-if="product">
 							<v-col cols="12">
 								<b>Do lokalizacji</b>
+								<h5 v-if="toLocation">{{ toLocation.LocationCode }}</h5>
 								<v-table density="compact">
 									<thead>
 										<tr>
@@ -164,7 +165,7 @@
 											v-for="l in toLocations"
 											:key="l.idLocationCode"
 											:class="{
-												'bg-green-lighten-4': l.LocationCode == toLocation,
+												'bg-green-lighten-4': l.LocationCode == toLocation.LocationCode,
 											}"
 										>
 											<td>{{ l.LocationCode }}</td>
@@ -210,6 +211,7 @@ export default {
 			],
 			dataTowarLocationTipTab: [],
 			warehouses: [],
+			warehousesLoc: [],
 			IDWarehouse: null,
 			days: 20,
 			snackbar: false,
@@ -278,9 +280,10 @@ export default {
 				}
 			}
 			if (this.step == 1) {
-				if (this.toLocations.find((f) => f.LocationCode == this.imputCod)) {
+				let to_loc = this.warehousesLoc.find((f) => f.LocationCode == this.imputCod);
+				if (to_loc) {
 					this.step = 3;
-					this.toLocation = this.imputCod;
+					this.toLocation = to_loc;
 					return;
 				}
 				if (this.imputCod == this.selected_item.KodKreskowy) {
@@ -326,6 +329,7 @@ export default {
 					if (res.status == 200) {
 						vm.dataTowarLocationTipTab = res.data;
 						vm.loading = false;
+						vm.getWarehouseLocations();
 					}
 				})
 				.catch((error) => console.log(error));
@@ -338,6 +342,17 @@ export default {
 					if (res.status == 200) {
 						vm.warehouses = res.data;
 						// vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+					}
+				})
+				.catch((error) => console.log(error));
+		},
+		getWarehouseLocations() {
+			const vm = this;
+			axios
+				.get('/api/getWarehouseLocations/' + vm.IDWarehouse)
+				.then((res) => {
+					if (res.status == 200) {
+						vm.warehousesLoc = res.data;
 					}
 				})
 				.catch((error) => console.log(error));

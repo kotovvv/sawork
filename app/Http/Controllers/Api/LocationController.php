@@ -89,4 +89,11 @@ class LocationController extends Controller
         $product->Zdjecie = base64_encode($product->Zdjecie);
         return $product;
     }
+    public function getWarehouseLocations($id)
+    {
+        return  DB::table('dbo.WarehouseLocations')->where('IDMagazynu', $id)->select(
+            'IDWarehouseLocation',
+            'LocationCode',
+        )->get();
+    }
 }
