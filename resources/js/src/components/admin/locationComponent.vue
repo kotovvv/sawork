@@ -153,9 +153,13 @@
 							<v-col cols="12">
 								<b
 									>Do lokalizacji:
-									<span v-if="step == 3"
+									<span
+										v-if="toLocation.LocationCode ?? 0"
+										class="px-2"
 										>{{ toLocation.LocationCode }}
+
 										<v-icon
+											v-if="toLocation.LocationCode ?? 0"
 											icon="mdi-checkbox-marked-circle-outline"
 											color="green"
 										></v-icon></span
@@ -185,14 +189,14 @@
 							<v-col>
 								<v-btn
 									v-if="step == 3"
-									class="btn primary"
+									class="btn primary mb-5"
 									variant="tonal"
 									>Relokacja</v-btn
 								>
 							</v-col>
 						</v-row>
 					</template>
-					{{ test }}
+					<p class="text-grey px-4">{{ test }}</p>
 				</v-card>
 			</v-container>
 		</v-dialog>
@@ -233,7 +237,7 @@ export default {
 			message: '',
 			product: null,
 			toLocations: [],
-			toLocation: null,
+			toLocation: {},
 			test: '',
 		};
 	},
@@ -245,9 +249,11 @@ export default {
 			this.step = 0;
 			this.loading = false;
 			this.imputCod = '';
+			this.test = '';
 			this.selected_item = {};
 			this.product = null;
 			this.message = '';
+			this.toLocation = {};
 		},
 		changeCounter: function (item, num) {
 			item.qty = parseInt(item.qty) + parseInt(+num);
@@ -288,8 +294,10 @@ export default {
 				}
 			}
 			if (this.step == 1) {
-				let to_loc = this.warehousesLoc.find((f) => f.LocationCode == this.imputCod);
-				if (to_loc) {
+				let to_loc = this.warehousesLoc.find((f) => {
+					return f.LocationCode == this.imputCod;
+				});
+				if (to_loc && this.product.qty > 0) {
 					this.step = 3;
 					this.toLocation = to_loc;
 					return;
@@ -302,6 +310,15 @@ export default {
 					} else {
 						this.message = 'Brak produktu!!!';
 					}
+				}
+			}
+			if (this.step == 3) {
+				let to_loc = this.warehousesLoc.find((f) => {
+					return f.LocationCode == this.imputCod;
+				});
+				if (to_loc && this.product.qty > 0) {
+					this.toLocation = to_loc;
+					return;
 				}
 			}
 		},
@@ -319,6 +336,7 @@ export default {
 			}
 		},
 		clickRow(event, row) {
+			this.clear();
 			this.selected_item = row.item;
 			this.dialogLocation = true;
 		},
