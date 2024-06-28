@@ -151,8 +151,16 @@
 					<template v-slot:actions>
 						<v-row v-if="product">
 							<v-col cols="12">
-								<b>Do lokalizacji</b>
-								<h5 v-if="toLocation">{{ toLocation.LocationCode }}</h5>
+								<b
+									>Do lokalizacji:
+									<span v-if="step == 3"
+										>{{ toLocation.LocationCode }}
+										<v-icon
+											icon="mdi-checkbox-marked-circle-outline"
+											color="green"
+										></v-icon></span
+								></b>
+
 								<v-table density="compact">
 									<thead>
 										<tr>
@@ -250,7 +258,6 @@ export default {
 			const vm = this;
 			this.message = '';
 
-			console.log(this.imputCod);
 			// this.imputCod = this.imputCod.replaceAll(/Shift(.)/g, (_, p1) => p1.toUpperCase());
 			this.imputCod = this.imputCod.replace('Unidentified', '');
 
@@ -271,6 +278,7 @@ export default {
 							if (res.status == 200) {
 								vm.product = res.data;
 								vm.loading = false;
+								vm.getPZ();
 							}
 						})
 						.catch((error) => console.log(error));
@@ -306,7 +314,6 @@ export default {
 				this.imputCod = '';
 			} else {
 				let key = event.key;
-				console.log(event);
 				this.imputCod += key;
 				this.test = this.imputCod;
 			}
@@ -353,6 +360,17 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.warehousesLoc = res.data;
+					}
+				})
+				.catch((error) => console.log(error));
+		},
+		getPZ() {
+			const vm = this;
+			axios
+				.get('/api/getPZ/' + vm.selected_item.IDTowaru + '/' + vm.selected_item.LocationCode)
+				.then((res) => {
+					if (res.status == 200) {
+						console.log(res.data);
 					}
 				})
 				.catch((error) => console.log(error));

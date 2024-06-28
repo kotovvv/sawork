@@ -23,7 +23,6 @@ class LocationController extends Controller
         // Выполнение первого блока запросов
         $towarItems = DB::table('Towar')->select('IDTowaru', 'IDMagazynu')->where('IDMagazynu', $idMag)->get();
 
-
         $sql = '';
         foreach ($towarItems as $item) {
             $sql = "EXEC TowarLocationTip {$item->IDTowaru}, {$item->IDMagazynu}; ";
@@ -31,8 +30,6 @@ class LocationController extends Controller
                 DB::unprepared($sql);
             }
         }
-
-
 
         // Обновление таблицы TowarLocationTipTab
         $updateSql = "
@@ -89,6 +86,7 @@ class LocationController extends Controller
         $product->Zdjecie = base64_encode($product->Zdjecie);
         return $product;
     }
+
     public function getWarehouseLocations($id)
     {
         return  DB::table('dbo.WarehouseLocations')->where('IDMagazynu', $id)->select(
@@ -97,7 +95,7 @@ class LocationController extends Controller
         )->get();
     }
 
-    public function getPZ($idTov, $LocationCode)
+    public function getPZ($idp, $idl)
     {
         $date = Carbon::now()->format('Ymd');
 
@@ -111,20 +109,21 @@ class LocationController extends Controller
             })
             ->whereRaw('e.ilosc * r.Operator > 0')
             ->where('r.Data', '>=', DB::raw('BO.MinDate'))
-            ->where('e.IDTowaru', $idTov)
-            ->where('l.LocationCode', $LocationCode)
+            ->where('e.IDTowaru', $idp)
+            ->where('l.LocationCode', $idl)
             ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
             ->select(
                 'e.IDElementuRuchuMagazynowego',
                 'e.IDTowaru',
                 'e.ilosc',
                 'e.Wydano',
+                DB::raw('e.ilosc - ISNULL(e.Wydano, 0) as qty'),
                 'e.IDWarehouseLocation',
                 'l.LocationCode',
                 'r.Operator',
                 'r.Data'
             )
             ->get();
-        return         $results;
+        return  $results;
     }
 }
