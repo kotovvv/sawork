@@ -23,11 +23,12 @@
 				<div class="d-flex">
 					<v-select
 						label="Magazyn"
-						v-model="IDWarehouse"
+						v-model="selectedWarehause"
 						:items="warehouses"
 						item-title="Nazwa"
 						item-value="IDMagazynu"
 						hide-details="auto"
+						return-object
 					></v-select>
 					<v-btn
 						size="x-large"
@@ -191,11 +192,17 @@
 									v-if="step == 3"
 									class="btn primary mb-5"
 									variant="tonal"
+									@click.once="doRelokacja"
 									>Relokacja</v-btn
 								>
 							</v-col>
 						</v-row>
 					</template>
+					<v-progress-linear
+						:active="loading"
+						indeterminate
+						color="purple"
+					></v-progress-linear>
 					<p class="text-grey px-4">{{ test }}</p>
 				</v-card>
 			</v-container>
@@ -224,7 +231,7 @@ export default {
 			dataTowarLocationTipTab: [],
 			warehouses: [],
 			warehousesLoc: [],
-			IDWarehouse: null,
+			selectedWarehause: null,
 			days: 20,
 			snackbar: false,
 			message: '',
@@ -239,10 +246,19 @@ export default {
 			toLocations: [],
 			toLocation: {},
 			test: '',
+			createdDoc: {},
 		};
 	},
 	mounted() {
 		this.getWarehouse();
+	},
+	watch: {
+		selectedWarehause(warehouse) {
+			console.log(warehouse);
+			if (this.selectedWarehause != warehouse) {
+				this.createdDoc = {};
+			}
+		},
 	},
 	methods: {
 		clear() {
@@ -284,7 +300,7 @@ export default {
 							if (res.status == 200) {
 								vm.product = res.data;
 								vm.loading = false;
-								vm.getPZ();
+								// vm.getPZ();
 							}
 						})
 						.catch((error) => console.log(error));
@@ -343,10 +359,10 @@ export default {
 
 		TowarLocationTipTab() {
 			const vm = this;
-			if (!vm.IDWarehouse) return;
+			if (!vm.selectedWarehause) return;
 			vm.loading = true;
 			let data = {};
-			data.stor = vm.IDWarehouse;
+			data.stor = vm.selectedWarehause.IDMagazynu;
 			data.days = vm.days;
 			axios
 				.post('/api/TowarLocationTipTab', data)
@@ -366,7 +382,6 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.warehouses = res.data;
-						// vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
 					}
 				})
 				.catch((error) => console.log(error));
@@ -374,7 +389,7 @@ export default {
 		getWarehouseLocations() {
 			const vm = this;
 			axios
-				.get('/api/getWarehouseLocations/' + vm.IDWarehouse)
+				.get('/api/getWarehouseLocations/' + vm.selectedWarehause.IDMagazynu)
 				.then((res) => {
 					if (res.status == 200) {
 						vm.warehousesLoc = res.data;
@@ -389,6 +404,26 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						console.log(res.data);
+					}
+				})
+				.catch((error) => console.log(error));
+		},
+		doRelokacja() {
+			const vm = this;
+			let data = {};
+			vm.loading = true;
+			data.IDTowaru = vm.product.IDTowaru;
+			data.qty = vm.product.qty;
+			data.fromLocation = vm.selected_item.LocationCode;
+			data.toLocation = vm.toLocation;
+			data.selectedWarehause = vm.selectedWarehause;
+			data.createdDoc = vm.createdDoc;
+			axios
+				.post('/api/doRelokacja', data)
+				.then((res) => {
+					if (res.status == 200) {
+						vm.createdDoc = res.data.createdDoc;
+						vm.loading = false;
 					}
 				})
 				.catch((error) => console.log(error));

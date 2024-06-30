@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class LocationController extends Controller
 {
@@ -95,7 +96,7 @@ class LocationController extends Controller
         )->get();
     }
 
-    public function getPZ($idp, $idl)
+    private function getPZ($IDTowaru, $LocationCode)
     {
         $date = Carbon::now()->format('Ymd');
 
@@ -109,8 +110,8 @@ class LocationController extends Controller
             })
             ->whereRaw('e.ilosc * r.Operator > 0')
             ->where('r.Data', '>=', DB::raw('BO.MinDate'))
-            ->where('e.IDTowaru', $idp)
-            ->where('l.LocationCode', $idl)
+            ->where('e.IDTowaru', $IDTowaru)
+            ->where('l.LocationCode', $LocationCode)
             ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
             ->select(
                 'e.IDElementuRuchuMagazynowego',
@@ -123,7 +124,78 @@ class LocationController extends Controller
                 'r.Operator',
                 'r.Data'
             )
-            ->get();
+            ->get()->toArray();
         return  $results;
+    }
+
+    public function doRelokacja(Request $request)
+    {
+        $data = $request->all();
+        $response = [];
+        $IDTowaru = $data['IDTowaru'];
+        $qty = $data['qty'];
+        $LocationCode = $data['fromLocation'];
+        $toLocation = $data['toLocation'];
+        $selectedWarehause = $data['selectedWarehause'];
+        $createdDoc = $data['createdDoc'];
+        $pz = [];
+
+        // 1. chech if doc cteated
+        if (!$createdDoc) {
+
+            $ndoc = DB::selectOne("SELECT TOP 1 NrDokumentu n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '27' AND IDMagazynu = " . $selectedWarehause['IDMagazynu'] . " AND year( Utworzono ) = " . date('Y') . " ORDER BY Data DESC");
+            preg_match('/^ZL(.*)\/.*/', $ndoc->n, $a_ndoc);
+            $NrDokumentu = 'ZL' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $selectedWarehause["Symbol"];
+
+            $creat_zl = [];
+
+            $creat_zl['IDRodzajuRuchuMagazynowego'] = 27;
+            $creat_zl['Data'] = Date('d-m-Y H:i:s');
+            $creat_zl['IDMagazynu'] = $selectedWarehause['IDMagazynu'];
+            $creat_zl['NrDokumentu'] = $NrDokumentu;
+            $creat_zl['Operator'] = 1;
+            $creat_zl['IDCompany'] = 1;
+            $creat_zl['IDUzytkownika'] = 1;
+            // $creat_zl['WartoscDokumentu'] = 0; // - в строке в которой отнимаем указываем сумму товаров
+
+            // create doc
+            DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
+            $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
+            DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
+            $resnonse['createdDoc']['idpls'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
+        } else {
+            $resnonse['createdDoc'] = $createdDoc;
+        }
+
+        //2. ElementRuchuMagazynowego
+        $pz = $this->getPZ($IDTowaru, $LocationCode);
+        $el = [];
+        $el['IDTowaru'] = $IDTowaru;
+        $k = $qty;
+
+        foreach ($pz as $key => $value) {
+            $debt = $k > $pz[$key]->qty ?  $pz[$key]->qty : $k;
+            $el['Ilosc'] = -$debt;
+            $el['IDRodzic'] = '';
+            $el['IDWarehouseLocation'] = null;
+            $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idmin'];
+            $el['CenaJednostkowa'] = 0;
+            DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
+            $ndocidmin = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
+            $el['Ilosc'] = $debt;
+            $el['IDRodzic'] = $ndocidmin;
+            $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idpls'];
+            $el['IDWarehouseLocation'] = $toLocation['IDWarehouseLocation'];
+            DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
+            $ndocidpls = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
+
+            DB::statement('EXEC dbo.UtworzZaleznoscPZWZ @IDElementuPZ = ?, @IDElementuWZ = ?, @Ilosc = ?', [
+                $pz[$key]->IDElementuRuchuMagazynowego, $ndocidmin, $debt
+            ]);
+            $k -=  $pz[$key]->qty;
+            if ($k <= 0) break;
+        }
+
+        return $resnonse;
     }
 }

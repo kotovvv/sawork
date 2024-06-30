@@ -31,4 +31,4 @@ Route::post('doWz', [ReturnController::class, 'doWz']);
 Route::get('sendPDF', [SendPDF::class, 'index']);
 Route::post('TowarLocationTipTab', [LocationController::class, 'TowarLocationTipTab']);
 Route::get('getWarehouseLocations/{id}', [LocationController::class, 'getWarehouseLocations']);
-Route::get('getPZ/{idp}/{idl}', [LocationController::class, 'getPZ']);
+Route::post('doRelokacja', [LocationController::class, 'doRelokacja']);
