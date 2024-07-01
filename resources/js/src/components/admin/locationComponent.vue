@@ -33,7 +33,10 @@
 					<v-btn
 						size="x-large"
 						class="btn primary"
-						@click="TowarLocationTipTab()"
+						@click="
+							TowarLocationTipTab();
+							createdDoc = {};
+						"
 						>Odbiór</v-btn
 					></div
 				>
@@ -138,8 +141,11 @@
 										:id="product.IDTowaru"
 										class="border qty text-h5 text-center"
 									>
-										{{ product.qty }} z {{ parseInt(selected_item.Quantity) }}</div
-									>
+										{{ product.qty }} z {{ parseInt(selected_item.peremestit) }} (<small>{{
+											parseInt(selected_item.Quantity)
+										}}</small
+										>)
+									</div>
 									<div
 										class="btn border"
 										@click="changeCounter(product, 1)"
@@ -252,14 +258,7 @@ export default {
 	mounted() {
 		this.getWarehouse();
 	},
-	watch: {
-		selectedWarehause(warehouse) {
-			console.log(warehouse);
-			if (this.selectedWarehause != warehouse) {
-				this.createdDoc = {};
-			}
-		},
-	},
+	watch: {},
 	methods: {
 		clear() {
 			this.step = 0;
@@ -412,6 +411,7 @@ export default {
 			const vm = this;
 			let data = {};
 			vm.loading = true;
+			vm.message = '';
 			data.IDTowaru = vm.product.IDTowaru;
 			data.qty = vm.product.qty;
 			data.fromLocation = vm.selected_item.LocationCode;
@@ -424,6 +424,8 @@ export default {
 					if (res.status == 200) {
 						vm.createdDoc = res.data.createdDoc;
 						vm.loading = false;
+						vm.message = `Dokumenty przeniesienia zostały utworzone. ${vm.createdDoc.idmin} ${vm.createdDoc.idpls}`;
+						vm.dataTowarLocationTipTab = vm.dataTowarLocationTipTab.filter((o) => o !== vm.selected_item);
 					}
 				})
 				.catch((error) => console.log(error));
