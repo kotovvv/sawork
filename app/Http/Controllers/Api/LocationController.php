@@ -176,10 +176,10 @@ class LocationController extends Controller
         foreach ($pz as $key => $value) {
             $debt = $k > $pz[$key]->qty ?  $pz[$key]->qty : $k;
             $el['Ilosc'] = -$debt;
-            $el['IDRodzic'] = '';
+            $el['IDRodzic'] = null;
             $el['IDWarehouseLocation'] = null;
             $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idmin'];
-            $el['CenaJednostkowa'] = 0;
+            //$el['CenaJednostkowa'] = 0;
             DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
             $ndocidmin = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
             $el['Ilosc'] = $debt;
