@@ -62,7 +62,10 @@
 			@keyup="handleKeypress"
 		>
 			<v-container>
-				<v-card>
+				<v-card
+					height="80vh"
+					class="ovoverflow-y-auto"
+				>
 					<v-card-title class="mb-5 bg-grey-lighten-3">
 						<v-row>
 							<v-col>
