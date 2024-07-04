@@ -150,7 +150,7 @@ class LocationController extends Controller
             $creat_zl = [];
 
             $creat_zl['IDRodzajuRuchuMagazynowego'] = 27;
-            $creat_zl['Data'] = Date('d-m-Y H:i:s');
+            $creat_zl['Data'] = Date('m-d-Y H:i:s');
             $creat_zl['IDMagazynu'] = $selectedWarehause['IDMagazynu'];
             $creat_zl['NrDokumentu'] = $NrDokumentu;
             $creat_zl['Operator'] = 1;
@@ -163,6 +163,7 @@ class LocationController extends Controller
             $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
             DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
             $resnonse['createdDoc']['idpls'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
+            DB::table('PrzesunieciaMM')->insert(['IDRuchuMagazynowegoZ' => $resnonse['createdDoc']['idmin'], 'IDRuchuMagazynowegoDo' => $resnonse['createdDoc']['idpls']]);
         } else {
             $resnonse['createdDoc'] = $createdDoc;
         }
@@ -193,6 +194,8 @@ class LocationController extends Controller
             DB::statement('EXEC dbo.UtworzZaleznoscPZWZ @IDElementuPZ = ?, @IDElementuWZ = ?, @Ilosc = ?', [
                 $pz[$key]->IDElementuRuchuMagazynowego, $ndocidmin, $debt
             ]);
+
+            // DB::table('ZaleznosciPZWZ')->insert(['IDElementuPZ'=> $pz[$key]->IDElementuRuchuMagazynowego, 'IDElementuWZ'=> $ndocidmin, 'Ilosc'=> $debt]);
             $k -=  $pz[$key]->qty;
             if ($k <= 0) break;
         }
