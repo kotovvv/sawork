@@ -1,5 +1,5 @@
 <template>
-	<form @submit.prevent="login">
+	<form @submit.prevent="dologin">
 		<input
 			type="text"
 			v-model="login"
@@ -25,7 +25,7 @@ export default {
 		};
 	},
 	methods: {
-		login() {
+		dologin() {
 			this.$emit('login', { login: this.login, password: this.password });
 		},
 	},

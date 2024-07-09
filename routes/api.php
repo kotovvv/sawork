@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ReturnController;
 use App\Http\Controllers\Api\MagazynController;
 use App\Http\Controllers\Api\SendPDF;
 use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\LocationController;
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     return $request->user();
 // });
+Route::post('login', [AuthController::class, 'login']);
 Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
 Route::get('loadMagEmail', [MagazynController::class, 'loadMagEmail']);
 Route::post('saveMagEmail', [MagazynController::class, 'saveMagEmail']);

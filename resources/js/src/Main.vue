@@ -9,6 +9,8 @@
 </template>
 
 <script>
+import axios from 'axios';
+
 import LoginComponent from './components/LoginComponent.vue';
 import ManagerComponent from './components/manager/ManagerComponent.vue';
 import AdminComponent from './components/admin/AdminComponent.vue';
