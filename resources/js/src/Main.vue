@@ -1,60 +1,56 @@
 <template>
 	<div>
 		<component
-			ref="main"
+			:is="currentComponent"
+			@login="handleLogin"
 			:user="user"
-			v-on:login="onLogin"
-			:is="theComponent"
 		/>
 	</div>
 </template>
 
 <script>
-import logincomponent from './components/LoginComponent.vue';
+import LoginComponent from './components/LoginComponent.vue';
+import ManagerComponent from './components/manager/ManagerComponent.vue';
+import AdminComponent from './components/admin/AdminComponent.vue';
 
-import managerComponent from './components/manager/managerComponent.vue';
-import adminComponent from './components/admin/adminComponent.vue';
-
-import axios from 'axios';
 export default {
-	components: [logincomponent, managerComponent],
-	data: () => ({
-		user: {},
-	}),
+	components: {
+		LoginComponent,
+		ManagerComponent,
+		AdminComponent,
+	},
+	data() {
+		return {
+			user: null,
+			token: localStorage.getItem('token') || '',
+		};
+	},
 	computed: {
-		theComponent() {
-			if (this.user.role_id == undefined) return logincomponent;
-			if (this.user.role_id == 3) return managerComponent;
-			if (this.user.role_id == 1) return adminComponent;
+		currentComponent() {
+			if (!this.user) return 'LoginComponent';
+			if (this.user.role.name === 'manager') return 'ManagerComponent';
+			if (this.user.role.name === 'admin') return 'AdminComponent';
+			return 'LoginComponent';
 		},
 	},
 	methods: {
-		onLogin(data) {
-			this.user = data;
-			if (this.user.role_id == undefined && localStorage.user != undefined) localStorage.clear();
-		},
-		isExist(user) {
-			return !!localStorage[user];
-		},
-		clear() {
-			localStorage.clear();
-			this.user = {};
+		async handleLogin(credentials) {
+			try {
+				const response = await axios.post('/api/login', credentials);
+				this.token = response.data.token;
+				this.user = response.data.user;
+				localStorage.setItem('token', this.token);
+				axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+			} catch (error) {
+				console.error('Login failed:', error);
+			}
 		},
 	},
-	mounted: function () {
-		if (this.isExist('user')) {
-			const self = this;
-			const local_user = JSON.parse(localStorage.user);
-			this.user = local_user;
-
-			// axios
-			// 	.post('/api/session', local_user)
-			// 	.then((res) => {
-			// 		if (res.data == 'create') {
-			// 			self.clear();
-			// 		}
-			// 	})
-			// 	.catch((error) => console.log(error));
+	created() {
+		if (this.token) {
+			axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+			// Fetch user data from API or use stored user data if already fetched
+			// this.fetchUserData();
 		}
 	},
 };
