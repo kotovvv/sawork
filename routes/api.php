@@ -22,14 +22,17 @@ use App\Http\Controllers\Api\AuthUserController;
 //     return $request->user();
 // });
 Route::post('login', [AuthUserController::class, 'login']);
-Route::middleware(['auth.jwt'])->get('getWarehouse', [ReturnController::class, 'getWarehouse']);
-Route::middleware(['auth.jwt'])->get('loadMagEmail', [MagazynController::class, 'loadMagEmail']);
-Route::middleware(['auth.jwt'])->post('saveMagEmail', [MagazynController::class, 'saveMagEmail']);
-Route::middleware(['auth.jwt'])->post('deleteMagEmail', [MagazynController::class, 'deleteMagEmail']);
-Route::middleware(['auth.jwt'])->post('getOrder', [ReturnController::class, 'getOrder']);
-Route::middleware(['auth.jwt'])->get('getProduct/{id}', [LocationController::class, 'getProduct']);
-Route::middleware(['auth.jwt'])->post('doWz', [ReturnController::class, 'doWz']);
-Route::middleware(['auth.jwt'])->get('sendPDF', [SendPDF::class, 'index']);
-Route::middleware(['auth.jwt'])->post('TowarLocationTipTab', [LocationController::class, 'TowarLocationTipTab']);
-Route::middleware(['auth.jwt'])->get('getWarehouseLocations/{id}', [LocationController::class, 'getWarehouseLocations']);
-Route::middleware(['auth.jwt'])->post('doRelokacja', [LocationController::class, 'doRelokacja']);
+
+Route::middleware(['auth.jwt'])->group(function () {
+    Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
+    Route::get('loadMagEmail', [MagazynController::class, 'loadMagEmail']);
+    Route::post('saveMagEmail', [MagazynController::class, 'saveMagEmail']);
+    Route::post('deleteMagEmail', [MagazynController::class, 'deleteMagEmail']);
+    Route::post('getOrder', [ReturnController::class, 'getOrder']);
+    Route::get('getProduct/{id}', [LocationController::class, 'getProduct']);
+    Route::post('doWz', [ReturnController::class, 'doWz']);
+    Route::get('sendPDF', [SendPDF::class, 'index']);
+    Route::post('TowarLocationTipTab', [LocationController::class, 'TowarLocationTipTab']);
+    Route::get('getWarehouseLocations/{id}', [LocationController::class, 'getWarehouseLocations']);
+    Route::post('doRelokacja', [LocationController::class, 'doRelokacja']);
+});

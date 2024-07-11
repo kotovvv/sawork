@@ -65,7 +65,7 @@
 import refunds2 from './refunds2Component.vue';
 
 export default {
-	name: 'Refunds',
+	name: 'managerComponent',
 	components: [refunds2],
 	props: ['user'],
 	data: () => ({

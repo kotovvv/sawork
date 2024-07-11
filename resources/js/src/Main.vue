@@ -12,14 +12,12 @@
 import axios from 'axios';
 
 import LoginComponent from './components/LoginComponent.vue';
-import ManagerComponent from './components/manager/ManagerComponent.vue';
-import AdminComponent from './components/admin/AdminComponent.vue';
+import managerComponent from './components/manager/managerComponent.vue';
+import adminComponent from './components/admin/adminComponent.vue';
 
 export default {
 	components: {
 		LoginComponent,
-		ManagerComponent,
-		AdminComponent,
 	},
 	data() {
 		return {
@@ -30,8 +28,8 @@ export default {
 	computed: {
 		currentComponent() {
 			if (!this.user) return 'LoginComponent';
-			if (this.user.name === 'manager') return 'ManagerComponent';
-			if (this.user.name === 'admin') return 'AdminComponent';
+			if (this.user.IDRoli === '3') return managerComponent;
+			if (this.user.IDRoli === '1') return adminComponent;
 			return 'LoginComponent';
 		},
 	},
@@ -39,7 +37,6 @@ export default {
 		async handleLogin(credentials) {
 			try {
 				const response = await axios.post('/api/login', credentials);
-				console.log(response);
 				localStorage.setItem('token', response.data.token);
 				axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
 				this.user = response.data.user;

@@ -6,7 +6,6 @@
 	>
 		<v-card-item>
 			<v-card-title> Connect to the system </v-card-title>
-
 			<v-card-subtitle class="red">{{ message }} </v-card-subtitle>
 		</v-card-item>
 
