@@ -30,8 +30,8 @@ export default {
 	computed: {
 		currentComponent() {
 			if (!this.user) return 'LoginComponent';
-			if (this.user.role.name === 'manager') return 'ManagerComponent';
-			if (this.user.role.name === 'admin') return 'AdminComponent';
+			if (this.user.name === 'manager') return 'ManagerComponent';
+			if (this.user.name === 'admin') return 'AdminComponent';
 			return 'LoginComponent';
 		},
 	},
@@ -39,10 +39,10 @@ export default {
 		async handleLogin(credentials) {
 			try {
 				const response = await axios.post('/api/login', credentials);
-				this.token = response.data.token;
+				console.log(response);
+				localStorage.setItem('token', response.data.token);
+				axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
 				this.user = response.data.user;
-				localStorage.setItem('token', this.token);
-				axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
 			} catch (error) {
 				console.error('Login failed:', error);
 			}
