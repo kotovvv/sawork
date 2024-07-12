@@ -6,9 +6,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use Illuminate\Support\Facades\Cache;
 
 class AuthUserController extends Controller
 {
+    protected $maxAttempts = 3; // Максимальное количество попыток
+    protected $decayMinutes = 6; // Время блокировки в минутах
+
     public function login(Request $request)
     {
         $request->validate([
@@ -16,10 +20,20 @@ class AuthUserController extends Controller
             'password' => 'required|string',
         ]);
 
+        $ipAddress = $request->ip();
+        $loginKey = 'login.attempts.' . $ipAddress;
+
+        if (Cache::has($loginKey) && Cache::get($loginKey) >= $this->maxAttempts) {
+            return response()->json(['error' => 'Zbyt wiele prób logowania. '], 429); //Please try again in ' . $this->decayMinutes . ' minutes.
+        }
+
         // Поиск пользователя по логину
         $user = User::select('IDUzytkownika', 'IDRoli', 'NazwaUzytkownika', 'IDDefaultWarehouse', 'Login')->where('login', $request->login)->where('Aktywny', 1)->first();
         // Проверка существования пользователя и совпадения хэшированных паролей
         if ($user && $this->checkPassword($request->password, User::where('IDUzytkownika', $user->IDUzytkownika)->value('Haslo'))) {
+            // Сброс попыток после успешного входа
+            Cache::forget($loginKey);
+
             // Создание токена JWT
             $token = JWTAuth::fromUser($user);
 
@@ -28,12 +42,21 @@ class AuthUserController extends Controller
                 'user' => $user,
             ], 200);
         } else {
-            return response()->json(['error' => 'Unauthorized'], 401);
+            // Увеличение количества попыток
+            Cache::increment($loginKey, 1);
+
+            // Установка времени жизни кеша при первой ошибочной попытке
+            if (Cache::get($loginKey) == 1) {
+                Cache::put($loginKey, 1, now()->addMinutes($this->decayMinutes));
+            }
+
+            return response()->json(['error' => 'Nieautoryzowany'], 401);
         }
     }
 
     private function checkPassword($inputPassword, $storedHash)
     {
+        // Проверка пароля с использованием вашего метода хеширования
         $inputHash = $this->getPasswordHash($inputPassword);
         return $inputHash === $storedHash;
     }

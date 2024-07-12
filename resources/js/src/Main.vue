@@ -5,15 +5,30 @@
 			@login="handleLogin"
 			:user="user"
 		/>
+		<v-snackbar
+			v-model="snackbar"
+			:timeout="timeout"
+			location="top"
+			color="red"
+		>
+			{{ text }}
+
+			<template v-slot:actions>
+				<v-btn
+					variant="text"
+					@click="snackbar = false"
+					icon="mdi-close"
+				>
+				</v-btn>
+			</template>
+		</v-snackbar>
 	</div>
 </template>
 
 <script>
+import { defineAsyncComponent } from 'vue';
 import axios from 'axios';
-
 import LoginComponent from './components/LoginComponent.vue';
-import managerComponent from './components/manager/managerComponent.vue';
-import adminComponent from './components/admin/adminComponent.vue';
 
 export default {
 	components: {
@@ -23,26 +38,39 @@ export default {
 		return {
 			user: null,
 			token: localStorage.getItem('token') || '',
+			text: '',
+			snackbar: false,
+			timeout: 6000,
 		};
 	},
 	computed: {
 		currentComponent() {
 			if (!this.user) return 'LoginComponent';
-			if (this.user.IDRoli === '3') return managerComponent;
-			if (this.user.IDRoli === '1') return adminComponent;
+			if (this.user.IDRoli === '3')
+				return defineAsyncComponent(() => import('./components/manager/managerComponent.vue'));
+			if (this.user.IDRoli === '1')
+				return defineAsyncComponent(() => import('./components/admin/adminComponent.vue'));
 			return 'LoginComponent';
 		},
 	},
 	methods: {
 		async handleLogin(credentials) {
-			try {
-				const response = await axios.post('/api/login', credentials);
-				localStorage.setItem('token', response.data.token);
-				axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-				this.user = response.data.user;
-			} catch (error) {
-				console.error('Login failed:', error);
-			}
+			const vm = this;
+			vm.text = '';
+			await axios
+				.post('/api/login', credentials)
+				.then((res) => {
+					localStorage.setItem('token', res.data.token);
+					axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+					vm.user = res.data.user;
+				})
+				.catch((error) => {
+					if (error.response && error.response.status >= 400) {
+						vm.text = error.response.data.error;
+						vm.snackbar = true;
+					}
+					console.error('Login failed:', error);
+				});
 		},
 	},
 	created() {

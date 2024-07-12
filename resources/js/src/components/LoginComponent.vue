@@ -5,7 +5,7 @@
 		max-width="344"
 	>
 		<v-card-item>
-			<v-card-title> Connect to the system </v-card-title>
+			<v-card-title> Podłącz do systemu </v-card-title>
 			<v-card-subtitle class="red">{{ message }} </v-card-subtitle>
 		</v-card-item>
 
@@ -45,7 +45,8 @@
 				<v-btn
 					width="100%"
 					@click="onSubmit"
-					>Login</v-btn
+					variant="outlined"
+					>Logowanie</v-btn
 				>
 			</v-card-actions>
 		</form>
