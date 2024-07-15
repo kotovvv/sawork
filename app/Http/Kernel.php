@@ -69,5 +69,6 @@ class Kernel extends HttpKernel
     protected $routeMiddleware = [
         // ...
         'auth.jwt' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
+        'jwt.verify' => \App\Http\Middleware\JWTMiddleware::class,
     ];
 }

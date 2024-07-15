@@ -23,7 +23,7 @@ use App\Http\Controllers\Api\AuthUserController;
 // });
 Route::post('login', [AuthUserController::class, 'login']);
 
-Route::middleware(['auth.jwt'])->group(function () {
+Route::middleware(['jwt.verify'])->group(function () {
     Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
     Route::get('loadMagEmail', [MagazynController::class, 'loadMagEmail']);
     Route::post('saveMagEmail', [MagazynController::class, 'saveMagEmail']);

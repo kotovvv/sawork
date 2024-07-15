@@ -9,17 +9,13 @@ use Illuminate\Support\Facades\DB;
 
 class ReturnController extends Controller
 {
-    public function getWarehouse()
+    public function getWarehouse(Request $request)
     {
+        $user = $request->user;
 
-        return DB::select('SELECT [IDMagazynu]
-           ,[Nazwa]
-        --    ,[Utworzono]
-        --    ,[Zmodyfikowano]
-           ,[Symbol]
-        --    ,[Hidden]
-        --    ,[NegativeStock]
-       FROM [dbo].[Magazyn]');
+        $a_mag = DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu');
+
+        return DB::table('Magazyn')->select('IDMagazynu', 'Nazwa', 'Symbol')->whereIn('IDMagazynu', $a_mag)->get();
     }
 
     public function getOrder(Request $request)
