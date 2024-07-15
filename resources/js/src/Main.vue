@@ -3,6 +3,7 @@
 		<component
 			:is="currentComponent"
 			@login="handleLogin"
+			@logout="handleLogout"
 			:user="user"
 		/>
 		<v-snackbar
@@ -72,6 +73,12 @@ export default {
 					console.error('Login failed:', error);
 				});
 		},
+	},
+	handleLogout() {
+		this.token = '';
+		this.user = null;
+		localStorage.removeItem('token');
+		delete axios.defaults.headers.common['Authorization'];
 	},
 	created() {
 		if (this.token) {

@@ -37,7 +37,7 @@
 			<v-divider></v-divider>
 			<v-list>
 				<v-list-item
-					@click="$emit('login', {})"
+					@click="$emit('logout')"
 					prepend-icon="mdi-logout"
 					title="Wyjście"
 				>

@@ -41,7 +41,7 @@
 				nav
 			>
 				<v-list-item
-					@click="$emit('login', {})"
+					@click="$emit('logout')"
 					prepend-icon="mdi-logout"
 					title="Wyjście"
 				>
