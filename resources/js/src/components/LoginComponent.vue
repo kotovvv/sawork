@@ -35,7 +35,7 @@
 						:rules="passwordRequired"
 						required
 						@keyup.enter="onSubmit"
-						prepend-icon="mdi-textbox-password"
+						prepend-icon="mdi-key"
 					>
 					</v-text-field>
 				</v-form>

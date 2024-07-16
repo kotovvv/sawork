@@ -75,19 +75,20 @@ export default {
 					console.error('Login failed:', error);
 				});
 		},
-	},
-	handleLogout() {
-		this.token = '';
-		this.user = null;
-		localStorage.removeItem('token');
-		delete axios.defaults.headers.common['Authorization'];
-	},
-	created() {
-		if (this.token) {
-			axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
-			// Fetch user data from API or use stored user data if already fetched
-			// this.fetchUserData();
-		}
+
+		handleLogout() {
+			this.token = '';
+			this.user = null;
+			localStorage.removeItem('token');
+			delete axios.defaults.headers.common['Authorization'];
+		},
+		created() {
+			if (this.token) {
+				axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+				// Fetch user data from API or use stored user data if already fetched
+				// this.fetchUserData();
+			}
+		},
 	},
 };
 </script>

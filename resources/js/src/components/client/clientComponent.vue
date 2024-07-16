@@ -72,6 +72,7 @@ export default {
 		rail: true,
 		selectedItem: 0,
 		theMenu: 'cabinet',
+		items: [{ text: 'Cabinet', name: 'cabinet', icon: 'mdi-account-box' }],
 	}),
 	computed: {
 		setComponent() {
