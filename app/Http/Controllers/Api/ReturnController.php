@@ -11,10 +11,10 @@ class ReturnController extends Controller
 {
     public function getWarehouse(Request $request)
     {
-        $user = $request->user;
-        if ($user) {
 
-            $a_mag = DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu');
+        if (isset($request->user)) {
+            $user = $request->user;
+            $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
 
             return DB::table('Magazyn')->select('IDMagazynu', 'Nazwa', 'Symbol')->whereIn('IDMagazynu', $a_mag)->get();
         }
