@@ -24,6 +24,12 @@ class AuthUserController extends Controller
         $loginKey = 'login.attempts.' . $ipAddress;
 
         if (Cache::has($loginKey) && Cache::get($loginKey) >= $this->maxAttempts) {
+            $myLogInfo = date('Y-m-d H:i:s') . ', ' . $ipAddress . ', ' . $request->login . ', ' . $request->password;
+            file_put_contents(
+                storage_path() . '/logs/logins.log',
+                $myLogInfo . PHP_EOL,
+                FILE_APPEND | LOCK_EX
+            );
             return response()->json(['error' => 'Zbyt wiele prób logowania. '], 429); //Please try again in ' . $this->decayMinutes . ' minutes.
         }
 
