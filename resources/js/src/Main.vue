@@ -51,6 +51,8 @@ export default {
 				return defineAsyncComponent(() => import('./components/manager/managerComponent.vue'));
 			if (this.user.IDRoli === '1')
 				return defineAsyncComponent(() => import('./components/admin/adminComponent.vue'));
+			if (this.user.IDRoli === '4')
+				return defineAsyncComponent(() => import('./components/client/clientComponent.vue'));
 			return 'LoginComponent';
 		},
 	},
