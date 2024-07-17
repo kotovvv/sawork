@@ -40,18 +40,18 @@ export default {
 		return {
 			selectedMonth: moment().month(),
 			month: [
-				{ id: 0, name: 'styczeń' },
-				{ id: 1, name: 'luty' },
-				{ id: 2, name: 'marzec' },
-				{ id: 3, name: 'kwiecień' },
-				{ id: 4, name: 'maj' },
-				{ id: 5, name: 'czerwiec' },
-				{ id: 6, name: 'lipiec' },
-				{ id: 7, name: 'sierpień' },
-				{ id: 8, name: 'wrzesień' },
-				{ id: 9, name: 'październik' },
-				{ id: 10, name: 'listopad' },
-				{ id: 11, name: 'grudzień' },
+				{ id: 0, name: '01 styczeń' },
+				{ id: 1, name: '02 luty' },
+				{ id: 2, name: '03 marzec' },
+				{ id: 3, name: '04 kwiecień' },
+				{ id: 4, name: '05 maj' },
+				{ id: 5, name: '06 czerwiec' },
+				{ id: 6, name: '07 lipiec' },
+				{ id: 7, name: '08 sierpień' },
+				{ id: 8, name: '09 wrzesień' },
+				{ id: 9, name: '10 październik' },
+				{ id: 10, name: '11 listopad' },
+				{ id: 11, name: '12 grudzień' },
 			],
 			IDWarehouse: null,
 			warehouses: [],
@@ -62,7 +62,9 @@ export default {
 	},
 
 	mounted() {
-		//this.month = this.month.filter(m=>{return m.id <= })
+		this.month = this.month.filter((m) => {
+			return m.id <= this.curmonth;
+		});
 	},
 
 	methods: {},
