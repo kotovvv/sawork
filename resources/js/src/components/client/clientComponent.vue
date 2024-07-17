@@ -61,31 +61,22 @@
 </template>
 
 <script>
-// import refunds from './refundsComponent.vue';
-import refunds2 from './refunds2Component.vue';
-import sendPDF from './sendPDF.vue';
+import cabinet from './cabinetComponent.vue';
 
 export default {
-	name: 'managerComponent',
-	components: [refunds2],
+	name: 'clientComponent',
+	components: [cabinet],
 	props: ['user'],
 	data: () => ({
 		drawer: true,
 		rail: true,
 		selectedItem: 0,
-		theMenu: 'refunds2',
-
-		items: [
-			// { text: 'Zwroty', name: 'refunds', icon: 'mdi-restore' },
-			{ text: 'Zwroty', name: 'refunds2', icon: 'mdi-database-plus' },
-			{ text: 'sendPDF', name: 'sendPDF', icon: 'mdi-file-send' },
-		],
+		theMenu: 'cabinet',
+		items: [{ text: 'Cabinet', name: 'cabinet', icon: 'mdi-account-box' }],
 	}),
 	computed: {
 		setComponent() {
-			// if (this.theMenu == 'refunds') return refunds;
-			if (this.theMenu == 'refunds2') return refunds2;
-			if (this.theMenu == 'sendPDF') return sendPDF;
+			if (this.theMenu == 'cabinet') return cabinet;
 		},
 	},
 };

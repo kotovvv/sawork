@@ -9,17 +9,16 @@ use Illuminate\Support\Facades\DB;
 
 class ReturnController extends Controller
 {
-    public function getWarehouse()
+    public function getWarehouse(Request $request)
     {
 
-        return DB::select('SELECT [IDMagazynu]
-           ,[Nazwa]
-        --    ,[Utworzono]
-        --    ,[Zmodyfikowano]
-           ,[Symbol]
-        --    ,[Hidden]
-        --    ,[NegativeStock]
-       FROM [dbo].[Magazyn]');
+        if (isset($request->user)) {
+            $user = $request->user;
+            $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
+
+            return DB::table('Magazyn')->select('IDMagazynu', 'Nazwa', 'Symbol')->whereIn('IDMagazynu', $a_mag)->get();
+        }
+        return response('Nou', 400);
     }
 
     public function getOrder(Request $request)
@@ -34,15 +33,7 @@ class ReturnController extends Controller
         , [Number]
         , cast ([Created] as date) Created
         , con.[Nazwa] cName
-        -- , [IDOrderType]
-        -- , [IDAccount]
-        -- , [Remarks]
         , CAST([_OrdersTempDecimal2] AS INT) as pk
-        -- , [_OrdersTempString1]
-        -- , [_OrdersTempString2]
-        -- , [_OrdersTempString3]
-        -- , [_OrdersTempString4]
-        -- , [_OrdersTempString5]
         FROM [dbo].[Orders] ord
         LEFT JOIN [dbo].[Kontrahent] con ON con.[IDKontrahenta] = ord.[IDAccount]
          WHERE [IDWarehouse] = ' . (int) $data['warehouse'] . ' AND \'' . $orderdata . '\' IN (Number, _OrdersTempString1,_OrdersTempString2, _OrdersTempString3, _OrdersTempString4, CONVERT(NVARCHAR(255), _OrdersTempDecimal1),  CONVERT(NVARCHAR(255), CONVERT(INT, _OrdersTempDecimal2)))'))->first();
@@ -95,7 +86,7 @@ class ReturnController extends Controller
     {
         $data = $request->all();
         $doc_wz = $data['wz'];
-        $magazin_id = $data['magazin']['IDMagazynu'];
+        $magazin_id = (int) $data['magazin']['IDMagazynu'];
 
         // $IDWarehouseLocation = [10 => 148, 11 => 731, 17 => 954, 16 => 953][$magazin_id];
         $IDWarehouseLocation = DB::table('dbo.EMailMagazyn')->where('IDMagazyn', $magazin_id)->where('IDLokalizaciiZwrot', '>', 0)->value('IDLokalizaciiZwrot');
@@ -103,7 +94,7 @@ class ReturnController extends Controller
         $tovs = collect(DB::select('SELECT "Ilosc" qty,   "CenaJednostkowa" price,   "IDTowaru" cod,     "IDOrderLine" nl FROM "dbo"."ElementRuchuMagazynowego" WHERE IDRuchuMagazynowego = ' . (int) $doc_wz['ID'] . ' ORDER BY "CenaJednostkowa"'))->toArray();
 
         // пока о.кол
-        // ищем е.код == о.код
+        // ищим е.код == о.код
         // если е.кол >= о.кол
         // е.кол = е.кол - о.кол
         // о.кол= о.кол - е.кол

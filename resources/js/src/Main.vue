@@ -1,61 +1,94 @@
 <template>
 	<div>
 		<component
-			ref="main"
+			:is="currentComponent"
+			@login="handleLogin"
+			@logout="handleLogout"
 			:user="user"
-			v-on:login="onLogin"
-			:is="theComponent"
 		/>
+		<v-snackbar
+			v-model="snackbar"
+			:timeout="timeout"
+			location="top"
+			color="red"
+		>
+			{{ text }}
+
+			<template v-slot:actions>
+				<v-btn
+					variant="text"
+					@click="snackbar = false"
+					icon="mdi-close"
+				>
+				</v-btn>
+			</template>
+		</v-snackbar>
 	</div>
 </template>
 
 <script>
-import logincomponent from './components/LoginComponent.vue';
-
-import managerComponent from './components/manager/managerComponent.vue';
-import adminComponent from './components/admin/adminComponent.vue';
-
+import { defineAsyncComponent } from 'vue';
 import axios from 'axios';
+import LoginComponent from './components/LoginComponent.vue';
+
 export default {
-	components: [logincomponent, managerComponent],
-	data: () => ({
-		user: {},
-	}),
+	components: {
+		LoginComponent,
+	},
+	data() {
+		return {
+			user: null,
+			token: localStorage.getItem('token') || '',
+			text: '',
+			snackbar: false,
+			timeout: 6000,
+		};
+	},
 	computed: {
-		theComponent() {
-			if (this.user.role_id == undefined) return logincomponent;
-			if (this.user.role_id == 3) return managerComponent;
-			if (this.user.role_id == 1) return adminComponent;
+		currentComponent() {
+			if (!this.user) return 'LoginComponent';
+			if (this.user.IDRoli === '3')
+				return defineAsyncComponent(() => import('./components/manager/managerComponent.vue'));
+			if (this.user.IDRoli === '1')
+				return defineAsyncComponent(() => import('./components/admin/adminComponent.vue'));
+			if (this.user.IDRoli === '4')
+				return defineAsyncComponent(() => import('./components/client/clientComponent.vue'));
+			return 'LoginComponent';
 		},
 	},
 	methods: {
-		onLogin(data) {
-			this.user = data;
-			if (this.user.role_id == undefined && localStorage.user != undefined) localStorage.clear();
+		async handleLogin(credentials) {
+			const vm = this;
+			vm.text = '';
+			await axios
+				.post('/api/login', credentials)
+				.then((res) => {
+					localStorage.setItem('token', res.data.token);
+					axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+					vm.user = res.data.user;
+				})
+				.catch((error) => {
+					if (error.response && error.response.status >= 400) {
+						vm.text = error.response.data.error;
+						vm.snackbar = true;
+					}
+					console.error('Login failed:', error);
+				});
 		},
-		isExist(user) {
-			return !!localStorage[user];
-		},
-		clear() {
-			localStorage.clear();
-			this.user = {};
-		},
-	},
-	mounted: function () {
-		if (this.isExist('user')) {
-			const self = this;
-			const local_user = JSON.parse(localStorage.user);
-			this.user = local_user;
 
-			// axios
-			// 	.post('/api/session', local_user)
-			// 	.then((res) => {
-			// 		if (res.data == 'create') {
-			// 			self.clear();
-			// 		}
-			// 	})
-			// 	.catch((error) => console.log(error));
-		}
+		handleLogout() {
+			this.token = '';
+			this.user = null;
+			localStorage.removeItem('token');
+			delete axios.defaults.headers.common['Authorization'];
+		},
+		created() {
+			if (this.token) {
+				axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+				// Fetch user data from API or use stored user data if already fetched
+				// this.fetchUserData();
+			}
+		},
 	},
 };
 </script>

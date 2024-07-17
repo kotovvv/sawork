@@ -108,30 +108,6 @@
 				</template>
 			</v-dialog>
 		</v-card>
-		<v-btn
-			class="btn primary"
-			@click="sendPDF()"
-			>Wyślij PDF</v-btn
-		>
-		<v-snackbar
-			v-model="snackbar"
-			vertical
-		>
-			<p>{{ message }}</p>
-
-			<template v-slot:actions>
-				<v-btn
-					color="indigo"
-					variant="text"
-					@click="
-						snackbar = false;
-						message = '';
-					"
-				>
-					Close
-				</v-btn>
-			</template>
-		</v-snackbar>
 	</v-container>
 </template>
 
@@ -156,8 +132,6 @@ export default {
 			editedItem: {},
 			warehouses: [],
 			cod: ['WZk'],
-			snackbar: false,
-			message: '',
 		};
 	},
 	mounted() {
@@ -165,18 +139,6 @@ export default {
 		this.getWarehouse();
 	},
 	methods: {
-		sendPDF() {
-			const self = this;
-			axios
-				.get('/api/sendPDF')
-				.then((response) => {
-					self.message = response.data;
-					self.snackbar = true;
-				})
-				.catch((error) => {
-					console.log(error);
-				});
-		},
 		loadMagEmail() {
 			const self = this;
 			axios

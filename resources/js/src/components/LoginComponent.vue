@@ -1,37 +1,74 @@
 <template>
-	<v-app id="inspire">
-		<v-main>
-			<v-container class="fill-height">
-				<v-row class="justify-center">
-					<v-card class="elevation-12">
-						<v-toolbar
-							color="primary"
-							dark
-							flat
-						>
-							<v-toolbar-title>Połączenie z systemem</v-toolbar-title>
-						</v-toolbar>
-						<v-row class="ma-2">
-							<v-col><v-btn @click="role(3)">Kierownik</v-btn></v-col>
-							<v-col><v-btn @click="role(1)">Аdministrator</v-btn></v-col>
-						</v-row>
-					</v-card>
-				</v-row>
-			</v-container>
-		</v-main>
-	</v-app>
+	<v-card
+		class="mx-auto my-8"
+		elevation="16"
+		max-width="344"
+	>
+		<v-card-item>
+			<v-card-title> Podłącz do systemu </v-card-title>
+			<v-card-subtitle class="red">{{ message }} </v-card-subtitle>
+		</v-card-item>
+
+		<form>
+			<v-card-text>
+				<v-form ref="form">
+					<v-text-field
+						label="Login"
+						name="login"
+						type="text"
+						v-model="login"
+						:rules="userNameRequired"
+						required
+						@keyup.enter="onSubmit"
+						prepend-icon="mdi-account-outline"
+					>
+					</v-text-field>
+
+					<v-text-field
+						id="password"
+						label="Password"
+						name="password"
+						:type="showPassword ? 'text' : 'password'"
+						v-model="password"
+						:append-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
+						@click:append="showPassword = !showPassword"
+						:rules="passwordRequired"
+						required
+						@keyup.enter="onSubmit"
+						prepend-icon="mdi-key"
+					>
+					</v-text-field>
+				</v-form>
+			</v-card-text>
+			<v-card-actions>
+				<v-spacer></v-spacer>
+				<v-btn
+					width="100%"
+					@click="onSubmit"
+					variant="outlined"
+					>Logowanie</v-btn
+				>
+			</v-card-actions>
+		</form>
+	</v-card>
 </template>
 
 <script>
 export default {
-	name: 'login',
-	props: [],
-	data: () => ({}),
+	data() {
+		return {
+			login: '',
+			password: '',
+			errors: {},
+			showPassword: false,
+			userNameRequired: [(v) => !!v || 'without login?'],
+			passwordRequired: [(v) => !!v || 'Password?'],
+			message: '',
+		};
+	},
 	methods: {
-		role(id) {
-			this.$attrs.user.role_id = id;
-			this.$emit('login', this.$attrs.user);
-			// localStorage.user = JSON.stringify(this.user);
+		onSubmit() {
+			this.$emit('login', { login: this.login, password: this.password });
 		},
 	},
 };

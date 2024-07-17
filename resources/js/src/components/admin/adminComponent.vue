@@ -37,7 +37,7 @@
 			<v-divider></v-divider>
 			<v-list>
 				<v-list-item
-					@click="$emit('login', {})"
+					@click="$emit('logout')"
 					prepend-icon="mdi-logout"
 					title="Wyjście"
 				>
@@ -62,7 +62,7 @@ import locationComponent from './locationComponent.vue';
 import test from './test.vue';
 
 export default {
-	name: 'dictionaryComponent',
+	name: 'adminComponent',
 	components: [dictionaryComponent, locationComponent, test],
 	props: ['user'],
 	data: () => ({
