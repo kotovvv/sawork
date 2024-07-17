@@ -47,38 +47,88 @@ class MagazynController extends Controller
         }
     }
 
-public function getWarehouseData($DataMax, $IDMagazynu)
+    public function getWarehouseData($dataMax, $idMagazynu)
     {
-        return DB::table('Towar')
-        ->select('DostawyMinusWydania.IdTowaru', 'Towar.IDMagazynu', 'Towar.IDGrupyTowarow', 'Towar.IDJednostkiMiary', 'Towar.Nazwa', 'Towar.KodKreskowy', 'JednostkaMiary.Nazwa as Jednostka', 'Towar.Archiwalny', 'Towar.Usluga')
-        ->join('ElementRuchuMagazynowego as PZ', 'Towar.IDTowaru', '=', 'PZ.IDTowaru')
-        ->join('RuchMagazynowy as RuchPZ', 'RuchPZ.IDRuchuMagazynowego', '=', 'PZ.IDRuchuMagazynowego')
-        ->leftJoin('RuchMagazynowy as RuchWZ', function ($join) use ($DataMax, $IDMagazynu) {
-            $join->on('RuchWZ.IDRodzajuRuchuMagazynowego', '=', DB::raw('12'))
-            ->on('RuchWZ.Operator', '=', DB::raw('1'))
-                ->on('RuchWZ.Data', '<=', DB::raw('?'))
-                ->on('RuchWZ.IDMagazynu', '=', DB::raw('?'))
-                ->where('RuchWZ.Data', '>=', DB::raw('(SELECT max(r.Data) FROM RuchMagazynowy r WHERE r.IDRodzajuRuchuMagazynowego = 12 AND r.Operator = 1 AND r.Data <= ? AND r.IDMagazynu = ?)'))
-                ->setBindings([$DataMax, $IDMagazynu, $DataMax, $IDMagazynu]);
-        })
-            ->where('Towar.Usluga', '=', 0)
-            ->where('RuchPZ.Data', '<=', $DataMax)
-            ->where('RuchPZ.Operator', '>', 0)
-            ->where('PZ.Ilosc', '>', 0)
-            ->groupBy('Towar.IDTowaru')
-            ->unionAll(function ($query) use ($DataMax, $IDMagazynu) {
-                $query->select('Towar.IDTowaru', DB::raw('sum(-PZWZ.ilosc) as ilosc'), DB::raw('sum(ISNULL(-PZWZ.ilosc*PZ.CenaJednostkowa, 0)) as Wartosc'), DB::raw('sum(ISNULL(-PZWZ.ilosc*WZ.CenaJednostkowa, 0)) as Bilans'))
-                ->from('ZaleznosciPZWZ as PZWZ')
-                ->join('ElementRuchuMagazynowego as WZ', 'WZ.IDElementuRuchuMagazynowego', '=', 'PZWZ.IDElementuWZ')
-                ->join('ElementRuchuMagazynowego as PZ', 'PZ.IDElementuRuchuMagazynowego', '=', 'PZWZ.IDElementuPZ')
-                ->join('RuchMagazynowy as RuchWZ', 'RuchWZ.IDRuchuMagazynowego', '=', 'WZ.IDRuchuMagazynowego')
-                ->join('RuchMagazynowy as RuchPZ', 'RuchPZ.IDRuchuMagazynowego', '=', 'PZ.IDRuchuMagazynowego')
-                ->join('Towar', 'Towar.IDTowaru', '=', 'WZ.IDTowaru')
-                ->where('Towar.Usluga', '=', 0)
-                ->where('RuchWZ.Data', '<=', $DataMax)
-                    ->where('RuchWZ.Operator', '=', DB::raw('1'))
-                    ->where('RuchWZ.Data', '>=', DB::raw('(SELECT max(r.Data) FROM RuchMagazynowy r WHERE r.IDRodzajuRuchuMagazynowego = 12 AND r.Operator = 1 AND r.Data <= ? AND r.IDMagazynu = ?)'))
-                    ->where(DB::raw('(RuchWZ.Operator * WZ.ilosc)'), '<', 0)
-                    ->groupBy('Towar.IDTowaru');
-
+        return DB::table('Towar as t')
+            ->select([
+                'DostawyMinusWydania.IdTowaru',
+                't.IDMagazynu',
+                't.IDGrupyTowarow',
+                't.IDJednostkiMiary',
+                't.Nazwa',
+                't.KodKreskowy',
+                'j.Nazwa as Jednostka',
+                't.Archiwalny',
+                't.Usluga',
+                DB::raw('SUM(DostawyMinusWydania.ilosc) as ilosc'),
+                DB::raw('SUM(DostawyMinusWydania.Wartosc) as Wartosc'),
+                DB::raw('SUM(DostawyMinusWydania.Bilans) as Bilans')
+            ])
+            ->joinSub(function ($query) use ($dataMax, $idMagazynu) {
+                $query->from('ElementRuchuMagazynowego as PZ')
+                    ->select([
+                        't.IdTowaru',
+                        DB::raw('SUM(PZ.ilosc) as Ilosc'),
+                        DB::raw('SUM(ISNULL(PZ.ilosc * PZ.CenaJednostkowa, 0)) as Wartosc'),
+                        DB::raw('SUM(ISNULL(PZ.ilosc * PZ.CenaJednostkowa, 0)) as Bilans')
+                    ])
+                    ->join('RuchMagazynowy as RuchPZ', 'RuchPZ.IDRuchuMagazynowego', '=', 'PZ.IDRuchuMagazynowego')
+                    ->join('Towar as t', 't.IDTowaru', '=', 'PZ.IDTowaru')
+                    ->where('t.Usluga', 0)
+                    ->where('RuchPZ.Data', '<=', $dataMax)
+                    ->where('RuchPZ.Data', '>=', function ($query) use ($dataMax, $idMagazynu) {
+                        $query->select(DB::raw('ISNULL(MAX(r.Data), \'1900-01-01\')'))
+                            ->from('RuchMagazynowy as r')
+                            ->where('r.IDRodzajuRuchuMagazynowego', 12)
+                            ->where('r.Operator', 1)
+                            ->where('r.Data', '<=', $dataMax)
+                            ->where('r.IDMagazynu', $idMagazynu)
+                            ->whereColumn('r.IDMagazynu', 't.IDMagazynu');
+                    })
+                    ->where('RuchPZ.Operator', '>', 0)
+                    ->where('PZ.Ilosc', '>', 0)
+                    ->groupBy('t.IDTowaru')
+                    ->unionAll(function ($query) use ($dataMax, $idMagazynu) {
+                        $query->from('ZaleznosciPZWZ as PZWZ')
+                            ->select([
+                                't.IdTowaru',
+                                DB::raw('SUM(-PZWZ.ilosc) ilosc'),
+                                DB::raw('SUM(ISNULL(-PZWZ.ilosc * PZ.CenaJednostkowa, 0)) as Wartosc'),
+                                DB::raw('SUM(ISNULL(-PZWZ.ilosc * WZ.CenaJednostkowa, 0)) as Bilans')
+                            ])
+                            ->join('ElementRuchuMagazynowego as WZ', 'WZ.IDElementuRuchuMagazynowego', '=', 'PZWZ.IDElementuWZ')
+                            ->join('ElementRuchuMagazynowego as PZ', 'PZ.IDElementuRuchuMagazynowego', '=', 'PZWZ.IDElementuPZ')
+                            ->join('RuchMagazynowy as RuchWZ', 'RuchWZ.IDRuchuMagazynowego', '=', 'WZ.IDRuchuMagazynowego')
+                            ->join('RuchMagazynowy as RuchPZ', 'RuchPZ.IDRuchuMagazynowego', '=', 'PZ.IDRuchuMagazynowego')
+                            ->join('Towar as t', 't.IDTowaru', '=', 'WZ.IDTowaru')
+                            ->where('t.Usluga', 0)
+                            ->where('RuchWZ.Data', '<=', $dataMax)
+                            ->where('RuchWZ.Data', '>=', function ($query) use ($dataMax, $idMagazynu) {
+                                $query->select(DB::raw('ISNULL(MAX(r.Data), \'1900-01-01\')'))
+                                    ->from('RuchMagazynowy as r')
+                                    ->where('r.IDRodzajuRuchuMagazynowego', 12)
+                                    ->where('r.Operator', 1)
+                                    ->where('r.Data', '<=', $dataMax)
+                                    ->where('r.IDMagazynu', $idMagazynu)
+                                    ->whereColumn('r.IDMagazynu', 't.IDMagazynu');
+                            })
+                            ->whereRaw('(RuchWZ.Operator * WZ.ilosc) < 0')
+                            ->groupBy('t.IDTowaru');
+                    });
+            }, 'DostawyMinusWydania', 'DostawyMinusWydania.IDTowaru', '=', 't.IDTowaru')
+            ->join('JednostkaMiary as j', 'j.IDJednostkiMiary', '=', 't.IDJednostkiMiary')
+            ->groupBy([
+                'DostawyMinusWydania.IdTowaru',
+                't.IDMagazynu',
+                't.IDGrupyTowarow',
+                't.IDJednostkiMiary',
+                't.Nazwa',
+                't.KodKreskowy',
+                't.Archiwalny',
+                't.Usluga',
+                'j.Nazwa'
+            ])
+            ->havingRaw('SUM(DostawyMinusWydania.ilosc) > 0')
+            ->get();
+    }
 }

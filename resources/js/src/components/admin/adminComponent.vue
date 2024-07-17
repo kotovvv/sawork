@@ -59,6 +59,7 @@
 <script>
 import dictionaryComponent from './dictionaryComponent.vue';
 import locationComponent from './locationComponent.vue';
+import getXLSX from './getXLSX.vue';
 import test from './test.vue';
 
 export default {
@@ -74,6 +75,7 @@ export default {
 		items: [
 			{ text: 'Podręczniki', name: 'dictionaryComponent', icon: 'mdi-list-box-outline' },
 			{ text: 'Lokalizacja', name: 'locationComponent', icon: 'mdi-forklift' },
+			{ text: 'Report XLSX', name: 'getXLSX', icon: 'mdi-file-excel' },
 			{ text: 'Test', name: 'test', icon: 'mdi-barcode-scan' },
 		],
 	}),
@@ -81,6 +83,7 @@ export default {
 		setComponent() {
 			if (this.theMenu == 'dictionaryComponent') return dictionaryComponent;
 			if (this.theMenu == 'locationComponent') return locationComponent;
+			if (this.theMenu == 'getXLSX') return getXLSX;
 			if (this.theMenu == 'test') return test;
 		},
 	},
