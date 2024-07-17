@@ -64,7 +64,7 @@
 			<v-container>
 				<v-card
 					height="80vh"
-					class="ovoverflow-y-auto"
+					class="overflow-y-auto"
 				>
 					<v-card-title class="mb-5 bg-grey-lighten-3">
 						<v-row>
