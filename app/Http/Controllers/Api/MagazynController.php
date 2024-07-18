@@ -62,9 +62,9 @@ class MagazynController extends Controller
             $lastDay = $current->day;
         }
         for ($day = 1; $day <= $lastDay; $day++) {
-            $res[$year . '-' . $month . '-' . $day] = $this->getWarehouseData($year . '-' . $month . '-' . $day, $IDWarehouse);
+            $date = Carbon::now()->setDate($year, $month, 22)->setTime(23, 59, 59)->format('d.m.Y H:i:s');
+            $res[$day] = $this->getWarehouseData($date, $IDWarehouse);
         }
-
         return $res;
     }
 
@@ -81,9 +81,11 @@ class MagazynController extends Controller
                 'j.Nazwa as Jednostka',
                 't.Archiwalny',
                 't.Usluga',
+                't._TowarTempDecimal2',
                 DB::raw('SUM(DostawyMinusWydania.ilosc) as ilosc'),
                 DB::raw('SUM(DostawyMinusWydania.Wartosc) as Wartosc'),
-                DB::raw('SUM(DostawyMinusWydania.Bilans) as Bilans')
+                DB::raw('SUM(DostawyMinusWydania.Bilans) as Bilans'),
+                DB::raw('SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2 as m3') // Calculate m3
             ])
             ->joinSub(function ($query) use ($dataMax, $idMagazynu) {
                 $query->from('ElementRuchuMagazynowego as PZ')
@@ -148,6 +150,7 @@ class MagazynController extends Controller
                 't.KodKreskowy',
                 't.Archiwalny',
                 't.Usluga',
+                't._TowarTempDecimal2',
                 'j.Nazwa'
             ])
             ->havingRaw('SUM(DostawyMinusWydania.ilosc) > 0')
