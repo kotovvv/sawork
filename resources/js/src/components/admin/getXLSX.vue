@@ -26,15 +26,17 @@
 					label="miesiąc"
 					persistent-hint
 					single-line
-				></v-select
-			></v-col>
+				></v-select>
+				<v-btn @click="getXLSX()">uzyskać XLSX</v-btn></v-col
+			>
 		</v-row>
 	</v-container>
 </template>
     <script>
 import moment from 'moment';
+import axios from 'axios';
 export default {
-	name: 'FulstorGetXLSX',
+	name: 'GetXLSX',
 
 	data() {
 		return {
@@ -62,11 +64,42 @@ export default {
 	},
 
 	mounted() {
+		this.getWarehouse();
 		this.month = this.month.filter((m) => {
 			return m.id <= this.curmonth;
 		});
 	},
 
-	methods: {},
+	methods: {
+		getXLSX() {
+			const vm = this;
+			let data = {};
+			data.IDWarehouse = vm.IDWarehouse;
+			data.month = vm.selectedMonth;
+			data.year = vm.curyear;
+			if (vm.curmonth == 0 && vm.selectedMonth == 11) {
+				data.year = vm.curyear - 1;
+			}
+			axios
+				.post('/api/getDataForXLS', data)
+				.then((res) => {
+					if (res.status == 200) {
+						console.log(res.data);
+					}
+				})
+				.catch((error) => console.log(error));
+		},
+		getWarehouse() {
+			const vm = this;
+			axios
+				.get('/api/getWarehouse')
+				.then((res) => {
+					if (res.status == 200) {
+						vm.warehouses = res.data;
+					}
+				})
+				.catch((error) => console.log(error));
+		},
+	},
 };
 </script>

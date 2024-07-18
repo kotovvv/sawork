@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use DB;
 
 class MagazynController extends Controller
@@ -47,7 +48,27 @@ class MagazynController extends Controller
         }
     }
 
-    public function getWarehouseData($dataMax, $idMagazynu)
+    public function getDataForXLS(Request $request)
+    {
+        $data = $request->all();
+        $res = [];
+        $month = (int) $data['month'] + 1;
+        $year = $data['year'];
+        $IDWarehouse = (int)$data['IDWarehouse'];
+        $current = Carbon::now();
+        $lastDay =  Carbon::createFromDate($year, $month + 1, '1')->endOfMonth()->day;
+
+        if ($current->month == $month) {
+            $lastDay = $current->day;
+        }
+        for ($day = 1; $day <= $lastDay; $day++) {
+            $res[$year . '-' . $month . '-' . $day] = $this->getWarehouseData($year . '-' . $month . '-' . $day, $IDWarehouse);
+        }
+
+        return $res;
+    }
+
+    private function getWarehouseData($dataMax, $idMagazynu)
     {
         return DB::table('Towar as t')
             ->select([
@@ -117,6 +138,7 @@ class MagazynController extends Controller
                     });
             }, 'DostawyMinusWydania', 'DostawyMinusWydania.IDTowaru', '=', 't.IDTowaru')
             ->join('JednostkaMiary as j', 'j.IDJednostkiMiary', '=', 't.IDJednostkiMiary')
+            ->where('t.IDMagazynu', $idMagazynu)
             ->groupBy([
                 'DostawyMinusWydania.IdTowaru',
                 't.IDMagazynu',
