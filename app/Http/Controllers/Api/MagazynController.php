@@ -62,7 +62,8 @@ class MagazynController extends Controller
             $lastDay = $current->day;
         }
         for ($day = 1; $day <= $lastDay; $day++) {
-            $date = Carbon::now()->setDate($year, $month, 22)->setTime(23, 59, 59)->format('d.m.Y H:i:s');
+            // $date = Carbon::now()->setDate($year, $month, 22)->setTime(23, 59, 59)->format('d.m.Y H:i:s');
+            $date = Carbon::now()->setDate($year, $month, 22)->setTime(23, 59, 59)->format('Y-m-d H:i:s');
             $res[$day] = $this->getWarehouseData($date, $IDWarehouse);
         }
         return $res;
@@ -72,20 +73,20 @@ class MagazynController extends Controller
     {
         return DB::table('Towar as t')
             ->select([
-                'DostawyMinusWydania.IdTowaru',
-                't.IDMagazynu',
-                't.IDGrupyTowarow',
-                't.IDJednostkiMiary',
+                //'DostawyMinusWydania.IdTowaru',
+                //'t.IDMagazynu',
+                // 't.IDGrupyTowarow',
+                //'t.IDJednostkiMiary',
                 't.Nazwa',
                 't.KodKreskowy',
-                'j.Nazwa as Jednostka',
-                't.Archiwalny',
-                't.Usluga',
-                't._TowarTempDecimal2',
-                DB::raw('SUM(DostawyMinusWydania.ilosc) as ilosc'),
+                // 'j.Nazwa as Jednostka',
+                //'t.Archiwalny',
+                //'t.Usluga',
+                't._TowarTempString1 as sku',
+                DB::raw('SUM(DostawyMinusWydania.ilosc) as stan'),
                 DB::raw('SUM(DostawyMinusWydania.Wartosc) as Wartosc'),
-                DB::raw('SUM(DostawyMinusWydania.Bilans) as Bilans'),
-                DB::raw('SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2 as m3') // Calculate m3
+                // DB::raw('SUM(DostawyMinusWydania.Bilans) as Bilans'),
+                DB::raw('SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2 as m3xstan') // Calculate m3
             ])
             ->joinSub(function ($query) use ($dataMax, $idMagazynu) {
                 $query->from('ElementRuchuMagazynowego as PZ')
@@ -151,6 +152,7 @@ class MagazynController extends Controller
                 't.Archiwalny',
                 't.Usluga',
                 't._TowarTempDecimal2',
+                '_TowarTempString1',
                 'j.Nazwa'
             ])
             ->havingRaw('SUM(DostawyMinusWydania.ilosc) > 0')
