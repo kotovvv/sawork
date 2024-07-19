@@ -56,14 +56,14 @@ class MagazynController extends Controller
         $year = $data['year'];
         $IDWarehouse = (int)$data['IDWarehouse'];
         $current = Carbon::now();
-        $lastDay =  Carbon::createFromDate($year, $month + 1, '1')->endOfMonth()->day;
+        $lastDay =  Carbon::createFromDate($year, $month, '1')->endOfMonth()->day;
 
         if ($current->month == $month) {
             $lastDay = $current->day;
         }
         for ($day = 1; $day <= $lastDay; $day++) {
             // $date = Carbon::now()->setDate($year, $month, 22)->setTime(23, 59, 59)->format('d.m.Y H:i:s');
-            $date = Carbon::now()->setDate($year, $month, 22)->setTime(23, 59, 59)->format('Y-m-d H:i:s');
+            $date = Carbon::now()->setDate($year, $month, $day)->setTime(23, 59, 59)->format('Y-m-d H:i:s');
             $res[$day] = $this->getWarehouseData($date, $IDWarehouse);
         }
         return $res;

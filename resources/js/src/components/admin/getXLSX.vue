@@ -29,11 +29,14 @@
 						persistent-hint
 						single-line
 					></v-select>
-					<v-btn @click="getDataForXLS()">uzyskać XLSX</v-btn></div
+					<v-btn
+						@click="getDataForXLS()"
+						size="x-large"
+						>uzyskać XLSX</v-btn
+					></div
 				></v-col
 			>
 		</v-row>
-		<button @click="prepareXLSX">Экспорт в Excel</button>
 		<v-progress-linear
 			:active="loading"
 			indeterminate
@@ -90,38 +93,37 @@ export default {
 
 	methods: {
 		prepareXLSX() {
-			// Пример данных с сервера
-			const data = [
-				{
-					name: 'Sheet1',
-					data: [
-						['Name', 'Age'],
-						['Alice', 30],
-						['Bob', 25],
-					],
-				},
-				{
-					name: 'Sheet2',
-					data: [
-						['Product', 'Price'],
-						['Apple', 1.2],
-						['Banana', 0.8],
-					],
-				},
-			];
-
+			let all = [];
+			let sum = 0;
 			// Создание новой книги
 			const wb = XLSX.utils.book_new();
 
-			// Добавление данных на отдельные листы
-			data.forEach((sheet) => {
-				const ws = XLSX.utils.aoa_to_sheet(sheet.data);
-				XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+			// get sum
+			this.dataforxsls.forEach((sheet) => {
+				let m3 = sheet[1].reduce((acc, o) => acc + parseFloat(o.m3xstan), 0);
+				sum += parseFloat(m3 * 2.1);
+				all.push({ day: sheet[0], m3: m3, zl: m3 * 2.1 });
+			});
+			all.push({ day: 'Итого', m3: '', zl: sum });
+
+			const ws = XLSX.utils.json_to_sheet(all);
+			XLSX.utils.book_append_sheet(wb, ws, 'Итого');
+
+			this.dataforxsls.forEach((sheet) => {
+				const ws = XLSX.utils.json_to_sheet(sheet[1]);
+				XLSX.utils.book_append_sheet(wb, ws, sheet[0]);
 			});
 
 			// Генерация файла и его сохранение
 			const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-			saveAs(new Blob([wbout], { type: 'application/octet-stream' }), 'data.xlsx');
+			saveAs(
+				new Blob([wbout], { type: 'application/octet-stream' }),
+				'Зберігання ' +
+					this.warehouses.find((w) => w.IDMagazynu == this.IDWarehouse).Symbol +
+					' ' +
+					this.month.find((m) => m.id == this.selectedMonth).name +
+					'.xlsx',
+			);
 		},
 		getDataForXLS() {
 			const vm = this;
@@ -137,8 +139,9 @@ export default {
 				.post('/api/getDataForXLS', data)
 				.then((res) => {
 					if (res.status == 200) {
-						vm.dataforxsls = res.data;
+						vm.dataforxsls = Object.entries(res.data);
 						vm.loading = false;
+						vm.prepareXLSX();
 					}
 				})
 				.catch((error) => {
