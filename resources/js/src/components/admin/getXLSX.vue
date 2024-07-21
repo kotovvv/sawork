@@ -110,6 +110,11 @@ export default {
 			XLSX.utils.book_append_sheet(wb, ws, 'Итого');
 
 			this.dataforxsls.forEach((sheet) => {
+				sheet[1].forEach((item) => {
+					item.stan = parseFloat(item.stan);
+					item.Wartosc = parseFloat(item.Wartosc);
+					item.m3xstan = parseFloat(item.m3xstan);
+				});
 				const ws = XLSX.utils.json_to_sheet(sheet[1]);
 				XLSX.utils.book_append_sheet(wb, ws, sheet[0]);
 			});
@@ -125,6 +130,7 @@ export default {
 					'.xlsx',
 			);
 		},
+
 		getDataForXLS() {
 			const vm = this;
 			let data = {};
