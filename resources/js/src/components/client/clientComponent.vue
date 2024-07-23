@@ -61,6 +61,7 @@
 </template>
 
 <script>
+import { defineAsyncComponent } from 'vue';
 import cabinet from './cabinetComponent.vue';
 
 export default {
@@ -72,11 +73,15 @@ export default {
 		rail: true,
 		selectedItem: 0,
 		theMenu: 'cabinet',
-		items: [{ text: 'Cabinet', name: 'cabinet', icon: 'mdi-account-box' }],
+		items: [
+			{ text: 'Cabinet', name: 'cabinet', icon: 'mdi-account-box' },
+			{ text: 'Report', name: 'report', icon: 'mdi-file-chart' },
+		],
 	}),
 	computed: {
 		setComponent() {
 			if (this.theMenu == 'cabinet') return cabinet;
+			if (this.theMenu == 'report') return defineAsyncComponent(() => import('./clientReport.vue'));
 		},
 	},
 };

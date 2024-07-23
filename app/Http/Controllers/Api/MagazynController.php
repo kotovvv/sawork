@@ -48,6 +48,92 @@ class MagazynController extends Controller
         }
     }
 
+    public function getDataNotActivProduct(Request $request, $day)
+    {
+        if (isset($request->user->IDDefaultWarehouse)) {
+            $res = [];
+            $res =  DB::select('WITH SqlQuery AS ( SELECT  ROW_NUMBER() OVER( ORDER BY [IDTowaru] ASC ) AS Row,  * FROM ( select Towar.IDTowaru,
+	Towar.[Nazwa] as \'Nazwa towaru\',
+	Towar.[KodKreskowy] as \'Kod kreskowy\',
+	jm.Nazwa as \'Jednostka\',
+	a.SumaIlosci as \'Stan\',
+	CASE WHEN [Data przyjęcia towaru] = \'1900-01-01\' THEN NULL ELSE [Data przyjęcia towaru] END as \'Data przyjęcia towaru\',
+	ISNULL([Numer dokumentu przyjęcia], \'\') as \'Numer dokumentu przyjęcia\',
+	CASE WHEN [Data ostatniego wydania] = \'1900-01-01\' THEN NULL ELSE [Data ostatniego wydania] END as \'Data ostatniego wydania\',
+	ISNULL([Numer ostatniego wydania], \'\') as \'Numer ostatniego wydania\',
+	ISNULL(gt.Nazwa, 0) as \'Grupa towarów\',
+	[CenaZakupu] as \'Cena zakupu\',
+	[CenaZakupu] * a.SumaIlosci as \'Wartość zakupu\',
+	a.SumaWartosci as \'Wartość\', -- zad. 1195
+	[CenaSprzedazy] as \'Cena sprzedaży\',
+	[DomyslnaMarza] as \'Domyślna marża\',
+	[StanMinimalny] as \'Stan minimalny\',
+	[StanMaksymalny] as \'Stan maksymalny\',
+	[StanPoczatkowy] as \'Stan początkowy\',
+	[CenaPoczatkowa] as \'Cena początkowa\',
+	[Zdjecie] as \'Zdjęcie\',
+	[Uwagi] as \'Uwagi\',
+	Towar.[Usluga] as \'Usługa\',
+	Towar.[Produkt] as \'Produkt\'
+	, Towar.[_TowarTempDecimal1] AS \'Waga\' , Towar.[_TowarTempDecimal2] AS \'m3\' , Towar.[_TowarTempString1] AS \'sku\' , Towar.[_TowarTempDecimal3] AS \'Długość\' , Towar.[_TowarTempDecimal4] AS \'Szerokość\' , Towar.[_TowarTempDecimal5] AS \'Wysokość\'
+from
+(
+	select Towar.IDTowaru,
+		ISNULL((select MAX(pz.Data) from elementRuchuMagazynowego epz
+			inner join RuchMagazynowy pz ON pz.IDRuchuMagazynowego = epz.IDRuchuMagazynowego
+			where IDTowaru = Towar.IDTowaru AND pz.Operator * epz.ilosc > 0
+				and (0 = 1 or pz.IDRodzajuRuchuMagazynowego <> 8)
+				and (0 = 1 or pz.IDRodzajuRuchuMagazynowego <> 27)
+			), \'\') as \'Data przyjęcia towaru\',
+		(select TOP 1 pz.NrDokumentu from elementRuchuMagazynowego epz
+			inner join RuchMagazynowy pz ON pz.IDRuchuMagazynowego = epz.IDRuchuMagazynowego
+			where IDTowaru = Towar.IDTowaru AND pz.Operator * epz.ilosc > 0
+				and (0 = 1 or pz.IDRodzajuRuchuMagazynowego <> 8)
+				and (0 = 1 or pz.IDRodzajuRuchuMagazynowego <> 27)
+			order by pz.Data desc) as \'Numer dokumentu przyjęcia\',
+		(select MAX(wz.Data) from elementRuchuMagazynowego ewz
+			inner join RuchMagazynowy wz ON wz.IDRuchuMagazynowego = ewz.IDRuchuMagazynowego
+			where IDTowaru = Towar.IDTowaru AND wz.Operator * ewz.ilosc < 0
+				and (0 = 1 or wz.IDRodzajuRuchuMagazynowego <> 8)
+				and (0 = 1 or wz.IDRodzajuRuchuMagazynowego <> 27)
+		) as \'Data ostatniego wydania\',
+		(select TOP 1 wz.NrDokumentu from elementRuchuMagazynowego ewz
+			inner join RuchMagazynowy wz ON wz.IDRuchuMagazynowego = ewz.IDRuchuMagazynowego
+			where IDTowaru = Towar.IDTowaru AND wz.Operator * ewz.ilosc < 0
+				and (0 = 1 or wz.IDRodzajuRuchuMagazynowego <> 8)
+				and (0 = 1 or wz.IDRodzajuRuchuMagazynowego <> 27)
+			order by wz.Data desc
+		) as \'Numer ostatniego wydania\'
+	from towar
+	where Towar.IDMagazynu = 10
+) Q
+inner join AktualnyStan a on a.IDTowaru = Q.IDTowaru
+inner join Towar on Towar.IDTowaru = Q.IDTowaru
+left join dbo.GrupyTowarow gt on gt.IDGrupyTowarow = Towar.[IDGrupyTowarow]
+left join dbo.JednostkaMiary jm on jm.[IDJednostkiMiary] = Towar.[IDJednostkiMiary]
+where
+	a.Sumailosci > 0 and Towar.Archiwalny = 0 and
+	([Data ostatniego wydania] IS NULL OR  DATEDIFF(day, [Data ostatniego wydania], getdate()) > 30) and
+	([Data przyjęcia towaru] IS NULL OR DATEDIFF(day, [Data przyjęcia towaru], getdate()) > 30)
+ ) AS SubQuery  ) SELECT "IDTowaru", "Nazwa towaru", "Kod kreskowy", "Jednostka", "Stan", "Data przyjęcia towaru", "Numer dokumentu przyjęcia", "Data ostatniego wydania", "Numer ostatniego wydania", "Grupa towarów", "Cena zakupu", "Wartość zakupu", "Wartość", "Cena sprzedaży", "Domyślna marża", "Stan minimalny", "Stan maksymalny", "Stan początkowy", "Cena początkowa", "Zdjęcie", "Uwagi", "Usługa", "Produkt", "Waga", "m3", "sku", "Długość", "Szerokość", "Wysokość" FROM SqlQuery ');
+            return response()->json($res, 200, [], JSON_UNESCAPED_UNICODE);
+        }
+        return response('No default warehause', 404);
+    }
+
+    public function getDataForXLSDay(Request $request, $day)
+    {
+        if (isset($request->user->IDDefaultWarehouse)) {
+            $res = [];
+            $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
+
+            $res[Carbon::now()->parse($day)->format('d-m-Y')] = $this->getWarehouseData($date, $request->user->IDDefaultWarehouse);
+            return $res;
+        }
+        return response('No default warehause', 404);
+    }
+
+
     public function getDataForXLS(Request $request)
     {
         $data = $request->all();

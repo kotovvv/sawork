@@ -29,6 +29,8 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('saveMagEmail', [MagazynController::class, 'saveMagEmail']);
     Route::post('deleteMagEmail', [MagazynController::class, 'deleteMagEmail']);
     Route::post('getDataForXLS', [MagazynController::class, 'getDataForXLS']);
+    Route::get('getDataForXLSDay/{day}', [MagazynController::class, 'getDataForXLSDay']);
+    Route::get('getDataNotActivProduct/{day}', [MagazynController::class, 'getDataNotActivProduct']);
     Route::post('getOrder', [ReturnController::class, 'getOrder']);
     Route::get('getProduct/{id}', [LocationController::class, 'getProduct']);
     Route::post('doWz', [ReturnController::class, 'doWz']);
