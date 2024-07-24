@@ -1,29 +1,47 @@
 <template>
 	<div>
-		<div class="d-flex justify-center">
-			<v-text-field
-				v-model.number="days"
-				hide-details
-				single-line
-				min="1"
-				type="number"
-				width="300"
-				max-width="400"
-				@keypress="filter()"
-			/>
-			<v-btn
-				@click="getDataNotActivProduct()"
-				size="x-large"
-				>uzyskać dane</v-btn
-			>
-			<v-btn
-				v-if="dataforxsls.length"
-				@click="prepareXLSX()"
-				size="x-large"
-				>pobieranie XLSX</v-btn
-			>
-		</div>
-        		<v-container fluid>
+		<v-container>
+			<v-row>
+				<v-col>
+					<v-select
+						label="Magazyn"
+						v-model="IDWarehouse"
+						:items="warehouses"
+						item-title="Nazwa"
+						item-value="IDMagazynu"
+						hide-details="auto"
+						width="368"
+						max-width="400"
+					></v-select>
+				</v-col>
+				<v-col>
+					<v-text-field
+						label="Days"
+						v-model.number="days"
+						hide-details
+						single-line
+						min="1"
+						type="number"
+						width="300"
+						max-width="400"
+						@keypress="filter()"
+				/></v-col>
+				<v-col>
+					<v-btn
+						@click="getDataNotActivProduct()"
+						size="x-large"
+						>uzyskać dane</v-btn
+					>
+					<v-btn
+						v-if="dataforxsls.length"
+						@click="prepareXLSX()"
+						size="x-large"
+						>pobieranie XLSX</v-btn
+					></v-col
+				>
+			</v-row>
+		</v-container>
+		<v-container fluid>
 			<v-row>
 				<v-col cols="12">
 					<v-progress-linear
@@ -31,6 +49,17 @@
 						indeterminate
 						color="purple"
 					></v-progress-linear>
+				</v-col>
+			</v-row>
+		</v-container>
+		<v-container
+			fluid
+			v-if="dataforxsls.length"
+		>
+			<v-row>
+				<v-col cols="12">
+					<!-- :headers="headers" -->
+					<v-data-table-virtual :items="dataforxsls"></v-data-table-virtual>
 				</v-col>
 			</v-row>
 		</v-container>
@@ -45,16 +74,34 @@ export default {
 		loading: false,
 		days: 30,
 		dataforxsls: [],
+		warehouses: [],
+		IDWarehouse: null,
 	}),
+	mounted() {
+		this.getWarehouse();
+	},
 	methods: {
+		getWarehouse() {
+			const vm = this;
+			axios
+				.get('/api/getWarehouse')
+				.then((res) => {
+					if (res.status == 200) {
+						vm.warehouses = res.data;
+						vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+					}
+				})
+				.catch((error) => console.log(error));
+		},
+
 		getDataNotActivProduct() {
 			const vm = this;
 			vm.loading = true;
 			axios
-				.get('/api/getDataNotActivProduct/' + vm.days)
+				.get('/api/getDataNotActivProduct/' + vm.days + '/' + vm.IDWarehouse)
 				.then((res) => {
 					if (res.status == 200) {
-						vm.dataforxsls = Object.entries(res.data);
+						vm.dataforxsls = res.data;
 						vm.loading = false;
 					}
 				})

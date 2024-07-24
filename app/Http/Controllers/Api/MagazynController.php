@@ -48,120 +48,103 @@ class MagazynController extends Controller
         }
     }
 
-    public function getDataNotActivProduct(Request $request, $day)
+    public function getDataNotActivProduct(Request $request, $day, $idwarehouse)
     {
-        if (isset($request->user->IDDefaultWarehouse)) {
-            $magID = $request->user->IDDefaultWarehouse;
+        $user = $request->user;
+        $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
+        if (isset($idwarehouse) && in_array($idwarehouse, $a_mag)) {
+            $MagID = $idwarehouse;
             $days = (int) $day;
 
-            // Использование параметров в запросе
-            $result = DB::select(DB::raw("
-            WITH SqlQuery AS (
-                SELECT
-                    ROW_NUMBER() OVER (ORDER BY Q.IDTowaru ASC) AS Row,
-                    Q.IDTowaru,
-                    Q.Nazwa_towaru,
-                    Q.Kod_kreskowy,
-                    jm.Nazwa AS Jednostka,
-                    a.SumaIlosci AS Stan,
-                    Q.Data_przyjęcia_towaru,
-                    Q.Numer_dokumentu_przyjęcia,
-                    Q.Data_ostatniego_wydania,
-                    Q.Numer_ostatniego_wydania,
-                    ISNULL(gt.Nazwa, '') AS Grupa_towarów,
-                    Q.Cena_zakupu,
-                    Q.Wartość_zakupu,
-                    a.SumaWartosci AS Wartość,
-                    Q.Cena_sprzedaży,
-                    Q.Domyślna_marża,
-                    Q.Stan_minimalny,
-                    Q.Stan_maksymalny,
-                    Q.Stan_początkowy,
-                    Q.Cena_początkowa,
-                    Q.Zdjęcie,
-                    Q.Uwagi,
-                    Q.Usługa,
-                    Q.Produkt,
-                    Q.Waga,
-                    Q.m3,
-                    Q.sku,
-                    Q.Długość,
-                    Q.Szerokość,
-                    Q.Wysokość
-                FROM (
-                    SELECT
-                        Towar.IDTowaru,
-                        Towar.Nazwa AS Nazwa_towaru,
-                        Towar.KodKreskowy AS Kod_kreskowy,
-                        CASE WHEN Towar.[Data przyjęcia towaru] = '1900-01-01' THEN NULL ELSE Towar.[Data przyjęcia towaru] END AS Data_przyjęcia_towaru,
-                        ISNULL(Towar.[Numer dokumentu przyjęcia], '') AS Numer_dokumentu_przyjęcia,
-                        CASE WHEN Towar.[Data ostatniego wydania] = '1900-01-01' THEN NULL ELSE Towar.[Data ostatniego wydania] END AS Data_ostatniego_wydania,
-                        ISNULL(Towar.[Numer ostatniego wydania], '') AS Numer_ostatniego_wydania,
-                        Towar.CenaZakupu AS Cena_zakupu,
-                        Towar.CenaZakupu * a.SumaIlosci AS Wartość_zakupu,
-                        Towar.CenaSprzedazy AS Cena_sprzedaży,
-                        Towar.DomyslnaMarza AS Domyślna_marża,
-                        Towar.StanMinimalny AS Stan_minimalny,
-                        Towar.StanMaksymalny AS Stan_maksymalny,
-                        Towar.StanPoczatkowy AS Stan_początkowy,
-                        Towar.CenaPoczatkowa AS Cena_początkowa,
-                        Towar.Zdjecie AS Zdjęcie,
-                        Towar.Uwagi AS Uwagi,
-                        Towar.Usluga AS Usługa,
-                        Towar.Produkt AS Produkt,
-                        Towar._TowarTempDecimal1 AS Waga,
-                        Towar._TowarTempDecimal2 AS m3,
-                        Towar._TowarTempString1 AS sku,
-                        Towar._TowarTempDecimal3 AS Długość,
-                        Towar._TowarTempDecimal4 AS Szerokość,
-                        Towar._TowarTempDecimal5 AS Wysokość
-                    FROM towar
-                    WHERE Towar.IDMagazynu = :magID
-                ) Q
-                INNER JOIN AktualnyStan a ON a.IDTowaru = Q.IDTowaru
-                LEFT JOIN dbo.GrupyTowarow gt ON gt.IDGrupyTowarow = Q.IDGrupyTowarow
-                LEFT JOIN dbo.JednostkaMiary jm ON jm.IDJednostkiMiary = Q.IDJednostkiMiary
-                WHERE
-                    a.SumaIlosci > 0
-                    AND Q.Archiwalny = 0
-                    AND (Q.Data_ostatniego_wydania IS NULL OR DATEDIFF(day, Q.Data_ostatniego_wydania, GETDATE()) > :days)
-                    AND (Q.Data_przyjęcia_towaru IS NULL OR DATEDIFF(day, Q.Data_przyjęcia_towaru, GETDATE()) > :days)
-            )
-            SELECT
-                [IDTowaru],
-                [Nazwa_towaru],
-                [Kod_kreskowy],
-                [Jednostka],
-                [Stan],
-                [Data_przyjęcia_towaru],
-                [Numer_dokumentu_przyjęcia],
-                [Data_ostatniego_wydania],
-                [Numer_ostatniego_wydania],
-                [Grupa_towarów],
-                [Cena_zakupu],
-                [Wartość_zakupu],
-                [Wartość],
-                [Cena_sprzedaży],
-                [Domyślna_marża],
-                [Stan_minimalny],
-                [Stan_maksymalny],
-                [Stan_początkowy],
-                [Cena_początkowa],
-                [Zdjęcie],
-                [Uwagi],
-                [Usługa],
-                [Produkt],
-                [Waga],
-                [m3],
-                [sku],
-                [Długość],
-                [Szerokość],
-                [Wysokość]
-            FROM SqlQuery
-        "), [
-                'magID' => $magID,
-                'days' => $days
-            ]);
+            // Параметры
+            // $MagID = 10;
+            // $days = 30;
+            $AllowZL = 0;
+            $AllowDiscounts = 0;
+            $_Lang = 'PL';
+            $_UserID = 4;
+            $_WarehouseID = 10;
+            $_DefaultCurrencyID = 1;
+            $_IsPricesModeNet = false;
+            $_CenaJakoMarza = true;
+
+            $subQuery = DB::table('towar')
+                ->select([
+                    'towar.IDTowaru',
+                    DB::raw("ISNULL((SELECT MAX(pz.Data) FROM elementRuchuMagazynowego epz
+            INNER JOIN RuchMagazynowy pz ON pz.IDRuchuMagazynowego = epz.IDRuchuMagazynowego
+            WHERE IDTowaru = towar.IDTowaru AND pz.Operator * epz.ilosc > 0
+                AND ($AllowDiscounts = 1 OR pz.IDRodzajuRuchuMagazynowego <> 8)
+                AND ($AllowZL = 1 OR pz.IDRodzajuRuchuMagazynowego <> 27)), '') AS [Data przyjęcia towaru]"),
+                    DB::raw("(SELECT TOP 1 pz.NrDokumentu FROM elementRuchuMagazynowego epz
+            INNER JOIN RuchMagazynowy pz ON pz.IDRuchuMagazynowego = epz.IDRuchuMagazynowego
+            WHERE IDTowaru = towar.IDTowaru AND pz.Operator * epz.ilosc > 0
+                AND ($AllowDiscounts = 1 OR pz.IDRodzajuRuchuMagazynowego <> 8)
+                AND ($AllowZL = 1 OR pz.IDRodzajuRuchuMagazynowego <> 27)
+            ORDER BY pz.Data DESC) AS [Numer dokumentu przyjęcia]"),
+                    DB::raw("(SELECT MAX(wz.Data) FROM elementRuchuMagazynowego ewz
+            INNER JOIN RuchMagazynowy wz ON wz.IDRuchuMagazynowego = ewz.IDRuchuMagazynowego
+            WHERE IDTowaru = towar.IDTowaru AND wz.Operator * ewz.ilosc < 0
+                AND ($AllowDiscounts = 1 OR wz.IDRodzajuRuchuMagazynowego <> 8)
+                AND ($AllowZL = 1 OR wz.IDRodzajuRuchuMagazynowego <> 27)) AS [Data ostatniego wydania]"),
+                    DB::raw("(SELECT TOP 1 wz.NrDokumentu FROM elementRuchuMagazynowego ewz
+            INNER JOIN RuchMagazynowy wz ON wz.IDRuchuMagazynowego = ewz.IDRuchuMagazynowego
+            WHERE IDTowaru = towar.IDTowaru AND wz.Operator * ewz.ilosc < 0
+                AND ($AllowDiscounts = 1 OR wz.IDRodzajuRuchuMagazynowego <> 8)
+                AND ($AllowZL = 1 OR wz.IDRodzajuRuchuMagazynowego <> 27)
+            ORDER BY wz.Data DESC) AS [Numer ostatniego wydania]")
+                ])
+                ->where('towar.IDMagazynu', $MagID);
+
+            $query = DB::table(DB::raw("({$subQuery->toSql()}) as Q"))
+                ->mergeBindings($subQuery)
+                ->join('AktualnyStan as a', 'a.IDTowaru', '=', 'Q.IDTowaru')
+                ->join('Towar', 'Towar.IDTowaru', '=', 'Q.IDTowaru')
+                ->leftJoin('GrupyTowarow as gt', 'gt.IDGrupyTowarow', '=', 'Towar.IDGrupyTowarow')
+                ->leftJoin('JednostkaMiary as jm', 'jm.IDJednostkiMiary', '=', 'Towar.IDJednostkiMiary')
+                ->select([
+                    'Towar.IDTowaru',
+                    'Towar.Nazwa as Nazwa towaru',
+                    'Towar.KodKreskowy as Kod kreskowy',
+                    'jm.Nazwa as Jednostka',
+                    'a.SumaIlosci as Stan',
+                    DB::raw("CASE WHEN Q.[Data przyjęcia towaru] = '1900-01-01' THEN NULL ELSE Q.[Data przyjęcia towaru] END as [Data przyjęcia towaru]"),
+                    DB::raw("ISNULL(Q.[Numer dokumentu przyjęcia], '') as [Numer dokumentu przyjęcia]"),
+                    DB::raw("CASE WHEN Q.[Data ostatniego wydania] = '1900-01-01' THEN NULL ELSE Q.[Data ostatniego wydania] END as [Data ostatniego wydania]"),
+                    DB::raw("ISNULL(Q.[Numer ostatniego wydania], '') as [Numer ostatniego wydania]"),
+                    DB::raw("ISNULL(gt.Nazwa, 0) as [Grupa towarów]"),
+                    'Towar.CenaZakupu as [Cena zakupu]',
+                    DB::raw('Towar.CenaZakupu * a.SumaIlosci as [Wartość zakupu]'),
+                    'a.SumaWartosci as Wartość',
+                    'Towar.CenaSprzedazy as [Cena sprzedaży]',
+                    'Towar.DomyslnaMarza as [Domyślna marża]',
+                    'Towar.StanMinimalny as [Stan minimalny]',
+                    'Towar.StanMaksymalny as [Stan maksymalny]',
+                    'Towar.StanPoczatkowy as [Stan początkowy]',
+                    'Towar.CenaPoczatkowa as [Cena początkowa]',
+                    'Towar.Zdjecie as Zdjęcie',
+                    'Towar.Uwagi as Uwagi',
+                    'Towar.Usluga as Usługa',
+                    'Towar.Produkt as Produkt',
+                    'Towar._TowarTempDecimal1 as Waga',
+                    'Towar._TowarTempDecimal2 as m3',
+                    'Towar._TowarTempString1 as sku',
+                    'Towar._TowarTempDecimal3 as Długość',
+                    'Towar._TowarTempDecimal4 as Szerokość',
+                    'Towar._TowarTempDecimal5 as Wysokość'
+                ])
+                ->where('a.SumaIlosci', '>', 0)
+                ->where('Towar.Archiwalny', '=', 0)
+                ->where(function ($query) use ($days) {
+                    $query->whereNull('Data ostatniego wydania')
+                        ->orWhereRaw('DATEDIFF(day, Q.[Data ostatniego wydania], getdate()) > ?', [$days]);
+                })
+                ->where(function ($query) use ($days) {
+                    $query->whereNull('Data przyjęcia towaru')
+                        ->orWhereRaw('DATEDIFF(day, Q.[Data przyjęcia towaru], getdate()) > ?', [$days]);
+                });
+
+            $result = $query->get();
 
             return $result;
         }
@@ -169,16 +152,18 @@ class MagazynController extends Controller
         return response('No default warehouse', 404);
     }
 
-    public function getDataForXLSDay(Request $request, $day)
+    public function getDataForXLSDay(Request $request, $day, $idwarehouse)
     {
-        if (isset($request->user->IDDefaultWarehouse)) {
+        $user = $request->user;
+        $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
+        if (isset($idwarehouse) && in_array($idwarehouse, $a_mag)) {
             $res = [];
             $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
 
             $res[Carbon::now()->parse($day)->format('d-m-Y')] = $this->getWarehouseData($date, $request->user->IDDefaultWarehouse);
             return $res;
         }
-        return response('No default warehause', 404);
+        return response('No warehause', 404);
     }
 
 
