@@ -61,7 +61,6 @@
 </template>
 
 <script>
-// import refunds from './refundsComponent.vue';
 import refunds2 from './refunds2Component.vue';
 import sendPDF from './sendPDF.vue';
 
@@ -76,7 +75,6 @@ export default {
 		theMenu: 'refunds2',
 
 		items: [
-			// { text: 'Zwroty', name: 'refunds', icon: 'mdi-restore' },
 			{ text: 'Zwroty', name: 'refunds2', icon: 'mdi-database-plus' },
 			{ text: 'sendPDF', name: 'sendPDF', icon: 'mdi-file-send' },
 		],

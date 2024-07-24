@@ -23,6 +23,17 @@
 				>pobieranie XLSX</v-btn
 			>
 		</div>
+        		<v-container fluid>
+			<v-row>
+				<v-col cols="12">
+					<v-progress-linear
+						:active="loading"
+						indeterminate
+						color="purple"
+					></v-progress-linear>
+				</v-col>
+			</v-row>
+		</v-container>
 	</div>
 </template>
 <script>
