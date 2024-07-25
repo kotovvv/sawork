@@ -17,14 +17,38 @@
 			</v-col>
 			<v-col cols="6">
 				<p>For magazyn</p>
+				<v-data-table
+					:headers="headers"
+					:items="showClientPriceCondition"
+					item-value="condition_id"
+					height="400"
+					:hide-default-footer="true"
+				></v-data-table>
 			</v-col>
 			<v-col cols="6"
 				><p>Select</p>
-				<v-data-table-virtual
+
+				<v-text-field
+					v-model="search"
+					label="Search"
+					prepend-inner-icon="mdi-magnify"
+					variant="outlined"
+					hide-details
+					single-line
+					clearable
+				></v-text-field>
+
+				<v-data-table
+					v-model="selected"
+					show-select
+					:headers="headers"
 					:items="priceCondition"
+					item-value="condition_id"
 					height="400"
-					selected
-				></v-data-table-virtual>
+					:search="search"
+					:hide-default-footer="true"
+				></v-data-table>
+				<v-btn @click="setClientPriceCondition()">Set</v-btn>
 			</v-col>
 		</v-row>
 	</v-container>
@@ -40,15 +64,61 @@ export default {
 			warehouses: [],
 			IDWarehouse: null,
 			priceCondition: [],
+			clientPriceCondition: [],
+			showClientPriceCondition: [],
+			selected: [],
+			search: '',
+			headers: [
+				{ title: 'min', key: 'min_value', sortable: false },
+				{ title: 'max', key: 'max_value', sortable: false },
+				{ title: 'price', key: 'price', sortable: false },
+			],
+			loading: false,
 		};
 	},
-
+	watch: {
+		IDWarehouse(idmag, idmagold) {
+			this.getClientPriceCondition(idmag);
+		},
+	},
 	mounted() {
 		this.getWarehouse();
 		this.getPriceCondition();
 	},
 
 	methods: {
+		setClientPriceCondition() {
+			if (this.IDWarehouse == null) return;
+			const vm = this;
+			let data = {};
+			data.id_condition = vm.selected;
+			data.IDWarehouse = vm.IDWarehouse;
+			axios
+				.post('/api/setClientPriceCondition', data)
+				.then((res) => {
+					if (res.status == 200) {
+						vm.getClientPriceCondition(vm.IDWarehouse);
+					}
+				})
+				.catch((error) => console.log(error));
+		},
+		getClientPriceCondition(idmag) {
+			const vm = this;
+			vm.selected = [];
+			vm.showClientPriceCondition = [];
+			axios
+				.get('/api/getClientPriceCondition/' + idmag)
+				.then((res) => {
+					if (res.status == 200) {
+						vm.clientPriceCondition = res.data;
+						vm.selected = vm.clientPriceCondition.map(({ condition_id }) => condition_id);
+						vm.showClientPriceCondition = vm.priceCondition.filter((f) =>
+							vm.selected.includes(f.condition_id),
+						);
+					}
+				})
+				.catch((error) => console.log(error));
+		},
 		getPriceCondition() {
 			const vm = this;
 			axios

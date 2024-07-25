@@ -277,6 +277,36 @@ class MagazynController extends Controller
             ->havingRaw('SUM(DostawyMinusWydania.ilosc) > 0')
             ->get();
     }
+
+    public function setClientPriceCondition(Request $request)
+    {
+        $data = $request->all();
+        $idwarehouse = (int) $data['IDWarehouse'];
+        $id_condition = $data['id_condition'];
+        $forinsert = [];
+        foreach ($id_condition as $value) {
+            $forinsert[] = ['IDMagazynu' => $idwarehouse, 'condition_id' => $value];
+        }
+        $user = $request->user;
+        $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
+        if (isset($idwarehouse) && in_array($idwarehouse, $a_mag)) {
+            DB::table('dbo.client_price_conditions')->where('IDMagazynu', $idwarehouse)->delete();
+            DB::table('dbo.client_price_conditions')->insert($forinsert);
+            return response('Set price condition', 200);
+        }
+        return response('No warehause', 431);
+    }
+
+    public function getClientPriceCondition(Request $request, $idwarehouse)
+    {
+        $user = $request->user;
+        $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
+        if (isset($idwarehouse) && in_array($idwarehouse, $a_mag)) {
+            return DB::table('dbo.client_price_conditions')->where('IDMagazynu', $idwarehouse)->get();
+        }
+        return response('No warehause', 431);
+    }
+
     public function getPriceCondition()
     {
         return DB::table('dbo.price_conditions')->orderBy('max_value', 'ASC')->get();
