@@ -277,4 +277,8 @@ class MagazynController extends Controller
             ->havingRaw('SUM(DostawyMinusWydania.ilosc) > 0')
             ->get();
     }
+    public function getPriceCondition()
+    {
+        return DB::table('dbo.price_conditions')->orderBy('max_value', 'ASC')->get();
+    }
 }
