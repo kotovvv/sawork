@@ -28,7 +28,7 @@
 				/></v-col>
 				<v-col>
 					<v-btn
-						@click="getDataNotActivProduct()"
+						@click="getReportTarif()"
 						size="x-large"
 						>uzyskać dane</v-btn
 					>
@@ -65,11 +65,13 @@
 		</v-container>
 	</div>
 </template>
+
 <script>
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 export default {
+	name: 'reportTarif',
 	data: () => ({
 		loading: false,
 		days: 30,
@@ -94,12 +96,11 @@ export default {
 				.catch((error) => console.log(error));
 		},
 
-		getDataNotActivProduct() {
+		getReportTarif() {
 			const vm = this;
 			vm.loading = true;
-			vm.dataforxsls = [];
 			axios
-				.get('/api/getDataNotActivProduct/' + vm.days + '/' + vm.IDWarehouse)
+				.get('/api/getReportTarif/' + vm.days + '/' + vm.IDWarehouse)
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = res.data;

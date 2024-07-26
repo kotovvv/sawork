@@ -57,6 +57,7 @@
 </template>
 
 <script>
+import { defineAsyncComponent } from 'vue';
 import dictionaryComponent from './dictionaryComponent.vue';
 import locationComponent from './locationComponent.vue';
 import getXLSX from './getXLSX.vue';
@@ -76,6 +77,7 @@ export default {
 			{ text: 'Podręczniki', name: 'dictionaryComponent', icon: 'mdi-list-box-outline' },
 			{ text: 'Lokalizacja', name: 'locationComponent', icon: 'mdi-forklift' },
 			{ text: 'Report XLSX', name: 'getXLSX', icon: 'mdi-file-excel' },
+			{ text: 'Report', name: 'report', icon: 'mdi-file-chart' },
 			// { text: 'Test', name: 'test', icon: 'mdi-barcode-scan' },
 		],
 	}),
@@ -84,7 +86,8 @@ export default {
 			if (this.theMenu == 'dictionaryComponent') return dictionaryComponent;
 			if (this.theMenu == 'locationComponent') return locationComponent;
 			if (this.theMenu == 'getXLSX') return getXLSX;
-			if (this.theMenu == 'test') return test;
+			if (this.theMenu == 'report') return defineAsyncComponent(() => import('../client/clientReport.vue'));
+			//if (this.theMenu == 'test') return test;
 		},
 	},
 };

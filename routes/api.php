@@ -31,6 +31,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('getDataForXLS', [MagazynController::class, 'getDataForXLS']);
     Route::get('getDataForXLSDay/{day}/{idwarehouse}', [MagazynController::class, 'getDataForXLSDay']);
     Route::get('getDataNotActivProduct/{day}/{idwarehouse}', [MagazynController::class, 'getDataNotActivProduct']);
+    Route::get('getReportTarif/{day}/{idwarehouse}', [MagazynController::class, 'getReportTarif']);
     Route::get('getClientPriceCondition/{idwarehouse}', [MagazynController::class, 'getClientPriceCondition']);
     Route::post('setClientPriceCondition', [MagazynController::class, 'setClientPriceCondition']);
     Route::get('getPriceCondition', [MagazynController::class, 'getPriceCondition']);

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use DB;
+use Illuminate\Support\Facades\DB;
 
 class MagazynController extends Controller
 {
@@ -158,9 +158,10 @@ class MagazynController extends Controller
         $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
         if (isset($idwarehouse) && in_array($idwarehouse, $a_mag)) {
             $res = [];
-            $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
+            //$date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
+            $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
 
-            $res[Carbon::now()->parse($day)->format('d-m-Y')] = $this->getWarehouseData($date, $request->user->IDDefaultWarehouse);
+            $res[Carbon::now()->parse($day)->format('d-m-Y')] = $this->getWarehouseData($date, $idwarehouse);
             return $res;
         }
         return response('No warehause', 404);
@@ -310,5 +311,23 @@ class MagazynController extends Controller
     public function getPriceCondition()
     {
         return DB::table('dbo.price_conditions')->orderBy('max_value', 'ASC')->get();
+    }
+
+    public function getReportTarif(Request $request, $day, $idwarehouse)
+    {
+
+        $user = $request->user;
+        $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
+        if (isset($idwarehouse) && in_array($idwarehouse, $a_mag)) {
+            $day = Carbon::now()->subDays($day);
+            $query = "SELECT rm.IDRuchuMagazynowego,NrDokumentu,Data,IDKontrahenta,prod.volume,pc.price FROM dbo.RuchMagazynowy rm JOIN (SELECT sum(Ilosc * t._TowarTempDecimal2) volume,erm.IDRuchuMagazynowego  FROM ElementRuchuMagazynowego erm LEFT JOIN Towar t ON t.IDTowaru = erm.IDTowaru GROUP BY erm.IDRuchuMagazynowego) prod ON prod.IDRuchuMagazynowego = rm.IDRuchuMagazynowego JOIN     client_price_conditions cpc ON rm.IDMagazynu = cpc.IDMagazynu JOIN price_conditions pc ON cpc.condition_id = pc.condition_id WHERE rm.IDRodzajuRuchuMagazynowego = 2 AND Data >= :day AND rm.IDMagazynu = :magID AND prod.volume >= pc.min_value AND prod.volume < pc.max_value";
+
+            $result = DB::select($query, [
+                'magID' => $idwarehouse,
+                'day' => $day
+            ]);
+            return $result;
+        }
+        return response('No warehause', 404);
     }
 }
