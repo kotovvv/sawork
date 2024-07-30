@@ -70,7 +70,7 @@
 					<v-btn
 						class="ms-auto"
 						text="Ok"
-						@click="dialogMessageQty = false"
+						@click.once="dialogMessageQty = false"
 					></v-btn>
 				</template>
 			</v-card>
@@ -222,7 +222,7 @@
 									products.find((e) => e.qty > e.Quantity) ||
 									products.reduce((ak, el) => ak + el.qty, 0) == 0,
 							}"
-							@click="checkFullOrder()"
+							@click.once="checkFullOrder()"
 							>Tworzenie dokumentu zwrotu</button
 						>
 					</template>
@@ -296,19 +296,19 @@ export default {
 		},
 		async ConfirmFullOrder() {
 			if (await this.$refs.confirm.open('Zwrot jest niekompletny!', 'Czy zwrot jest na pewno niekompletny?')) {
-				this.doWz();
+				await this.doWz();
 			} else {
 				this.dialogProduct = true;
 			}
 		},
-		checkFullOrder() {
+		async checkFullOrder() {
 			let sQty = this.products.reduce((acc, el) => acc + parseInt(el.qty), 0);
 			let sQua = this.products.reduce((acc, el) => acc + parseInt(el.Quantity), 0);
 			if (sQty != sQua) {
 				this.dialogProduct = false;
 				this.ConfirmFullOrder();
 			} else {
-				this.doWz();
+				await this.doWz();
 			}
 		},
 		doWz() {
