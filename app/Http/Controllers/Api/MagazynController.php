@@ -206,7 +206,7 @@ class MagazynController extends Controller
                 DB::raw('SUM(DostawyMinusWydania.ilosc) as stan'),
                 DB::raw('SUM(DostawyMinusWydania.Wartosc) as Wartosc'),
                 // DB::raw('SUM(DostawyMinusWydania.Bilans) as Bilans'),
-                DB::raw('SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2 as m3xstan') // Calculate m3
+                DB::raw('ISNULL(SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2,0) as m3xstan') // Calculate m3
             ])
             ->joinSub(function ($query) use ($dataMax, $idMagazynu) {
                 $query->from('ElementRuchuMagazynowego as PZ')
