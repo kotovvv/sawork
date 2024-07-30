@@ -129,7 +129,7 @@ class MagazynController extends Controller
                     'Towar.StanMaksymalny as [Stan maksymalny]',
                     'Towar.StanPoczatkowy as [Stan początkowy]',
                     'Towar.CenaPoczatkowa as [Cena początkowa]',
-                    'Towar.Zdjecie as Zdjęcie',
+                    //'Towar.Zdjecie as Zdjęcie',
                     'Towar.Uwagi as Uwagi',
                     'Towar.Usluga as Usługa',
                     'Towar.Produkt as Produkt',
@@ -141,7 +141,7 @@ class MagazynController extends Controller
                     'Towar._TowarTempDecimal5 as Wysokość'
                 ])
                 ->where('a.SumaIlosci', '>', 0)
-                ->where('Towar.Archiwalny', '=', 0)
+                ->where('Towar.Archiwalny',  0)
                 ->where(function ($query) use ($days) {
                     $query->whereNull('Data ostatniego wydania')
                         ->orWhereRaw('DATEDIFF(day, Q.[Data ostatniego wydania], getdate()) > ?', [$days]);
@@ -150,6 +150,7 @@ class MagazynController extends Controller
                     $query->whereNull('Data przyjęcia towaru')
                         ->orWhereRaw('DATEDIFF(day, Q.[Data przyjęcia towaru], getdate()) > ?', [$days]);
                 });
+
 
             $result = $query->get();
 
@@ -164,6 +165,7 @@ class MagazynController extends Controller
         if ($this->canUseWarehouse($request->user, $idwarehouse)) {
             $res = [];
             //$date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
+            // $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('Y-m-d H:i:s');
             $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
 
             $res[Carbon::now()->parse($day)->format('d-m-Y')] = $this->getWarehouseData($date, $idwarehouse);
