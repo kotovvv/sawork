@@ -70,7 +70,7 @@
 					<v-btn
 						class="ms-auto"
 						text="Ok"
-						@click="dialogMessageQty = false"
+						@click.once="dialogMessageQty = false"
 					></v-btn>
 				</template>
 			</v-card>
@@ -222,7 +222,7 @@
 									products.find((e) => e.qty > e.Quantity) ||
 									products.reduce((ak, el) => ak + el.qty, 0) == 0,
 							}"
-							@click="checkFullOrder()"
+							@click.once="checkFullOrder()"
 							>Tworzenie dokumentu zwrotu</button
 						>
 					</template>
