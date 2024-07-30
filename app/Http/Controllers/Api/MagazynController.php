@@ -48,12 +48,19 @@ class MagazynController extends Controller
         }
     }
 
+    private function canUseWarehouse($user, $idwarehouse)
+    {
+        if ($user && (int) $idwarehouse > 0) {
+            $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
+            return in_array($idwarehouse, $a_mag);
+        }
+        return false;
+    }
+
     public function getDataNotActivProduct(Request $request, $day, $idwarehouse)
     {
-        $user = $request->user;
-        $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
-        if (isset($idwarehouse) && in_array($idwarehouse, $a_mag)) {
-            $MagID = $idwarehouse;
+        if ($this->canUseWarehouse($request->user, $idwarehouse)) {
+            $MagID = (int) $idwarehouse;
             $days = (int) $day;
 
             // Параметры
@@ -154,9 +161,7 @@ class MagazynController extends Controller
 
     public function getDataForXLSDay(Request $request, $day, $idwarehouse)
     {
-        $user = $request->user;
-        $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
-        if (isset($idwarehouse) && in_array($idwarehouse, $a_mag)) {
+        if ($this->canUseWarehouse($request->user, $idwarehouse)) {
             $res = [];
             //$date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
             $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
@@ -288,9 +293,7 @@ class MagazynController extends Controller
         foreach ($id_condition as $value) {
             $forinsert[] = ['IDMagazynu' => $idwarehouse, 'condition_id' => $value];
         }
-        $user = $request->user;
-        $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
-        if (isset($idwarehouse) && in_array($idwarehouse, $a_mag)) {
+        if ($this->canUseWarehouse($request->user, $idwarehouse)) {
             DB::table('dbo.client_price_conditions')->where('IDMagazynu', $idwarehouse)->delete();
             DB::table('dbo.client_price_conditions')->insert($forinsert);
             return response('Set price condition', 200);
@@ -300,9 +303,7 @@ class MagazynController extends Controller
 
     public function getClientPriceCondition(Request $request, $idwarehouse)
     {
-        $user = $request->user;
-        $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
-        if (isset($idwarehouse) && in_array($idwarehouse, $a_mag)) {
+        if ($this->canUseWarehouse($request->user, $idwarehouse)) {
             return DB::table('dbo.client_price_conditions')->where('IDMagazynu', $idwarehouse)->get();
         }
         return response('No warehause', 431);
@@ -315,10 +316,7 @@ class MagazynController extends Controller
 
     public function getReportTarif(Request $request, $day, $idwarehouse)
     {
-
-        $user = $request->user;
-        $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
-        if (isset($idwarehouse) && in_array($idwarehouse, $a_mag)) {
+        if ($this->canUseWarehouse($request->user, $idwarehouse)) {
             $day = Carbon::now()->subDays($day);
             $query = "SELECT rm.IDRuchuMagazynowego,NrDokumentu,Data,IDKontrahenta,prod.volume,pc.price FROM dbo.RuchMagazynowy rm JOIN (SELECT sum(Ilosc * t._TowarTempDecimal2) volume,erm.IDRuchuMagazynowego  FROM ElementRuchuMagazynowego erm LEFT JOIN Towar t ON t.IDTowaru = erm.IDTowaru GROUP BY erm.IDRuchuMagazynowego) prod ON prod.IDRuchuMagazynowego = rm.IDRuchuMagazynowego JOIN     client_price_conditions cpc ON rm.IDMagazynu = cpc.IDMagazynu JOIN price_conditions pc ON cpc.condition_id = pc.condition_id WHERE rm.IDRodzajuRuchuMagazynowego = 2 AND Data >= :day AND rm.IDMagazynu = :magID AND prod.volume >= pc.min_value AND prod.volume < pc.max_value";
 
