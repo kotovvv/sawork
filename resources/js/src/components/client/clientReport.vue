@@ -12,9 +12,8 @@
 		<v-card-text>
 			<v-tabs-window v-model="tab">
 				<v-tabs-window-item value="day">
-					<ReportDay />
+					<ReportDay :user="$attrs.user" />
 				</v-tabs-window-item>
-
 				<v-tabs-window-item value="notactive">
 					<ReportNotActiveProducts />
 				</v-tabs-window-item>
@@ -30,6 +29,7 @@ import ReportDay from './reportDay.vue';
 import ReportNotActiveProducts from './reportNotActiveProducts.vue';
 import ReportTarif from './reportTraif.vue';
 export default {
+	name: 'clientReport',
 	components: { ReportDay, ReportNotActiveProducts, ReportTarif },
 	data: () => ({
 		tab: null,

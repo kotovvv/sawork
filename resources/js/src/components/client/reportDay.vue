@@ -75,6 +75,7 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 export default {
+	name: 'reportDay',
 	components: {
 		VDateInput,
 	},
@@ -123,16 +124,18 @@ export default {
 			// Создание новой книги
 			const wb = XLSX.utils.book_new();
 
-			// get sum
-			this.dataforxsls.forEach((sheet) => {
-				let m3 = sheet[1].reduce((acc, o) => acc + parseFloat(o.m3xstan), 0);
-				sum += parseFloat(m3 * 2.1);
-				all.push({ day: sheet[0], m3: m3, zl: m3 * 2.1 });
-			});
-			all.push({ day: 'Итого', m3: '', zl: sum });
+			if (this.$attrs.user.IDRoli == '1') {
+				// get sum
+				this.dataforxsls.forEach((sheet) => {
+					let m3 = sheet[1].reduce((acc, o) => acc + parseFloat(o.m3xstan), 0);
+					sum += parseFloat(m3 * 2.1);
+					all.push({ day: sheet[0], m3: m3, zl: m3 * 2.1 });
+				});
+				all.push({ day: 'Итого', m3: '', zl: sum });
 
-			const ws = XLSX.utils.json_to_sheet(all);
-			XLSX.utils.book_append_sheet(wb, ws, 'Итого');
+				const ws = XLSX.utils.json_to_sheet(all);
+				XLSX.utils.book_append_sheet(wb, ws, 'Итого');
+			}
 
 			this.dataforxsls.forEach((sheet) => {
 				sheet[1].forEach((item) => {
