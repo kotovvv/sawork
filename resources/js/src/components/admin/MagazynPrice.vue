@@ -72,6 +72,7 @@ export default {
 				{ title: 'min', key: 'min_value', sortable: false },
 				{ title: 'max', key: 'max_value', sortable: false },
 				{ title: 'price', key: 'price', sortable: false },
+				{ title: 'Warehouse', key: 'magazyn', sortable: false },
 			],
 			loading: false,
 		};
