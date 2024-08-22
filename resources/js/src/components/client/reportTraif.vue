@@ -15,17 +15,16 @@
 					></v-select>
 				</v-col>
 				<v-col>
-					<v-text-field
-						label="Days"
-						v-model.number="days"
-						hide-details
+					<v-select
+						v-model="selectedMonth"
+						:items="month"
+						item-title="name"
+						item-value="id"
+						label="miesiąc"
+						persistent-hint
 						single-line
-						min="1"
-						type="number"
-						width="300"
-						max-width="400"
-						@keypress="filter()"
-				/></v-col>
+					></v-select
+				></v-col>
 				<v-col>
 					<v-btn
 						@click="getReportTarif()"
@@ -67,6 +66,8 @@
 </template>
 
 <script>
+import moment from 'moment';
+
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -74,7 +75,21 @@ export default {
 	name: 'reportTarif',
 	data: () => ({
 		loading: false,
-		days: 30,
+		selectedMonth: moment().month(),
+		month: [
+			{ id: 0, name: '01 styczeń' },
+			{ id: 1, name: '02 luty' },
+			{ id: 2, name: '03 marzec' },
+			{ id: 3, name: '04 kwiecień' },
+			{ id: 4, name: '05 maj' },
+			{ id: 5, name: '06 czerwiec' },
+			{ id: 6, name: '07 lipiec' },
+			{ id: 7, name: '08 sierpień' },
+			{ id: 8, name: '09 wrzesień' },
+			{ id: 9, name: '10 październik' },
+			{ id: 10, name: '11 listopad' },
+			{ id: 11, name: '12 grudzień' },
+		],
 		dataforxsls: [],
 		warehouses: [],
 		IDWarehouse: null,
@@ -100,7 +115,7 @@ export default {
 			const vm = this;
 			vm.loading = true;
 			axios
-				.get('/api/getReportTarif/' + vm.days + '/' + vm.IDWarehouse)
+				.get('/api/getReportTarif/' + vm.selectedMonth + '/' + vm.IDWarehouse)
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = res.data;
@@ -113,48 +128,14 @@ export default {
 				});
 		},
 		prepareXLSX() {
-			let all = [];
-			let sum = 0;
 			// Создание новой книги
 			const wb = XLSX.utils.book_new();
-
-			// get sum
-			this.dataforxsls.forEach((sheet) => {
-				let m3 = sheet[1].reduce((acc, o) => acc + parseFloat(o.m3xstan), 0);
-				sum += parseFloat(m3 * 2.1);
-				all.push({ day: sheet[0], m3: m3, zl: m3 * 2.1 });
-			});
-			all.push({ day: 'Итого', m3: '', zl: sum });
-
-			const ws = XLSX.utils.json_to_sheet(all);
-			XLSX.utils.book_append_sheet(wb, ws, 'Итого');
-
-			this.dataforxsls.forEach((sheet) => {
-				sheet[1].forEach((item) => {
-					item.stan = parseFloat(item.stan);
-					item.Wartosc = parseFloat(item.Wartosc);
-					item.m3xstan = parseFloat(item.m3xstan);
-				});
-				const ws = XLSX.utils.json_to_sheet(sheet[1]);
-				XLSX.utils.book_append_sheet(wb, ws, sheet[0]);
-			});
+			const ws = XLSX.utils.json_to_sheet(this.dataforxsls);
+			XLSX.utils.book_append_sheet(wb, ws, '');
 
 			// Генерация файла и его сохранение
 			const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-			saveAs(
-				new Blob([wbout], { type: 'application/octet-stream' }),
-				'Зберігання ' + this.date.toLocaleString().substring(0, 10).replaceAll('.', '_') + '.xlsx',
-			);
-		},
-		filter: function (evt) {
-			evt = evt ? evt : window.event;
-			let expect = evt.target.value.toString() + evt.key.toString();
-
-			if (!/^[-+]?[0-9]*\.?[0-9]*$/.test(expect)) {
-				evt.preventDefault();
-			} else {
-				return true;
-			}
+			saveAs(new Blob([wbout], { type: 'application/octet-stream' }), 'Tarif ' + this.selectedMonth + '.xlsx');
 		},
 	},
 };

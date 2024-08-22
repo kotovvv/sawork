@@ -316,15 +316,23 @@ class MagazynController extends Controller
         return DB::table('dbo.price_conditions')->orderBy('max_value', 'ASC')->get();
     }
 
-    public function getReportTarif(Request $request, $day, $idwarehouse)
+    public function getReportTarif(Request $request, $month, $idwarehouse)
     {
+        $now = Carbon::now();
         if ($this->canUseWarehouse($request->user, $idwarehouse)) {
-            $day = Carbon::now()->subDays($day);
-            $query = "SELECT rm.IDRuchuMagazynowego,NrDokumentu,Data,IDKontrahenta,prod.volume,pc.price FROM dbo.RuchMagazynowy rm JOIN (SELECT sum(Ilosc * t._TowarTempDecimal2) volume,erm.IDRuchuMagazynowego  FROM ElementRuchuMagazynowego erm LEFT JOIN Towar t ON t.IDTowaru = erm.IDTowaru GROUP BY erm.IDRuchuMagazynowego) prod ON prod.IDRuchuMagazynowego = rm.IDRuchuMagazynowego JOIN     client_price_conditions cpc ON rm.IDMagazynu = cpc.IDMagazynu JOIN price_conditions pc ON cpc.condition_id = pc.condition_id WHERE rm.IDRodzajuRuchuMagazynowego = 2 AND Data >= :day AND rm.IDMagazynu = :magID AND prod.volume >= pc.min_value AND prod.volume < pc.max_value";
+            $year = $now->year;
+            if ($now->month == 0 && $month == 11) {
+                $year = $now->year - 1;
+            }
+            $startDay = $now->createFromDate($year, $month + 1, '1')->setTime(0, 0, 0)->format('Y-m-d H:i:s');
+            $endDay = $now->createFromDate($year, $month + 1, '1')->endOfMonth()->setTime(23, 59, 59)->format('Y-m-d H:i:s');
+
+            $query = "SELECT rm.IDRuchuMagazynowego,NrDokumentu,Data,IDKontrahenta,prod.volume,pc.price FROM dbo.RuchMagazynowy rm JOIN (SELECT sum(Ilosc * t._TowarTempDecimal2) volume,erm.IDRuchuMagazynowego  FROM ElementRuchuMagazynowego erm LEFT JOIN Towar t ON t.IDTowaru = erm.IDTowaru GROUP BY erm.IDRuchuMagazynowego) prod ON prod.IDRuchuMagazynowego = rm.IDRuchuMagazynowego JOIN     client_price_conditions cpc ON rm.IDMagazynu = cpc.IDMagazynu JOIN price_conditions pc ON cpc.condition_id = pc.condition_id WHERE rm.IDRodzajuRuchuMagazynowego = 2 AND Data >= :startDay AND Data <= :endDay AND rm.IDMagazynu = :magID AND prod.volume >= pc.min_value AND prod.volume < pc.max_value order by Data ASC";
 
             $result = DB::select($query, [
                 'magID' => $idwarehouse,
-                'day' => $day
+                'startDay' => $startDay,
+                'endDay' => $endDay,
             ]);
             return $result;
         }
