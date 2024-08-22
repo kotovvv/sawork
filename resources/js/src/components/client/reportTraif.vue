@@ -119,6 +119,9 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = res.data;
+						vm.dataforxsls.forEach((el) => {
+							el.price = parseFloat(el.price);
+						});
 						vm.loading = false;
 					}
 				})
