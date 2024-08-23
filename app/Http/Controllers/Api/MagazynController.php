@@ -164,9 +164,9 @@ class MagazynController extends Controller
     {
         if ($this->canUseWarehouse($request->user, $idwarehouse)) {
             $res = [];
-            //$date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
+            $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
             // $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('Y-m-d H:i:s');
-            $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
+            // $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
 
             $res[Carbon::now()->parse($day)->format('d-m-Y')] = $this->getWarehouseData($date, $idwarehouse);
             return $res;
@@ -200,20 +200,14 @@ class MagazynController extends Controller
     {
         return DB::table('Towar as t')
             ->select([
-                //'DostawyMinusWydania.IdTowaru',
-                //'t.IDMagazynu',
-                // 't.IDGrupyTowarow',
-                //'t.IDJednostkiMiary',
                 't.Nazwa',
                 't.KodKreskowy',
-                // 'j.Nazwa as Jednostka',
-                //'t.Archiwalny',
-                //'t.Usluga',
                 't._TowarTempString1 as sku',
-                DB::raw('SUM(DostawyMinusWydania.ilosc) as stan'),
-                DB::raw('SUM(DostawyMinusWydania.Wartosc) as Wartosc'),
-                // DB::raw('SUM(DostawyMinusWydania.Bilans) as Bilans'),
-                DB::raw('ISNULL(SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2,0) as m3xstan') // Calculate m3
+                DB::raw('ROUND(SUM(DostawyMinusWydania.Wartosc), 2) as wartość'),
+                DB::raw('ISNULL(SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2, 0) as m3xstan'),
+                DB::raw('CAST(SUM(DostawyMinusWydania.ilosc) AS INT) as stan'),
+                DB::raw('CAST(ISNULL(ol.ProductCountWithoutWZ, 0) AS INT) as rezerv'),
+                DB::raw('CAST(ISNULL(SUM(DostawyMinusWydania.ilosc) - ISNULL(ol.ProductCountWithoutWZ, 0), 0) AS INT) as pozostać')
             ])
             ->joinSub(function ($query) use ($dataMax, $idMagazynu) {
                 $query->from('ElementRuchuMagazynowego as PZ')
@@ -267,6 +261,25 @@ class MagazynController extends Controller
                             ->groupBy('t.IDTowaru');
                     });
             }, 'DostawyMinusWydania', 'DostawyMinusWydania.IDTowaru', '=', 't.IDTowaru')
+            ->leftJoinSub(function ($query) {
+                $query->from('OrderLines as ol')
+                    ->select([
+                        'ol.IDItem as IDTowaru',
+                        DB::raw('ISNULL(SUM(ol.Quantity), 0) as ProductCountWithoutWZ')
+                    ])
+                    ->join('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+                    ->join('OrderStatus as os', 'os.IDOrderStatus', '=', 'o.IDOrderStatus')
+                    ->whereNull('os.SetUpAction')
+                    ->orWhere('os.SetUpAction', '<>', 256)
+                    ->whereNotExists(function ($query) {
+                        $query->select(DB::raw(1))
+                            ->from('DocumentRelations as dr')
+                            ->whereColumn('dr.ID2', 'o.IDOrder')
+                            ->where('dr.IDType2', 15)
+                            ->where('dr.IDType1', 2);
+                    })
+                    ->groupBy('ol.IDItem');
+            }, 'ol', 'ol.IDTowaru', '=', 't.IDTowaru')
             ->join('JednostkaMiary as j', 'j.IDJednostkiMiary', '=', 't.IDJednostkiMiary')
             ->where('t.IDMagazynu', $idMagazynu)
             ->groupBy([
@@ -280,7 +293,8 @@ class MagazynController extends Controller
                 't.Usluga',
                 't._TowarTempDecimal2',
                 '_TowarTempString1',
-                'j.Nazwa'
+                'j.Nazwa',
+                'ol.ProductCountWithoutWZ'
             ])
             ->havingRaw('SUM(DostawyMinusWydania.ilosc) > 0')
             ->get();
