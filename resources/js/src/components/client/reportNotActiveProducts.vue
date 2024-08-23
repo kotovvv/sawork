@@ -112,38 +112,14 @@ export default {
 				});
 		},
 		prepareXLSX() {
-			let all = [];
-			let sum = 0;
 			// Создание новой книги
 			const wb = XLSX.utils.book_new();
-
-			// get sum
-			this.dataforxsls.forEach((sheet) => {
-				let m3 = sheet[1].reduce((acc, o) => acc + parseFloat(o.m3xstan), 0);
-				sum += parseFloat(m3 * 2.1);
-				all.push({ day: sheet[0], m3: m3, zl: m3 * 2.1 });
-			});
-			all.push({ day: 'Итого', m3: '', zl: sum });
-
-			const ws = XLSX.utils.json_to_sheet(all);
-			XLSX.utils.book_append_sheet(wb, ws, 'Итого');
-
-			this.dataforxsls.forEach((sheet) => {
-				sheet[1].forEach((item) => {
-					item.stan = parseFloat(item.stan);
-					item.Wartosc = parseFloat(item.Wartosc);
-					item.m3xstan = parseFloat(item.m3xstan);
-				});
-				const ws = XLSX.utils.json_to_sheet(sheet[1]);
-				XLSX.utils.book_append_sheet(wb, ws, sheet[0]);
-			});
+			const ws = XLSX.utils.json_to_sheet(this.dataforxsls);
+			XLSX.utils.book_append_sheet(wb, ws, '');
 
 			// Генерация файла и его сохранение
 			const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-			saveAs(
-				new Blob([wbout], { type: 'application/octet-stream' }),
-				'Зберігання ' + this.date.toLocaleString().substring(0, 10).replaceAll('.', '_') + '.xlsx',
-			);
+			saveAs(new Blob([wbout], { type: 'application/octet-stream' }), 'noActive' + this.IDWarehouse + '.xlsx');
 		},
 		filter: function (evt) {
 			evt = evt ? evt : window.event;
