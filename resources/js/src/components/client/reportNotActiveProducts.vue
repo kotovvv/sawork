@@ -59,7 +59,21 @@
 			<v-row>
 				<v-col cols="12">
 					<!-- :headers="headers" -->
-					<v-data-table-virtual :items="dataforxsls"></v-data-table-virtual>
+					<v-data-table-virtual
+						:items="dataforxsls"
+						:search="searchInTable"
+					>
+						<template v-slot:top="{}">
+							<v-row>
+								<v-col cols="2">
+									<v-text-field
+										v-model="searchInTable"
+										clearable
+									></v-text-field>
+								</v-col>
+							</v-row>
+						</template>
+					</v-data-table-virtual>
 				</v-col>
 			</v-row>
 		</v-container>
@@ -71,6 +85,7 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 export default {
 	data: () => ({
+		searchInTable: '',
 		loading: false,
 		days: 30,
 		dataforxsls: [],
