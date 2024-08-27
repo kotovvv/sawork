@@ -354,4 +354,50 @@ class MagazynController extends Controller
         }
         return response('No warehause', 404);
     }
+
+    public function getProductHistory($idTowaru)
+    {
+        // Получаем ID Магазина для товара
+        $idMagazynu = DB::table('Towar')
+            ->where('IDTowaru', $idTowaru)
+            ->value('IDMagazynu');
+
+        // Инициализируем переменные
+        $stanMagazynu = 0;
+        $boDate = DB::select('SELECT dbo.MostRecentOBDateScalar(?, ?)', [now(), $idMagazynu])[0]->result;
+
+        // Выполняем запрос с защитой от SQL-инъекций
+        $results = DB::table('RuchMagazynowy as r')
+            ->leftJoin('Kontrahent', 'r.IDKontrahenta', '=', 'Kontrahent.IDKontrahenta')
+            ->join('RodzajRuchuMagazynowego', 'r.IDRodzajuRuchuMagazynowego', '=', 'RodzajRuchuMagazynowego.IDRodzajuRuchuMagazynowego')
+            ->leftJoin('PrzesunieciaMM as pmm', 'pmm.IDRuchuMagazynowegoDo', '=', 'r.IDRuchuMagazynowego')
+            ->whereRaw('(SELECT COUNT(*) FROM ElementRuchuMagazynowego AS ElementRuchuMagazynowego_1 WHERE IDTowaru = ? AND IDRuchuMagazynowego = r.IDRuchuMagazynowego) > 0', [$idTowaru])
+            ->where('r.Data', '>=', $boDate)
+            ->where('r.Operator', '<>', 0)
+            ->orderBy('Data', 'asc')
+            ->select([
+                DB::raw('ROW_NUMBER() OVER(ORDER BY r.Data ASC) as ID'),
+                'r.IDRuchuMagazynowego',
+                DB::raw('CASE WHEN pmm.IDPrzesunieciaMM IS NULL THEN r.Data ELSE DATEADD(ms, 333, r.Data) END AS Data'),
+                'r.Uwagi',
+                'r.IDRodzajuRuchuMagazynowego',
+                'r.IDMagazynu',
+                'r.NrDokumentu',
+                'r.IDKontrahenta',
+                'Kontrahent.Nazwa as NazwaKontrahenta',
+                'RodzajRuchuMagazynowego.Nazwa as NazwaRuchu',
+                DB::raw("r.Operator * (SELECT SUM(e_X.Ilosc) FROM ElementRuchuMagazynowego AS e_X WHERE e_X.IDTowaru = ? AND e_X.IDRuchuMagazynowego = r.IDRuchuMagazynowego) AS ilosc", [$idTowaru]),
+                DB::raw('CAST(0 as decimal(18,7)) AS StanMagazynu'),
+                DB::raw("(SELECT CASE WHEN SUM(Ilosc) = 0 THEN 0 ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc) END FROM ElementRuchuMagazynowego AS ElementRuchuMagazynowego_2 WHERE IDTowaru = ? AND IDRuchuMagazynowego = r.IDRuchuMagazynowego) AS CenaJednostkowa", [$idTowaru]),
+            ])
+            ->get();
+
+        // Обновляем поле StanMagazynu
+        foreach ($results as $result) {
+            $stanMagazynu += $result->ilosc;
+            $result->StanMagazynu = $stanMagazynu;
+        }
+
+        return $results;
+    }
 }

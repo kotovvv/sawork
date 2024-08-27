@@ -76,7 +76,11 @@
 										clearable
 									></v-text-field>
 								</v-col>
-								<v-btn :disabled="!selected.length">Historia</v-btn>
+								<v-btn
+									:disabled="!selected.length"
+									@click="getProductHistory"
+									>Historia</v-btn
+								>
 							</v-row>
 						</template>
 					</v-data-table>
@@ -103,6 +107,17 @@ export default {
 		this.getWarehouse();
 	},
 	methods: {
+		getProductHistory() {
+			axios
+				.get('/api/getProductHistory/' + this.selected[0])
+				.then((res) => {
+					if (res.status == 200) {
+						vm.warehouses = res.data;
+						vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+					}
+				})
+				.catch((error) => console.log(error));
+		},
 		colorRowItem(item) {
 			if (item.item.IDTowaru != undefined && item.item.IDTowaru == this.selected[0]) {
 				return { class: 'bg-red-darken-4' };
