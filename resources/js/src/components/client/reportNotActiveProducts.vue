@@ -59,21 +59,27 @@
 			<v-row>
 				<v-col cols="12">
 					<!-- :headers="headers" -->
-					<v-data-table-virtual
+					<v-data-table
 						:items="dataforxsls"
+						item-value="IDTowaru"
 						:search="searchInTable"
+						@click:row="handleClick"
+						select-strategy="single"
+						:row-props="colorRowItem"
 					>
 						<template v-slot:top="{}">
-							<v-row>
+							<v-row class="align-center">
 								<v-col cols="2">
 									<v-text-field
+										label="odzyskiwanie"
 										v-model="searchInTable"
 										clearable
 									></v-text-field>
 								</v-col>
+								<v-btn :disabled="!selected.length">Historia</v-btn>
 							</v-row>
 						</template>
-					</v-data-table-virtual>
+					</v-data-table>
 				</v-col>
 			</v-row>
 		</v-container>
@@ -85,6 +91,7 @@ import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 export default {
 	data: () => ({
+		selected: [],
 		searchInTable: '',
 		loading: false,
 		days: 30,
@@ -96,6 +103,14 @@ export default {
 		this.getWarehouse();
 	},
 	methods: {
+		colorRowItem(item) {
+			if (item.item.IDTowaru != undefined && item.item.IDTowaru == this.selected[0]) {
+				return { class: 'bg-red-darken-4' };
+			}
+		},
+		handleClick(event, row) {
+			this.selected = [row.item.IDTowaru];
+		},
 		getWarehouse() {
 			const vm = this;
 			axios
@@ -116,6 +131,9 @@ export default {
 			axios
 				.get('/api/getDataNotActivProduct/' + vm.days + '/' + vm.IDWarehouse)
 				.then((res) => {
+					if (res.status == 401) {
+						document.location.reload();
+					}
 					if (res.status == 200) {
 						vm.dataforxsls = res.data;
 						vm.loading = false;
@@ -124,6 +142,7 @@ export default {
 				.catch((error) => {
 					console.log(error);
 					vm.loading = false;
+					document.location.reload();
 				});
 		},
 		prepareXLSX() {

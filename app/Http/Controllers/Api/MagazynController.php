@@ -110,7 +110,7 @@ class MagazynController extends Controller
                 ->leftJoin('GrupyTowarow as gt', 'gt.IDGrupyTowarow', '=', 'Towar.IDGrupyTowarow')
                 ->leftJoin('JednostkaMiary as jm', 'jm.IDJednostkiMiary', '=', 'Towar.IDJednostkiMiary')
                 ->select([
-                    // 'Towar.IDTowaru',
+                    'Towar.IDTowaru',
                     'Towar.Nazwa as Nazwa towaru',
                     'Towar.KodKreskowy as Kod kreskowy',
                     'jm.Nazwa as Jednostka',
@@ -166,9 +166,9 @@ class MagazynController extends Controller
     {
         if ($this->canUseWarehouse($request->user, $idwarehouse)) {
             $res = [];
-            $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
+            //$date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
             // $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('Y-m-d H:i:s');
-            // $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
+            $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
 
             $res[Carbon::now()->parse($day)->format('d-m-Y')] = $this->getWarehouseData($date, $idwarehouse);
             return $res;
