@@ -113,6 +113,7 @@ class MagazynController extends Controller
                     'Towar.IDTowaru',
                     'Towar.Nazwa as Nazwa towaru',
                     'Towar.KodKreskowy as Kod kreskowy',
+                    'Towar._TowarTempString1 as sku',
                     'jm.Nazwa as Jednostka',
                     DB::raw('CAST(a.SumaIlosci AS INT)as Stan'),
                     DB::raw("CASE WHEN Q.[Data przyjęcia towaru] = '1900-01-01' THEN NULL ELSE Q.[Data przyjęcia towaru] END as [Data przyjęcia towaru]"),
@@ -121,8 +122,7 @@ class MagazynController extends Controller
                     DB::raw("ISNULL(Q.[Numer ostatniego wydania], '') as [Numer ostatniego wydania]"),
                     DB::raw("ISNULL(gt.Nazwa, 0) as [Grupa towarów]"),
                     DB::raw('ROUND(Towar.CenaZakupu, 2) as [Cena zakupu]'),
-                    DB::raw("DATEDIFF(DAY,
-            [Data przyjęcia towaru],[Data ostatniego wydania]) AS [Ilość dni]"),
+                    DB::raw("DATEDIFF(DAY,ISNULL([Data ostatniego wydania],[Data przyjęcia towaru]),GETDATE()) AS [Ilość dni]"),
                     // DB::raw('Towar.CenaZakupu * a.SumaIlosci as [Wartość zakupu]'),
                     // 'a.SumaWartosci as Wartość',
                     // 'Towar.CenaSprzedazy as [Cena sprzedaży]',
@@ -137,7 +137,7 @@ class MagazynController extends Controller
                     // 'Towar.Produkt as Produkt',
                     // 'Towar._TowarTempDecimal1 as Waga',
                     // 'Towar._TowarTempDecimal2 as m3',
-                    // 'Towar._TowarTempString1 as sku',
+
                     // 'Towar._TowarTempDecimal3 as Długość',
                     // 'Towar._TowarTempDecimal4 as Szerokość',
                     // 'Towar._TowarTempDecimal5 as Wysokość'
@@ -355,49 +355,53 @@ class MagazynController extends Controller
         return response('No warehause', 404);
     }
 
-    public function getProductHistory($idTowaru)
+    public function getProductHistory($IDTowaru)
     {
-        // Получаем ID Магазина для товара
-        $idMagazynu = DB::table('Towar')
-            ->where('IDTowaru', $idTowaru)
-            ->value('IDMagazynu');
+        //$product = DB::table('towar')->where('IDTowaru', $IDTowaru)->first();
+        $warehouseId = DB::table('towar')->where('IDTowaru', $IDTowaru)->value('IDMagazynu');
 
-        // Инициализируем переменные
-        $stanMagazynu = 0;
-        $boDate = DB::select('SELECT dbo.MostRecentOBDateScalar(?, ?)', [now(), $idMagazynu])[0]->result;
 
-        // Выполняем запрос с защитой от SQL-инъекций
-        $results = DB::table('RuchMagazynowy as r')
+        $boDateResult = DB::select('SELECT dbo.MostRecentOBDateScalar(?, ?) as BODate', [now(), $warehouseId]);
+        $boDate = $boDateResult[0]->BODate;
+
+        // Fetch movements and handle stock calculations
+        $movements = DB::table('RuchMagazynowy as r')
             ->leftJoin('Kontrahent', 'r.IDKontrahenta', '=', 'Kontrahent.IDKontrahenta')
             ->join('RodzajRuchuMagazynowego', 'r.IDRodzajuRuchuMagazynowego', '=', 'RodzajRuchuMagazynowego.IDRodzajuRuchuMagazynowego')
             ->leftJoin('PrzesunieciaMM as pmm', 'pmm.IDRuchuMagazynowegoDo', '=', 'r.IDRuchuMagazynowego')
-            ->whereRaw('(SELECT COUNT(*) FROM ElementRuchuMagazynowego AS ElementRuchuMagazynowego_1 WHERE IDTowaru = ? AND IDRuchuMagazynowego = r.IDRuchuMagazynowego) > 0', [$idTowaru])
+            ->whereExists(function ($query) use ($IDTowaru) {
+                $query->select(DB::raw(1))
+                    ->from('ElementRuchuMagazynowego as e_X')
+                    ->whereColumn('e_X.IDRuchuMagazynowego', 'r.IDRuchuMagazynowego')
+                    ->where('e_X.IDTowaru', $IDTowaru);
+            })
             ->where('r.Data', '>=', $boDate)
             ->where('r.Operator', '<>', 0)
-            ->orderBy('Data', 'asc')
             ->select([
-                DB::raw('ROW_NUMBER() OVER(ORDER BY r.Data ASC) as ID'),
-                'r.IDRuchuMagazynowego',
-                DB::raw('CASE WHEN pmm.IDPrzesunieciaMM IS NULL THEN r.Data ELSE DATEADD(ms, 333, r.Data) END AS Data'),
-                'r.Uwagi',
-                'r.IDRodzajuRuchuMagazynowego',
-                'r.IDMagazynu',
-                'r.NrDokumentu',
-                'r.IDKontrahenta',
-                'Kontrahent.Nazwa as NazwaKontrahenta',
-                'RodzajRuchuMagazynowego.Nazwa as NazwaRuchu',
-                DB::raw("r.Operator * (SELECT SUM(e_X.Ilosc) FROM ElementRuchuMagazynowego AS e_X WHERE e_X.IDTowaru = ? AND e_X.IDRuchuMagazynowego = r.IDRuchuMagazynowego) AS ilosc", [$idTowaru]),
-                DB::raw('CAST(0 as decimal(18,7)) AS StanMagazynu'),
-                DB::raw("(SELECT CASE WHEN SUM(Ilosc) = 0 THEN 0 ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc) END FROM ElementRuchuMagazynowego AS ElementRuchuMagazynowego_2 WHERE IDTowaru = ? AND IDRuchuMagazynowego = r.IDRuchuMagazynowego) AS CenaJednostkowa", [$idTowaru]),
+                'r.IDRuchuMagazynowego as movement_id',
+                DB::raw('CASE WHEN pmm.IDPrzesunieciaMM IS NULL THEN r.Data ELSE DATEADD(ms, 333, r.Data) END AS date'),
+                'r.Uwagi as remarks',
+                'r.IDRodzajuRuchuMagazynowego as movement_type_id',
+                'r.IDMagazynu as warehouse_id',
+                'r.NrDokumentu as document_number',
+                'r.IDKontrahenta as contractor_id',
+                'Kontrahent.Nazwa as contractor_name',
+                'RodzajRuchuMagazynowego.Nazwa as movement_name',
+                DB::raw('(r.Operator * (SELECT SUM(e_X.Ilosc) FROM ElementRuchuMagazynowego e_X WHERE e_X.IDTowaru = ' . $IDTowaru . ' AND e_X.IDRuchuMagazynowego = r.IDRuchuMagazynowego)) AS quantity'),
+                DB::raw('0 AS stock_level'),
+                DB::raw('ROUND((SELECT CASE WHEN SUM(Ilosc) = 0 THEN 0 ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc) END FROM ElementRuchuMagazynowego WHERE IDTowaru = ' . $IDTowaru . ' AND IDRuchuMagazynowego = r.IDRuchuMagazynowego),2) AS unit_price'),
+                DB::raw('ROUND((SELECT CASE WHEN SUM(Ilosc) = 0 THEN 0 ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc) END FROM ElementRuchuMagazynowego WHERE IDTowaru = ' . $IDTowaru . ' AND IDRuchuMagazynowego = r.IDRuchuMagazynowego) * (r.Operator * (SELECT SUM(e_X.Ilosc) FROM ElementRuchuMagazynowego e_X WHERE e_X.IDTowaru = ' . $IDTowaru . ' AND e_X.IDRuchuMagazynowego = r.IDRuchuMagazynowego)),2) as wartosc')
             ])
+            ->orderBy('date', 'ASC')
             ->get();
 
-        // Обновляем поле StanMagazynu
-        foreach ($results as $result) {
-            $stanMagazynu += $result->ilosc;
-            $result->StanMagazynu = $stanMagazynu;
+        // Updating stock levels in memory
+        $stockLevel = 0;
+        foreach ($movements as $movement) {
+            $stockLevel += $movement->quantity;
+            $movement->stock_level = $stockLevel;
         }
 
-        return $results;
+        return response()->json($movements);
     }
 }

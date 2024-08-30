@@ -76,11 +76,10 @@
 										clearable
 									></v-text-field>
 								</v-col>
-								<v-btn
-									:disabled="!selected.length"
-									@click="getProductHistory"
-									>Historia</v-btn
-								>
+								<productHistory
+									:product_id="selected[0]"
+									:product="getProduct()"
+								/>
 							</v-row>
 						</template>
 					</v-data-table>
@@ -93,7 +92,11 @@
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import productHistory from './productHistory.vue';
 export default {
+	components: {
+		productHistory,
+	},
 	data: () => ({
 		selected: [],
 		searchInTable: '',
@@ -107,16 +110,10 @@ export default {
 		this.getWarehouse();
 	},
 	methods: {
-		getProductHistory() {
-			axios
-				.get('/api/getProductHistory/' + this.selected[0])
-				.then((res) => {
-					if (res.status == 200) {
-						vm.warehouses = res.data;
-						vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
-					}
-				})
-				.catch((error) => console.log(error));
+		getProduct() {
+			return this.dataforxsls.filter((el) => {
+				return el.IDTowaru == this.selected[0];
+			});
 		},
 		colorRowItem(item) {
 			if (item.item.IDTowaru != undefined && item.item.IDTowaru == this.selected[0]) {
@@ -157,7 +154,6 @@ export default {
 				.catch((error) => {
 					console.log(error);
 					vm.loading = false;
-					document.location.reload();
 				});
 		},
 		prepareXLSX() {
