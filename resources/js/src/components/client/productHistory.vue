@@ -44,14 +44,21 @@
 					>
 						<template v-slot:top="{}">
 							<v-row class="align-center">
+								<img
+									v-if="product.Zdjecie"
+									:src="'data:image/jpeg;base64,' + product.Zdjecie"
+									alt="pic"
+									style="height: 4em"
+								/>
+
 								<v-col>
-									<h3> {{ product[0]['Nazwa towaru'] }}</h3>
+									<h3> {{ product.Nazwa }}</h3>
 								</v-col>
 								<v-col>
-									Kod kreskowy: <b>{{ product[0]['Kod kreskowy'] }}</b>
+									Kod kreskowy: <b>{{ product.KodKreskowy }}</b>
 								</v-col>
 								<v-col>
-									sku: <b> {{ product[0]['sku'] }}</b>
+									sku: <b> {{ product.sku }}</b>
 								</v-col>
 							</v-row>
 						</template>
@@ -65,7 +72,7 @@
 import axios from 'axios';
 export default {
 	name: 'productHistory',
-	props: ['product_id', 'product'],
+	props: ['product_id'],
 	data() {
 		return {
 			loading: false,
@@ -75,21 +82,22 @@ export default {
 				{ title: 'Numer Dokumentu', key: 'document_number', sortable: false },
 				{ title: 'Rodzaj Dokumentu', key: 'movement_name', sortable: false },
 				{ title: 'Ilość', key: 'stock_level', sortable: false },
-				{ title: 'Cena jednostkowa', key: 'unit_price', sortable: false },
+				// { title: 'Cena jednostkowa', key: 'unit_price', sortable: false },
 				{ title: 'Stan magazynu', key: 'quantity', sortable: false },
-				{ title: 'Wartość', key: 'wartosc', sortable: false },
+				// { title: 'Wartość', key: 'wartosc', sortable: false },
 				{ title: 'Data', key: 'date', sortable: false },
 				{ title: 'Nazwa kontrahenta', key: 'contractor_name', sortable: false },
 				{ title: 'Uwagi', key: 'remarks', sortable: false },
 				// { title: 'Twórca dokumentu', key: 'min_value', sortable: false },
 			],
+			product: {},
 		};
 	},
 	watch: {
 		dialog(visible) {
 			if (visible) {
 				this.getProductHistory();
-				console.log(this.dataHistory);
+				// console.log(this.dataHistory);
 			} else {
 				this.dataHistory = [];
 			}
@@ -99,12 +107,22 @@ export default {
 		getProductHistory() {
 			const vm = this;
 			vm.loading = true;
+			vm.product = {};
 			axios
 				.get('/api/getProductHistory/' + this.product_id)
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataHistory = res.data;
+						axios
+							.get('api/getProduct/' + this.product_id)
+							.then((pr) => {
+								if (pr.status == 200) {
+									vm.product = pr.data;
+								}
+							})
+							.catch((error) => console.log(error));
 					}
+
 					vm.loading = false;
 				})
 				.catch((error) => console.log(error));

@@ -77,7 +77,7 @@ export default {
 			{ text: 'Podręczniki', name: 'dictionaryComponent', icon: 'mdi-list-box-outline' },
 			{ text: 'Lokalizacja', name: 'locationComponent', icon: 'mdi-forklift' },
 			{ text: 'Report XLSX', name: 'getXLSX', icon: 'mdi-file-excel' },
-			{ text: 'Report', name: 'report', icon: 'mdi-file-chart' },
+			{ text: 'Raporty', name: 'report', icon: 'mdi-file-chart' },
 			// { text: 'Test', name: 'test', icon: 'mdi-barcode-scan' },
 		],
 	}),

@@ -79,7 +79,7 @@ class LocationController extends Controller
             'IDTowaru',
             'Nazwa',
             'KodKreskowy',
-            '_TowarTempString1',
+            '_TowarTempString1 as sku',
             'Zdjecie',
             DB::raw("0 as qty")
         )->first();
@@ -192,7 +192,9 @@ class LocationController extends Controller
             $ndocidpls = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
 
             DB::statement('EXEC dbo.UtworzZaleznoscPZWZ @IDElementuPZ = ?, @IDElementuWZ = ?, @Ilosc = ?', [
-                $pz[$key]->IDElementuRuchuMagazynowego, $ndocidmin, $debt
+                $pz[$key]->IDElementuRuchuMagazynowego,
+                $ndocidmin,
+                $debt
             ]);
 
             // DB::table('ZaleznosciPZWZ')->insert(['IDElementuPZ'=> $pz[$key]->IDElementuRuchuMagazynowego, 'IDElementuWZ'=> $ndocidmin, 'Ilosc'=> $debt]);

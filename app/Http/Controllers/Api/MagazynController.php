@@ -114,14 +114,14 @@ class MagazynController extends Controller
                     'Towar.Nazwa as Nazwa towaru',
                     'Towar.KodKreskowy as Kod kreskowy',
                     'Towar._TowarTempString1 as sku',
-                    'jm.Nazwa as Jednostka',
+                    //'jm.Nazwa as Jednostka',
                     DB::raw('CAST(a.SumaIlosci AS INT)as Stan'),
                     DB::raw("CASE WHEN Q.[Data przyjęcia towaru] = '1900-01-01' THEN NULL ELSE Q.[Data przyjęcia towaru] END as [Data przyjęcia towaru]"),
                     DB::raw("ISNULL(Q.[Numer dokumentu przyjęcia], '') as [Numer dokumentu przyjęcia]"),
                     DB::raw("CASE WHEN Q.[Data ostatniego wydania] = '1900-01-01' THEN NULL ELSE Q.[Data ostatniego wydania] END as [Data ostatniego wydania]"),
                     DB::raw("ISNULL(Q.[Numer ostatniego wydania], '') as [Numer ostatniego wydania]"),
-                    DB::raw("ISNULL(gt.Nazwa, 0) as [Grupa towarów]"),
-                    DB::raw('ROUND(Towar.CenaZakupu, 2) as [Cena zakupu]'),
+                    //DB::raw("ISNULL(gt.Nazwa, 0) as [Grupa towarów]"),
+                    //DB::raw('ROUND(Towar.CenaZakupu, 2) as [Cena zakupu]'),
                     DB::raw("DATEDIFF(DAY,ISNULL([Data ostatniego wydania],[Data przyjęcia towaru]),GETDATE()) AS [Ilość dni]"),
                     // DB::raw('Towar.CenaZakupu * a.SumaIlosci as [Wartość zakupu]'),
                     // 'a.SumaWartosci as Wartość',
@@ -202,10 +202,11 @@ class MagazynController extends Controller
     {
         return DB::table('Towar as t')
             ->select([
-                't.Nazwa',
+                't.IDTowaru',
+                DB::raw('t.Nazwa as "Nazwa towaru"'),
                 't.KodKreskowy',
-                't._TowarTempString1 as sku',
-                DB::raw('ROUND(SUM(DostawyMinusWydania.Wartosc), 2) as wartość'),
+                DB::raw('t._TowarTempString1 as sku'),
+                DB::raw('ROUND(SUM(DostawyMinusWydania.Wartosc), 2) as wartosc'),
                 DB::raw('ISNULL(SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2, 0) as m3xstan'),
                 DB::raw('CAST(SUM(DostawyMinusWydania.ilosc) AS INT) as stan'),
                 DB::raw('CAST(ISNULL(ol.ProductCountWithoutWZ, 0) AS INT) as rezerv'),
@@ -216,7 +217,7 @@ class MagazynController extends Controller
                     ->select([
                         't.IdTowaru',
                         DB::raw('SUM(PZ.ilosc) as Ilosc'),
-                        DB::raw('SUM(ISNULL(PZ.ilosc * PZ.CenaJednostkowa, 0)) as Wartosc'),
+                        DB::raw('ROUND(SUM(ISNULL(PZ.ilosc * PZ.CenaJednostkowa, 0)),2) as Wartosc'),
                         DB::raw('SUM(ISNULL(PZ.ilosc * PZ.CenaJednostkowa, 0)) as Bilans')
                     ])
                     ->join('RuchMagazynowy as RuchPZ', 'RuchPZ.IDRuchuMagazynowego', '=', 'PZ.IDRuchuMagazynowego')
@@ -286,6 +287,7 @@ class MagazynController extends Controller
             ->where('t.IDMagazynu', $idMagazynu)
             ->groupBy([
                 'DostawyMinusWydania.IdTowaru',
+                't.IDTowaru',
                 't.IDMagazynu',
                 't.IDGrupyTowarow',
                 't.IDJednostkiMiary',
@@ -377,6 +379,7 @@ class MagazynController extends Controller
             })
             ->where('r.Data', '>=', $boDate)
             ->where('r.Operator', '<>', 0)
+            ->where('r.IDRodzajuRuchuMagazynowego', '<>', 27)
             ->select([
                 'r.IDRuchuMagazynowego as movement_id',
                 DB::raw('CASE WHEN pmm.IDPrzesunieciaMM IS NULL THEN r.Data ELSE DATEADD(ms, 333, r.Data) END AS date'),
@@ -388,9 +391,11 @@ class MagazynController extends Controller
                 'Kontrahent.Nazwa as contractor_name',
                 'RodzajRuchuMagazynowego.Nazwa as movement_name',
                 DB::raw('(r.Operator * (SELECT SUM(e_X.Ilosc) FROM ElementRuchuMagazynowego e_X WHERE e_X.IDTowaru = ' . $IDTowaru . ' AND e_X.IDRuchuMagazynowego = r.IDRuchuMagazynowego)) AS quantity'),
-                DB::raw('0 AS stock_level'),
-                DB::raw('ROUND((SELECT CASE WHEN SUM(Ilosc) = 0 THEN 0 ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc) END FROM ElementRuchuMagazynowego WHERE IDTowaru = ' . $IDTowaru . ' AND IDRuchuMagazynowego = r.IDRuchuMagazynowego),2) AS unit_price'),
-                DB::raw('ROUND((SELECT CASE WHEN SUM(Ilosc) = 0 THEN 0 ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc) END FROM ElementRuchuMagazynowego WHERE IDTowaru = ' . $IDTowaru . ' AND IDRuchuMagazynowego = r.IDRuchuMagazynowego) * (r.Operator * (SELECT SUM(e_X.Ilosc) FROM ElementRuchuMagazynowego e_X WHERE e_X.IDTowaru = ' . $IDTowaru . ' AND e_X.IDRuchuMagazynowego = r.IDRuchuMagazynowego)),2) as wartosc')
+                DB::raw('0 AS stock_level')
+                // ,
+                //                 DB::raw('ROUND((SELECT CASE WHEN SUM(Ilosc) = 0 THEN 0 ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc) END FROM ElementRuchuMagazynowego WHERE IDTowaru = ' . $IDTowaru . ' AND IDRuchuMagazynowego = r.IDRuchuMagazynowego),2) AS unit_price')
+                // ,
+                // DB::raw('ROUND((SELECT CASE WHEN SUM(Ilosc) = 0 THEN 0 ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc) END FROM ElementRuchuMagazynowego WHERE IDTowaru = ' . $IDTowaru . ' AND IDRuchuMagazynowego = r.IDRuchuMagazynowego) * (r.Operator * (SELECT SUM(e_X.Ilosc) FROM ElementRuchuMagazynowego e_X WHERE e_X.IDTowaru = ' . $IDTowaru . ' AND e_X.IDRuchuMagazynowego = r.IDRuchuMagazynowego)),2) as wartosc')
             ])
             ->orderBy('date', 'ASC')
             ->get();

@@ -119,7 +119,7 @@
 									<span
 										><h5
 											>{{ product.Nazwa }}<br />cod: {{ product.KodKreskowy }}, sku:
-											{{ product._TowarTempString1 }}</h5
+											{{ product.sku }}</h5
 										>
 									</span>
 									<!-- <v-btn

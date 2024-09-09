@@ -27,18 +27,20 @@
 						@keypress="filter()"
 				/></v-col>
 				<v-col>
-					<v-btn
-						@click="getDataNotActivProduct()"
-						size="x-large"
-						>uzyskać dane</v-btn
+					<div class="d-flex">
+						<v-btn
+							@click="getDataNotActivProduct()"
+							size="x-large"
+							>uzyskać dane</v-btn
+						>
+						<v-btn
+							v-if="dataforxsls.length"
+							@click="prepareXLSX()"
+							size="x-large"
+							>pobieranie XLSX</v-btn
+						></div
 					>
-					<v-btn
-						v-if="dataforxsls.length"
-						@click="prepareXLSX()"
-						size="x-large"
-						>pobieranie XLSX</v-btn
-					></v-col
-				>
+				</v-col>
 			</v-row>
 		</v-container>
 		<v-container fluid>
@@ -61,11 +63,13 @@
 					<!-- :headers="headers" -->
 					<v-data-table
 						:items="dataforxsls"
+						:headers="headers"
 						item-value="IDTowaru"
 						:search="searchInTable"
 						@click:row="handleClick"
 						select-strategy="single"
 						:row-props="colorRowItem"
+						height="60vh"
 					>
 						<template v-slot:top="{}">
 							<v-row class="align-center">
@@ -76,10 +80,7 @@
 										clearable
 									></v-text-field>
 								</v-col>
-								<productHistory
-									:product_id="selected[0]"
-									:product="getProduct()"
-								/>
+								<productHistory :product_id="selected[0]" />
 							</v-row>
 						</template>
 					</v-data-table>
@@ -105,16 +106,23 @@ export default {
 		dataforxsls: [],
 		warehouses: [],
 		IDWarehouse: null,
+		headers:[
+			{ title: 'nazwa towaru', key: 'Nazwa towaru', sortable: false },
+{ title: 'Kod kreskowy', key: 'Kod kreskowy', sortable: false },
+{ title: 'sku', key: 'sku', sortable: false },
+{ title: 'Stan', key: 'Stan', sortable: false },
+{ title: 'Data przyjęcia towaru', key: 'Data przyjęcia towaru', sortable: false },
+{ title: 'Numer dokumentu przyjęcia', key: 'Numer dokumentu przyjęcia', sortable: false },
+{ title: 'Data ostatniego wydania', key: 'Data ostatniego wydania', sortable: false },
+{ title: 'Numer ostatniego wydania', key: 'Numer ostatniego wydania', sortable: false },
+{ title: 'Grupa towarów', key: 'Grupa towarów', sortable: false },
+{ title: 'Ilość dni', key: 'Ilość dni', sortable: false }
+		]
 	}),
 	mounted() {
 		this.getWarehouse();
 	},
 	methods: {
-		getProduct() {
-			return this.dataforxsls.filter((el) => {
-				return el.IDTowaru == this.selected[0];
-			});
-		},
 		colorRowItem(item) {
 			if (item.item.IDTowaru != undefined && item.item.IDTowaru == this.selected[0]) {
 				return { class: 'bg-red-darken-4' };

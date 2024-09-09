@@ -10,7 +10,11 @@
 				>Stan</v-tab
 			>
 			<v-tab value="notactive">nieaktywny</v-tab>
-			<v-tab value="tarif">tarif</v-tab>
+			<v-tab
+				value="tarif"
+				v-if="$attrs.user.IDRoli == 1"
+				>Tarif</v-tab
+			>
 		</v-tabs>
 
 		<v-card-text>

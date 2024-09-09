@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<v-container>
+		<v-container fluid>
 			<v-row>
 				<v-col>
 					<v-select
@@ -26,18 +26,20 @@
 					></v-date-input
 				></v-col>
 				<v-col>
-					<v-btn
-						@click="getDataForXLSDay()"
-						size="x-large"
-						>uzyskać dane</v-btn
+					<div class="d-flex">
+						<v-btn
+							@click="getDataForXLSDay()"
+							size="x-large"
+							>uzyskać dane</v-btn
+						>
+						<v-btn
+							v-if="dataforxsls.length"
+							@click="prepareXLSX()"
+							size="x-large"
+							>pobieranie XLSX</v-btn
+						></div
 					>
-					<v-btn
-						v-if="dataforxsls.length"
-						@click="prepareXLSX()"
-						size="x-large"
-						>pobieranie XLSX</v-btn
-					></v-col
-				>
+				</v-col>
 			</v-row>
 		</v-container>
 
@@ -59,10 +61,29 @@
 			<v-row>
 				<v-col cols="12">
 					<!-- :headers="headers" -->
-					<v-data-table-virtual
+					<v-data-table
 						:items="dataforxsls[0][1]"
-						height="400"
-					></v-data-table-virtual>
+						:headers="headers"
+						item-value="IDTowaru"
+						:search="searchInTable"
+						@click:row="handleClick"
+						select-strategy="single"
+						:row-props="colorRowItem"
+						height="55vh"
+					>
+						<template v-slot:top="{}">
+							<v-row class="align-center">
+								<v-col cols="2">
+									<v-text-field
+										label="odzyskiwanie"
+										v-model="searchInTable"
+										clearable
+									></v-text-field>
+								</v-col>
+								<productHistory :product_id="selected[0]" />
+							</v-row>
+						</template>
+					</v-data-table>
 				</v-col>
 			</v-row>
 		</v-container>
@@ -74,22 +95,45 @@ import { VDateInput } from 'vuetify/labs/VDateInput';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import productHistory from './productHistory.vue';
+
 export default {
 	name: 'reportDay',
+
 	components: {
+		productHistory,
 		VDateInput,
 	},
 	data: () => ({
+		selected: [],
+		searchInTable: '',
 		loading: false,
 		date: new Date(),
 		dataforxsls: [],
 		IDWarehouse: null,
 		warehouses: [],
+		headers: [
+			{ title: 'nazwa towaru', key: 'Nazwa towaru', sortable: false },
+			{ title: 'kod kreskowy', key: 'KodKreskowy', sortable: false },
+			{ title: 'sku', key: 'sku', sortable: false },
+			{ title: 'Wartość', key: 'wartosc', sortable: false },
+			{ title: 'stan', key: 'stan', sortable: false },
+			{ title: 'rezerv', key: 'rezerv', sortable: false },
+			{ title: 'pozostać', key: 'pozostać', sortable: false },
+		],
 	}),
 	mounted() {
 		this.getWarehouse();
 	},
 	methods: {
+		colorRowItem(item) {
+			if (item.item.IDTowaru != undefined && item.item.IDTowaru == this.selected[0]) {
+				return { class: 'bg-red-darken-4' };
+			}
+		},
+		handleClick(event, row) {
+			this.selected = [row.item.IDTowaru];
+		},
 		getWarehouse() {
 			const vm = this;
 			axios
@@ -110,7 +154,16 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = Object.entries(res.data);
+						console.log(vm.dataforxsls);
+						vm.dataforxsls[0][1] = vm.dataforxsls[0][1].map((el) => {
+							el.wartosc = parseFloat(el.wartosc).toFixed(2);
+							el.m3xstan = parseFloat(el.m3xstan).toFixed(2);
+							return el;
+						});
 						vm.loading = false;
+						if (vm.$attrs.user.IDRoli == 1) {
+							vm.headers.push({ title: 'm3xstan', key: 'm3xstan', sortable: false });
+						}
 					}
 				})
 				.catch((error) => {
