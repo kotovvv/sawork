@@ -1,12 +1,31 @@
 <template>
 	<v-app id="inspire">
+		<v-app-bar prominent>
+			<v-app-bar-nav-icon
+				variant="text"
+				@click.stop="drawer = !drawer"
+			></v-app-bar-nav-icon>
+
+			<v-toolbar-title></v-toolbar-title>
+
+			<v-spacer></v-spacer>
+
+			<template v-if="$vuetify.display.mdAndUp">
+				{{ $props.user.NazwaUzytkownika }}
+			</template>
+
+			<v-btn
+				icon="mdi-logout"
+				variant="text"
+				@click="$emit('logout')"
+			></v-btn>
+		</v-app-bar>
+
 		<v-navigation-drawer
+			v-model="drawer"
 			:location="$vuetify.display.mobile ? 'bottom' : undefined"
-			:rail="rail"
-			permanent
-			@click.stop="rail = !rail"
+			temporary
 		>
-			<!-- menu -->
 			<v-list
 				:lines="false"
 				density="compact"
@@ -20,7 +39,7 @@
 						<v-btn
 							icon="mdi-chevron-left"
 							variant="text"
-							@click.stop="rail = !rail"
+							@click.stop="drawer = !drawer"
 						></v-btn>
 					</template>
 				</v-list-item>
@@ -31,15 +50,6 @@
 					@click.stop="theMenu = item.name"
 					:title="item.text"
 					:prepend-icon="item.icon"
-				>
-				</v-list-item>
-			</v-list>
-			<v-divider></v-divider>
-			<v-list>
-				<v-list-item
-					@click="$emit('logout')"
-					prepend-icon="mdi-logout"
-					title="Wyjście"
 				>
 				</v-list-item>
 			</v-list>
@@ -68,8 +78,7 @@ export default {
 	components: [dictionaryComponent, locationComponent, test],
 	props: ['user'],
 	data: () => ({
-		drawer: true,
-		rail: true,
+		drawer: null,
 
 		theMenu: 'dictionaryComponent',
 

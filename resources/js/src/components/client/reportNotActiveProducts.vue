@@ -106,18 +106,18 @@ export default {
 		dataforxsls: [],
 		warehouses: [],
 		IDWarehouse: null,
-		headers:[
-			{ title: 'nazwa towaru', key: 'Nazwa towaru', sortable: false },
-{ title: 'Kod kreskowy', key: 'Kod kreskowy', sortable: false },
-{ title: 'sku', key: 'sku', sortable: false },
-{ title: 'Stan', key: 'Stan', sortable: false },
-{ title: 'Data przyjęcia towaru', key: 'Data przyjęcia towaru', sortable: false },
-{ title: 'Numer dokumentu przyjęcia', key: 'Numer dokumentu przyjęcia', sortable: false },
-{ title: 'Data ostatniego wydania', key: 'Data ostatniego wydania', sortable: false },
-{ title: 'Numer ostatniego wydania', key: 'Numer ostatniego wydania', sortable: false },
-{ title: 'Grupa towarów', key: 'Grupa towarów', sortable: false },
-{ title: 'Ilość dni', key: 'Ilość dni', sortable: false }
-		]
+		headers: [
+			{ title: 'nazwa towaru', key: 'Nazwa towaru' },
+			{ title: 'Kod kreskowy', key: 'Kod kreskowy' },
+			{ title: 'sku', key: 'sku' },
+			{ title: 'Stan', key: 'Stan' },
+			{ title: 'Data przyjęcia towaru', key: 'Data przyjęcia towaru' },
+			{ title: 'Numer dokumentu przyjęcia', key: 'Numer dokumentu przyjęcia' },
+			{ title: 'Data ostatniego wydania', key: 'Data ostatniego wydania' },
+			{ title: 'Numer ostatniego wydania', key: 'Numer ostatniego wydania' },
+			{ title: 'Grupa towarów', key: 'Grupa towarów' },
+			{ title: 'Ilość dni', key: 'Ilość dni' },
+		],
 	}),
 	mounted() {
 		this.getWarehouse();

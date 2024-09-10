@@ -397,7 +397,7 @@ class MagazynController extends Controller
                 // ,
                 // DB::raw('ROUND((SELECT CASE WHEN SUM(Ilosc) = 0 THEN 0 ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc) END FROM ElementRuchuMagazynowego WHERE IDTowaru = ' . $IDTowaru . ' AND IDRuchuMagazynowego = r.IDRuchuMagazynowego) * (r.Operator * (SELECT SUM(e_X.Ilosc) FROM ElementRuchuMagazynowego e_X WHERE e_X.IDTowaru = ' . $IDTowaru . ' AND e_X.IDRuchuMagazynowego = r.IDRuchuMagazynowego)),2) as wartosc')
             ])
-            ->orderBy('date', 'ASC')
+            ->orderBy('date', 'DESC')
             ->get();
 
         // Updating stock levels in memory

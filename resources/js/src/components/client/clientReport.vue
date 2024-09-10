@@ -6,8 +6,7 @@
 		>
 			<v-tab
 				value="day"
-				v-if="$attrs.user.IDRoli == 1"
-				>Stan</v-tab
+						>Stan</v-tab
 			>
 			<v-tab value="notactive">nieaktywny</v-tab>
 			<v-tab
@@ -21,7 +20,6 @@
 			<v-tabs-window v-model="tab">
 				<v-tabs-window-item
 					value="day"
-					v-if="$attrs.user.IDRoli == 1"
 				>
 					<ReportDay :user="$attrs.user" />
 				</v-tabs-window-item>
