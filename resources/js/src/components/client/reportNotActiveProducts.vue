@@ -73,7 +73,7 @@
 					>
 						<template v-slot:top="{}">
 							<v-row class="align-center">
-								<v-col cols="2">
+								<v-col class="v-col-sm-6 v-col-md-2">
 									<v-text-field
 										label="odzyskiwanie"
 										v-model="searchInTable"
