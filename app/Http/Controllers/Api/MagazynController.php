@@ -417,6 +417,8 @@ class MagazynController extends Controller
         $dataMax = $data['dataMax'];
         $IDMagazynu = $data['IDMagazynu'];
         $IDKontrahenta = $data['IDKontrahenta'];
+        $AllowDiscountDocs = 1;
+        $AllowZLDocs = 1;
 
 
         $results = DB::table('Towar as t')
@@ -437,13 +439,13 @@ class MagazynController extends Controller
             ])
             ->join('JednostkaMiary', 'JednostkaMiary.IDJednostkiMiary', '=', 't.IDJednostkiMiary')
             ->join('Magazyn', 't.IDMagazynu', '=', 'Magazyn.IDMagazynu')
-            ->join(DB::raw('dbo.MostRecentOBDate(?) as BO'), 't.IDMagazynu', '=', 'BO.IDMagazynu')
-            ->leftJoin(DB::raw('dbo.StanyWDniu(?) as StanPoczatkowy'), 'StanPoczatkowy.IDTowaru', '=', 't.IDTowaru')
-            ->leftJoin(DB::raw('dbo.StanyWDniu(?) as StanKoncowy'), 'StanKoncowy.IDTowaru', '=', 't.IDTowaru')
+            ->join(DB::raw('dbo.MostRecentOBDate(?) as BO', [$dataMax]), 't.IDMagazynu', '=', 'BO.IDMagazynu')
+            ->leftJoin(DB::raw('dbo.StanyWDniu(?) as StanPoczatkowy', [$dataMin]), 'StanPoczatkowy.IDTowaru', '=', 't.IDTowaru')
+            ->leftJoin(DB::raw('dbo.StanyWDniu(?) as StanKoncowy', [$dataMax]), 'StanKoncowy.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin('ElementRuchuMagazynowego as el', 'el.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin('RuchMagazynowy', function ($join) use ($dataMin, $dataMax) {
                 $join->on('el.IDRuchuMagazynowego', '=', 'RuchMagazynowy.IDRuchuMagazynowego')
-                    ->whereBetween('RuchMagazynowy.Data', [$dataMin, $dataMax]);
+                    ->whereBetween('RuchMagazynowy.Data', [$dataMin,  $dataMax]);
             })
             ->leftJoin('GrupyTowarow', 't.IDGrupyTowarow', '=', 'GrupyTowarow.IDGrupyTowarow')
             ->where('Magazyn.IDMagazynu', $IDMagazynu)
