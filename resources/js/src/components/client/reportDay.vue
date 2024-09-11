@@ -154,7 +154,7 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = Object.entries(res.data);
-						console.log(vm.dataforxsls);
+						// console.log(vm.dataforxsls);
 						vm.dataforxsls[0][1] = vm.dataforxsls[0][1].map((el) => {
 							el.wartosc = parseFloat(el.wartosc).toFixed(2);
 							el.m3xstan = parseFloat(el.m3xstan).toFixed(2);

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class MagazynController extends Controller
 {
@@ -413,8 +414,11 @@ class MagazynController extends Controller
     public function getOborot(Request $request)
     {
         $data = $request->all();
-        $dataMin = $data['dataMin'];
-        $dataMax = $data['dataMax'];
+        $dataMin = new Carbon($data['dataMin']);
+
+        $dataMin = $dataMin->format('Y-m-d H:i:s');
+        $dataMax = new Carbon($data['dataMax']);
+        $dataMax = $dataMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
         $IDMagazynu = $data['IDMagazynu'];
         $IDKontrahenta = $data['IDKontrahenta'];
         $AllowDiscountDocs = 1;
@@ -439,13 +443,13 @@ class MagazynController extends Controller
             ])
             ->join('JednostkaMiary', 'JednostkaMiary.IDJednostkiMiary', '=', 't.IDJednostkiMiary')
             ->join('Magazyn', 't.IDMagazynu', '=', 'Magazyn.IDMagazynu')
-            ->join(DB::raw('dbo.MostRecentOBDate(?) as BO', [$dataMax]), 't.IDMagazynu', '=', 'BO.IDMagazynu')
-            ->leftJoin(DB::raw('dbo.StanyWDniu(?) as StanPoczatkowy', [$dataMin]), 'StanPoczatkowy.IDTowaru', '=', 't.IDTowaru')
-            ->leftJoin(DB::raw('dbo.StanyWDniu(?) as StanKoncowy', [$dataMax]), 'StanKoncowy.IDTowaru', '=', 't.IDTowaru')
+            ->join(DB::raw("dbo.MostRecentOBDate('$dataMax') as BO"), 't.IDMagazynu', '=', 'BO.IDMagazynu')
+            ->leftJoin(DB::raw("dbo.StanyWDniu('$dataMin') as StanPoczatkowy"), 'StanPoczatkowy.IDTowaru', '=', 't.IDTowaru')
+            ->leftJoin(DB::raw("dbo.StanyWDniu('$dataMax') as StanKoncowy"), 'StanKoncowy.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin('ElementRuchuMagazynowego as el', 'el.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin('RuchMagazynowy', function ($join) use ($dataMin, $dataMax) {
                 $join->on('el.IDRuchuMagazynowego', '=', 'RuchMagazynowy.IDRuchuMagazynowego')
-                    ->whereBetween('RuchMagazynowy.Data', [$dataMin,  $dataMax]);
+                ->whereBetween('RuchMagazynowy.Data', [$dataMin,  $dataMax]);
             })
             ->leftJoin('GrupyTowarow', 't.IDGrupyTowarow', '=', 'GrupyTowarow.IDGrupyTowarow')
             ->where('Magazyn.IDMagazynu', $IDMagazynu)
@@ -465,6 +469,9 @@ class MagazynController extends Controller
             ->groupBy('t.IDTowaru', 't.Nazwa', 't.KodKreskowy', 'GrupyTowarow.Nazwa', 'JednostkaMiary.Nazwa', 't.Uwagi')
             ->havingRaw('ISNULL(MAX(StanPoczatkowy.ilosc), 0) > 0 OR ISNULL(MAX(StanKoncowy.ilosc), 0) > 0 OR SUM(ABS(el.Ilosc * RuchMagazynowy.Operator)) > 0')
             ->get();
+
+        // $sql_with_bindings = Str::replaceArray('?', $results->getBindings(), $results->toSql());
+        // dd($sql_with_bindings);
         return $results;
     }
 }

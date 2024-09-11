@@ -156,6 +156,11 @@ export default {
 					}
 					if (res.status == 200) {
 						vm.dataforxsls = res.data;
+						vm.dataforxsls = vm.dataforxsls.map((el) => {
+							el.Stan = parseInt(el.Stan);
+							el['Ilość dni'] = parseInt(el['Ilość dni']);
+							return el;
+						});
 						vm.loading = false;
 					}
 				})
