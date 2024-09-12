@@ -41,6 +41,7 @@
 					<v-data-table
 						:items="dataHistory"
 						:headers="headers"
+						fixed-header
 					>
 						<template v-slot:top="{}">
 							<v-row class="align-center">

@@ -1,5 +1,5 @@
 <template>
-	<v-card height="100vh">
+	<v-card style="min-height: 100vh">
 		<v-tabs
 			v-model="tab"
 			bg-color="primary"
@@ -11,7 +11,11 @@
 				v-if="$attrs.user.IDRoli == 1"
 				>Tarif</v-tab
 			>
-			<v-tab value="oborot" v-if="$attrs.user.IDRoli == 1">Oborot</v-tab>
+			<v-tab
+				value="oborot"
+				v-if="$attrs.user.IDRoli == 1"
+				>Oborot</v-tab
+			>
 		</v-tabs>
 
 		<v-card-text>

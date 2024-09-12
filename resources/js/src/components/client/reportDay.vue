@@ -70,6 +70,7 @@
 						select-strategy="single"
 						:row-props="colorRowItem"
 						height="55vh"
+                        fixed-header
 					>
 						<template v-slot:top="{}">
 							<v-row class="align-center">

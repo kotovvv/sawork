@@ -1,5 +1,5 @@
 <template>
-	<div style="height: 100vh">
+	<div style="min-height: 100vh">
 		<v-container fluid>
 			<v-row>
 				<v-col>
@@ -70,6 +70,7 @@
 						select-strategy="single"
 						:row-props="colorRowItem"
 						height="55vh"
+						fixed-header
 					>
 						<template v-slot:top="{}">
 							<v-row class="align-center">
