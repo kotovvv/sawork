@@ -423,80 +423,23 @@ class MagazynController extends Controller
         $IDKontrahenta = $data['IDKontrahenta'];
         $AllowDiscountDocs = 1;
         $AllowZLDocs = 1;
-        // $IDGrupyTowarow = 0;
-
-        // // Base Query
-        // $results = DB::table('Towar as t')
-        //     ->select([
-        //         't.IDTowaru',
-        //         't.Nazwa as Towar',
-        //         't.KodKreskowy as Kod Kreskowy',
-        //         DB::raw('ISNULL(MAX(StanPoczatkowy.ilosc),0) as Stan początkowy'),
-        //         DB::raw('ISNULL(MAX(StanPoczatkowy.wartosc),0) as Wartość początkowa'),
-        //         DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator*el.Ilosc>0 then 1 else 0 end),0) AS Ilość wchodząca'),
-        //         DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator*el.Ilosc>0 then 1 else 0 end * el.CenaJednostkowa), 0) AS Wartość wchodząca'),
-        //         DB::raw('ISNULL(SUM(abs(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator*el.Ilosc<0 then 1 else 0 end),0) AS Ilość wychodząca'),
-        //         DB::raw('ISNULL(SUM(abs(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator*el.Ilosc<0 then 1 else 0 end * el.CenaJednostkowa), 0) AS Wartość wychodząca'),
-        //         DB::raw('ISNULL(MAX(StanKoncowy.ilosc),0) as StanKoncowy'),
-        //         DB::raw('ISNULL(MAX(StanKoncowy.wartosc),0) as Wartość końcowa'),
-        //         DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator*el.Ilosc>0 then 1 else 0 end),0) -ISNULL(SUM(abs(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator*el.Ilosc<0 then 1 else 0 end),0) as Bilans ilości'),
-        //         DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator*el.Ilosc>0 then 1 else 0 end * el.CenaJednostkowa) - SUM(abs(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator*el.Ilosc<0 then 1 else 0 end * el.CenaJednostkowa), 0) as Bilans wartości'),
-        //         'JednostkaMiary.Nazwa as Jednostka',
-        //         'GrupyTowarow.Nazwa AS Grupa',
-        //         't.Uwagi as Uwagi towaru'
-        //     ])
-        //     ->join('JednostkaMiary', 'JednostkaMiary.IDJednostkiMiary', '=', 't.IDJednostkiMiary')
-        //     ->join('Magazyn', 't.IDMagazynu', '=', 'Magazyn.IDMagazynu')
-        //     ->join(DB::raw('dbo.MostRecentOBDate(@dataMax) as BO'), function ($join) {
-        //         $join->on('t.IDMagazynu', '=', 'BO.IDMagazynu');
-        //     })
-        //     ->leftJoin(DB::raw('dbo.StanyWDniu(@dataMin) as StanPoczatkowy'), 'StanPoczatkowy.IDTowaru', '=', 't.IDTowaru')
-        //     ->leftJoin(DB::raw('dbo.StanyWDniu(@dataMax) as StanKoncowy'), 'StanKoncowy.IDTowaru', '=', 't.IDTowaru')
-        //     ->leftJoin('ElementRuchuMagazynowego as el', 'el.IDTowaru', '=', 't.IDTowaru')
-        //     ->leftJoin('RuchMagazynowy', function ($join) use ($dataMin, $dataMax) {
-        //         $join->on('el.IDRuchuMagazynowego', '=', 'RuchMagazynowy.IDRuchuMagazynowego')
-        //             ->where('RuchMagazynowy.Data', '>', $dataMin)
-        //             ->where('RuchMagazynowy.Data', '<', $dataMax);
-        //     })
-        //     ->leftJoin('GrupyTowarow', 't.IDGrupyTowarow', '=', 'GrupyTowarow.IDGrupyTowarow')
-        //     ->leftJoin('Kontrahent', 'Kontrahent.IDKontrahenta', '=', 'RuchMagazynowy.IDKontrahenta')
-        //     ->where('Magazyn.IDMagazynu', $IDMagazynu)
-        //     ->where(function ($query) use ($IDKontrahenta) {
-        //         $query->where('RuchMagazynowy.IDKontrahenta', $IDKontrahenta)
-        //             ->orWhereNull($IDKontrahenta);
-        //     })
-        //     ->where(function ($query) use ($IDGrupyTowarow) {
-        //         $query->where('t.IDGrupyTowarow', $IDGrupyTowarow)
-        //             ->orWhere($IDGrupyTowarow, 0);
-        //     })
-        //     ->where('Magazyn.Hidden', 0)
-        //     ->where(function ($query) use ($AllowDiscountDocs) {
-        //         $query->whereRaw('? = 1', [$AllowDiscountDocs])
-        //             ->orWhere('RuchMagazynowy.IDRodzajuRuchuMAgazynowego', '<>', 8);
-        //     })
-        //     ->where(function ($query) use ($AllowZLDocs) {
-        //         $query->whereRaw('? = 1', [$AllowZLDocs])
-        //             ->orWhere('RuchMagazynowy.IDRodzajuRuchuMAgazynowego', '<>', 27);
-        //     })
-        //     ->groupBy('t.IDTowaru', 't.Nazwa', 't.KodKreskowy', 'GrupyTowarow.Nazwa', 'JednostkaMiary.Nazwa', 't.Uwagi')
-        //     ->havingRaw('@AllItems = 1 OR (ISNULL(MAX(StanPoczatkowy.ilosc),0) >0 OR ISNULL(MAX(StanKoncowy.ilosc),0) > 0 OR SUM(abs(el.Ilosc * RuchMagazynowy.Operator)) > 0)');
 
         $results = DB::table('Towar as t')
             ->select([
                 't.IDTowaru',
                 't.Nazwa as Towar',
-                DB::raw('t._TowarTempString1 as sku'),
                 't.KodKreskowy as KodKreskowy',
+                DB::raw('t._TowarTempString1 as sku'),
                 DB::raw('CAST(ISNULL(MAX(StanPoczatkowy.ilosc), 0) as INT) as StanPoczatkowy'),
                 DB::raw('CAST(ISNULL(MAX(StanPoczatkowy.wartosc), 0) as decimal(32,2)) as WartośćPoczątkowa'),
-                DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator * el.Ilosc > 0 THEN 1 ELSE 0 END), 0) as IlośćWchodząca'),
-                DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator * el.Ilosc > 0 THEN 1 ELSE 0 END * el.CenaJednostkowa), 0) as WartośćWchodząca'),
-                DB::raw('ISNULL(SUM(ABS(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator * el.Ilosc < 0 THEN 1 ELSE 0 END), 0) as IlośćWychodząca'),
-                DB::raw('ISNULL(SUM(ABS(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator * el.Ilosc < 0 THEN 1 ELSE 0 END * el.CenaJednostkowa), 0) as WartośćWychodząca'),
+                DB::raw('CAST(ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator * el.Ilosc > 0 THEN 1 ELSE 0 END), 0) as INT) as IlośćWchodząca'),
+                DB::raw('CAST(ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator * el.Ilosc > 0 THEN 1 ELSE 0 END * el.CenaJednostkowa), 0) as decimal(32,2)) as WartośćWchodząca'),
+                DB::raw('CAST(ISNULL(SUM(ABS(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator * el.Ilosc < 0 THEN 1 ELSE 0 END), 0) as INT) as IlośćWychodząca'),
+                DB::raw('CAST(ISNULL(SUM(ABS(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator * el.Ilosc < 0 THEN 1 ELSE 0 END * el.CenaJednostkowa), 0) as decimal(32,2)) as WartośćWychodząca'),
                 DB::raw('CAST(ISNULL(MAX(StanKoncowy.ilosc), 0) as INT) as StanKoncowy'),
                 DB::raw('CAST(ISNULL(MAX(StanKoncowy.wartosc), 0) as decimal(32,2)) as WartośćKoncowa'),
-                DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator * el.Ilosc > 0 THEN 1 ELSE 0 END), 0) - ISNULL(SUM(ABS(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator * el.Ilosc < 0 THEN 1 ELSE 0 END), 0) as BilansIlości'),
-                DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator * el.Ilosc > 0 THEN 1 ELSE 0 END * el.CenaJednostkowa) - SUM(ABS(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator * el.Ilosc < 0 THEN 1 ELSE 0 END * el.CenaJednostkowa), 0) as BilansWartości')
+                //DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator * el.Ilosc > 0 THEN 1 ELSE 0 END), 0) - ISNULL(SUM(ABS(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator * el.Ilosc < 0 THEN 1 ELSE 0 END), 0) as BilansIlości'),
+                //DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator * el.Ilosc > 0 THEN 1 ELSE 0 END * el.CenaJednostkowa) - SUM(ABS(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator * el.Ilosc < 0 THEN 1 ELSE 0 END * el.CenaJednostkowa), 0) as BilansWartości')
             ])
             ->join('JednostkaMiary', 'JednostkaMiary.IDJednostkiMiary', '=', 't.IDJednostkiMiary')
             ->join('Magazyn', 't.IDMagazynu', '=', 'Magazyn.IDMagazynu')

@@ -149,19 +149,19 @@ export default {
 		getDataForXLSDay() {
 			const vm = this;
 			vm.loading = true;
+			vm.dataforxsls = [];
 			axios
 				.get('/api/getDataForXLSDay/' + vm.date.toDateString() + '/' + vm.IDWarehouse)
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = Object.entries(res.data);
 						// console.log(vm.dataforxsls);
-						vm.dataforxsls[0][1] = vm.dataforxsls[0][1].map((el) => {
+						vm.dataforxsls[0][1].forEach((el) => {
 							el.stan = parseInt(el.stan);
 							el.pozostać = parseInt(el.pozostać);
 							el.rezerv = parseInt(el.rezerv);
 							el.wartosc = parseFloat(el.wartosc).toFixed(2);
 							el.m3xstan = parseFloat(el.m3xstan).toFixed(2);
-							return el;
 						});
 						vm.loading = false;
 						if (vm.$attrs.user.IDRoli == 1) {

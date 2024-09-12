@@ -114,6 +114,7 @@ export default {
 		getReportTarif() {
 			const vm = this;
 			vm.loading = true;
+			vm.dataforxsls = [];
 			axios
 				.get('/api/getReportTarif/' + vm.selectedMonth + '/' + vm.IDWarehouse)
 				.then((res) => {

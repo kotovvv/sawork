@@ -108,6 +108,7 @@ export default {
 			const vm = this;
 			vm.loading = true;
 			vm.product = {};
+			vm.dataHistory = [];
 			axios
 				.get('/api/getProductHistory/' + this.product_id)
 				.then((res) => {

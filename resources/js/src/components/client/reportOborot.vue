@@ -63,6 +63,7 @@
 					<!-- :headers="headers" -->
 					<v-data-table
 						:items="dataforxsls"
+						:headers="headers"
 						item-value="IDTowaru"
 						:search="searchInTable"
 						@click:row="handleClick"
@@ -113,6 +114,19 @@ export default {
 		IDWarehouse: null,
 		searchInTable: '',
 		selected: [],
+		headers: [
+			{ title: 'nazwa towaru', key: 'Towar' },
+			{ title: 'kod kreskowy', key: 'KodKreskowy' },
+			{ title: 'sku', key: 'sku' },
+			{ title: 'Stan Poczatkowy', key: 'StanPoczatkowy', align: 'end' },
+			{ title: 'Wartość Początkowa', key: 'WartośćPoczątkowa', align: 'end' },
+			{ title: 'Ilość Wchodząca', key: 'IlośćWchodząca', align: 'end' },
+			{ title: 'Wartość Wchodząca', key: 'WartośćWchodząca', align: 'end' },
+			{ title: 'Ilość Wychodząca', key: 'IlośćWychodząca', align: 'end' },
+			{ title: 'Wartość Wychodząca', key: 'WartośćWychodząca', align: 'end' },
+			{ title: 'Stan Koncowy', key: 'StanKoncowy', align: 'end' },
+			{ title: 'Wartość Koncowa', key: 'WartośćKoncowa', align: 'end' },
+		],
 	}),
 	mounted() {
 		this.getWarehouse();
@@ -143,6 +157,7 @@ export default {
 			const vm = this;
 			vm.loading = true;
 			let data = {};
+			vm.dataforxsls = [];
 			data.dataMin = vm.dateMin;
 			data.dataMax = vm.dateMax;
 			data.IDMagazynu = vm.IDWarehouse;
@@ -153,7 +168,17 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = res.data;
-						// vm.dataforxsls.forEach((el) => {});
+						vm.dataforxsls.forEach((el) => {
+							el.StanPoczatkowy = parseInt(el.StanPoczatkowy);
+							el.IlośćWchodząca = parseInt(el.IlośćWchodząca);
+							el.IlośćWychodząca = parseInt(el.IlośćWychodząca);
+							el.StanKoncowy = parseInt(el.StanKoncowy);
+							el.StanKoncowy = parseInt(el.StanKoncowy);
+							el.WartośćPoczątkowa = parseFloat(el.WartośćPoczątkowa).toFixed(2);
+							el.WartośćWchodząca = parseFloat(el.WartośćWchodząca).toFixed(2);
+							el.WartośćWychodząca = parseFloat(el.WartośćWychodząca).toFixed(2);
+							el.WartośćKoncowa = parseFloat(el.WartośćKoncowa).toFixed(2);
+						});
 						vm.loading = false;
 					}
 				})
@@ -164,13 +189,27 @@ export default {
 		},
 		prepareXLSX() {
 			// Создание новой книги
+			this.dataforxsls.forEach((el) => {
+				el.StanPoczatkowy = parseInt(el.StanPoczatkowy);
+				el.IlośćWchodząca = parseInt(el.IlośćWchodząca);
+				el.IlośćWychodząca = parseInt(el.IlośćWychodząca);
+				el.StanKoncowy = parseInt(el.StanKoncowy);
+				el.StanKoncowy = parseInt(el.StanKoncowy);
+				el.WartośćPoczątkowa = parseFloat(el.WartośćPoczątkowa);
+				el.WartośćWchodząca = parseFloat(el.WartośćWchodząca);
+				el.WartośćWychodząca = parseFloat(el.WartośćWychodząca);
+				el.WartośćKoncowa = parseFloat(el.WartośćKoncowa);
+			});
 			const wb = XLSX.utils.book_new();
 			const ws = XLSX.utils.json_to_sheet(this.dataforxsls);
 			XLSX.utils.book_append_sheet(wb, ws, '');
 
 			// Генерация файла и его сохранение
 			const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-			saveAs(new Blob([wbout], { type: 'application/octet-stream' }), 'oborot ' + this.selectedMonth + '.xlsx');
+			saveAs(
+				new Blob([wbout], { type: 'application/octet-stream' }),
+				'oborot ' + this.vm.dateMin + '_' + this.vm.dateMax + '.xlsx',
+			);
 		},
 	},
 };
