@@ -107,7 +107,7 @@ export default {
 		warehouses: [],
 		IDWarehouse: null,
 		headers: [
-			{ title: 'nazwa towaru', key: 'Nazwa towaru' },
+			{ title: 'nazwa towaru', key: 'Towar' },
 			{ title: 'Kod kreskowy', key: 'Kod kreskowy' },
 			{ title: 'sku', key: 'sku' },
 			{ title: 'Stan', key: 'Stan' },

@@ -112,6 +112,7 @@ export default {
 		warehouses: [],
 		IDWarehouse: null,
 		searchInTable: '',
+		selected: [],
 	}),
 	mounted() {
 		this.getWarehouse();
@@ -146,14 +147,13 @@ export default {
 			data.dataMax = vm.dateMax;
 			data.IDMagazynu = vm.IDWarehouse;
 			data.IDKontrahenta = null;
+
 			axios
 				.post('/api/getOborot', data)
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = res.data;
-						vm.dataforxsls.forEach((el) => {
-							el.price = parseFloat(el.price);
-						});
+						// vm.dataforxsls.forEach((el) => {});
 						vm.loading = false;
 					}
 				})

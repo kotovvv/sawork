@@ -156,6 +156,9 @@ export default {
 						vm.dataforxsls = Object.entries(res.data);
 						// console.log(vm.dataforxsls);
 						vm.dataforxsls[0][1] = vm.dataforxsls[0][1].map((el) => {
+							el.stan = parseInt(el.stan);
+							el.pozostać = parseInt(el.pozostać);
+							el.rezerv = parseInt(el.rezerv);
 							el.wartosc = parseFloat(el.wartosc).toFixed(2);
 							el.m3xstan = parseFloat(el.m3xstan).toFixed(2);
 							return el;
@@ -193,7 +196,7 @@ export default {
 			this.dataforxsls.forEach((sheet) => {
 				sheet[1].forEach((item) => {
 					item.stan = parseFloat(item.stan);
-					item.Wartosc = parseFloat(item.Wartosc);
+					item.wartosc = parseFloat(item.wartosc);
 					item.m3xstan = parseFloat(item.m3xstan);
 				});
 				const ws = XLSX.utils.json_to_sheet(sheet[1]);
