@@ -421,8 +421,8 @@ class MagazynController extends Controller
         $dataMax = $dataMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
         $IDMagazynu = $data['IDMagazynu'];
         $IDKontrahenta = $data['IDKontrahenta'];
-        $AllowDiscountDocs = 1;
-        $AllowZLDocs = 1;
+        $AllowDiscountDocs = 0;
+        $AllowZLDocs = 0;
 
         $results = DB::table('Towar as t')
             ->select([
