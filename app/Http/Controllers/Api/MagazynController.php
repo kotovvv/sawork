@@ -438,8 +438,6 @@ class MagazynController extends Controller
                 DB::raw('CAST(ISNULL(SUM(ABS(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator * el.Ilosc < 0 THEN 1 ELSE 0 END * el.CenaJednostkowa), 0) as decimal(32,2)) as WartośćWychodząca'),
                 DB::raw('CAST(ISNULL(MAX(StanKoncowy.ilosc), 0) as INT) as StanKoncowy'),
                 DB::raw('CAST(ISNULL(MAX(StanKoncowy.wartosc), 0) as decimal(32,2)) as WartośćKoncowa'),
-                //DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator * el.Ilosc > 0 THEN 1 ELSE 0 END), 0) - ISNULL(SUM(ABS(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator * el.Ilosc < 0 THEN 1 ELSE 0 END), 0) as BilansIlości'),
-                //DB::raw('ISNULL(SUM(el.Ilosc * CASE WHEN RuchMagazynowy.Operator * el.Ilosc > 0 THEN 1 ELSE 0 END * el.CenaJednostkowa) - SUM(ABS(el.Ilosc) * CASE WHEN RuchMagazynowy.Operator * el.Ilosc < 0 THEN 1 ELSE 0 END * el.CenaJednostkowa), 0) as BilansWartości')
             ])
             ->join('JednostkaMiary', 'JednostkaMiary.IDJednostkiMiary', '=', 't.IDJednostkiMiary')
             ->join('Magazyn', 't.IDMagazynu', '=', 'Magazyn.IDMagazynu')
@@ -453,10 +451,7 @@ class MagazynController extends Controller
             })
             ->leftJoin('GrupyTowarow', 't.IDGrupyTowarow', '=', 'GrupyTowarow.IDGrupyTowarow')
             ->where('Magazyn.IDMagazynu', $IDMagazynu)
-            ->where(function ($query) use ($IDKontrahenta) {
-                $query->where('RuchMagazynowy.IDKontrahenta', $IDKontrahenta)
-                    ->orWhereNull($IDKontrahenta);
-            })
+
             ->where('Magazyn.Hidden', 0)
             ->where(function ($query) use ($AllowDiscountDocs, $AllowZLDocs) {
                 if ($AllowDiscountDocs == 0) {
