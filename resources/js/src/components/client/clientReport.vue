@@ -30,7 +30,7 @@
 					<ReportTarif />
 				</v-tabs-window-item>
 				<v-tabs-window-item value="oborot">
-					<ReportOborot />
+					<ReportOborot :user="$attrs.user" />
 				</v-tabs-window-item>
 			</v-tabs-window>
 		</v-card-text>

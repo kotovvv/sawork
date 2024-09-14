@@ -120,13 +120,9 @@ export default {
 			{ title: 'kod kreskowy', key: 'KodKreskowy' },
 			{ title: 'sku', key: 'sku' },
 			{ title: 'Stan Poczatkowy', key: 'StanPoczatkowy', align: 'end' },
-			{ title: 'Wartość Początkowa', key: 'WartośćPoczątkowa', align: 'end' },
 			{ title: 'Ilość Wchodząca', key: 'IlośćWchodząca', align: 'end' },
-			{ title: 'Wartość Wchodząca', key: 'WartośćWchodząca', align: 'end' },
 			{ title: 'Ilość Wychodząca', key: 'IlośćWychodząca', align: 'end' },
-			{ title: 'Wartość Wychodząca', key: 'WartośćWychodząca', align: 'end' },
 			{ title: 'Stan Koncowy', key: 'StanKoncowy', align: 'end' },
-			{ title: 'Wartość Koncowa', key: 'WartośćKoncowa', align: 'end' },
 		],
 	}),
 	mounted() {
@@ -181,6 +177,14 @@ export default {
 							el.WartośćKoncowa = parseFloat(el.WartośćKoncowa).toFixed(2);
 						});
 						vm.loading = false;
+						if (vm.$attrs.user.IDRoli == 1) {
+							vm.headers.push(
+								{ title: 'Wartość Początkowa', key: 'WartośćPoczątkowa', align: 'end' },
+								{ title: 'Wartość Wychodząca', key: 'WartośćWychodząca', align: 'end' },
+								{ title: 'Wartość Wchodząca', key: 'WartośćWchodząca', align: 'end' },
+								{ title: 'Wartość Koncowa', key: 'WartośćKoncowa', align: 'end' },
+							);
+						}
 					}
 				})
 				.catch((error) => {
@@ -196,10 +200,10 @@ export default {
 				el.IlośćWychodząca = parseInt(el.IlośćWychodząca);
 				el.StanKoncowy = parseInt(el.StanKoncowy);
 				el.StanKoncowy = parseInt(el.StanKoncowy);
-				el.WartośćPoczątkowa = parseFloat(el.WartośćPoczątkowa);
-				el.WartośćWchodząca = parseFloat(el.WartośćWchodząca);
-				el.WartośćWychodząca = parseFloat(el.WartośćWychodząca);
-				el.WartośćKoncowa = parseFloat(el.WartośćKoncowa);
+				// el.WartośćPoczątkowa = parseFloat(el.WartośćPoczątkowa);
+				// el.WartośćWchodząca = parseFloat(el.WartośćWchodząca);
+				// el.WartośćWychodząca = parseFloat(el.WartośćWychodząca);
+				// el.WartośćKoncowa = parseFloat(el.WartośćKoncowa);
 			});
 			const wb = XLSX.utils.book_new();
 			const ws = XLSX.utils.json_to_sheet(this.dataforxsls);
@@ -209,7 +213,7 @@ export default {
 			const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 			saveAs(
 				new Blob([wbout], { type: 'application/octet-stream' }),
-				'oborot ' + this.vm.dateMin + '_' + this.vm.dateMax + '.xlsx',
+				'oborot ' + this.dateMin + '_' + this.dateMax + '.xlsx',
 			);
 		},
 	},
