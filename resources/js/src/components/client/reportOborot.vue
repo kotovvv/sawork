@@ -182,6 +182,7 @@ export default {
 								delete el.WartośćKoncowa;
 							}
 						});
+						vm.selected[0] = vm.dataforxsls[0].IDTowaru;
 						vm.loading = false;
 						if (vm.$attrs.user.IDRoli == 1) {
 							vm.headers.push(
