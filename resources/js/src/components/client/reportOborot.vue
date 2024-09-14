@@ -171,10 +171,16 @@ export default {
 							el.IlośćWychodząca = parseInt(el.IlośćWychodząca);
 							el.StanKoncowy = parseInt(el.StanKoncowy);
 							el.StanKoncowy = parseInt(el.StanKoncowy);
-							el.WartośćPoczątkowa = parseFloat(el.WartośćPoczątkowa).toFixed(2);
-							el.WartośćWchodząca = parseFloat(el.WartośćWchodząca).toFixed(2);
-							el.WartośćWychodząca = parseFloat(el.WartośćWychodząca).toFixed(2);
-							el.WartośćKoncowa = parseFloat(el.WartośćKoncowa).toFixed(2);
+							// el.WartośćPoczątkowa = parseFloat(el.WartośćPoczątkowa).toFixed(2);
+							// el.WartośćWchodząca = parseFloat(el.WartośćWchodząca).toFixed(2);
+							// el.WartośćWychodząca = parseFloat(el.WartośćWychodząca).toFixed(2);
+							// el.WartośćKoncowa = parseFloat(el.WartośćKoncowa).toFixed(2);
+							if (vm.$attrs.user.IDRoli != 1) {
+								delete el.WartośćPoczątkowa;
+								delete el.WartośćWchodząca;
+								delete el.WartośćWychodząca;
+								delete el.WartośćKoncowa;
+							}
 						});
 						vm.loading = false;
 						if (vm.$attrs.user.IDRoli == 1) {
@@ -213,7 +219,11 @@ export default {
 			const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 			saveAs(
 				new Blob([wbout], { type: 'application/octet-stream' }),
-				'oborot ' + this.dateMin + '_' + this.dateMax + '.xlsx',
+				'oborot ' +
+					moment(this.dateMin).format('YYYY-MM-DD') +
+					'_' +
+					moment(this.dateMax).format('YYYY-MM-DD') +
+					'.xlsx',
 			);
 		},
 	},

@@ -162,6 +162,7 @@ export default {
 							el['Ilość dni'] = parseInt(el['Ilość dni']);
 							return el;
 						});
+						vm.selected[0] = vm.dataforxsls[0].IDTowaru;
 						vm.loading = false;
 					}
 				})

@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div style="min-height: 100vh">
 		<v-container fluid>
 			<v-row>
 				<v-col>
@@ -15,7 +15,12 @@
 					></v-select>
 				</v-col>
 				<v-col>
-					<v-date-input
+					<datepicker
+						v-model="date"
+						format="yyyy-MM-dd"
+						monday-first
+					></datepicker>
+					<!-- <v-date-input
 						v-model="date"
 						label="Select a date"
 						width="368"
@@ -24,7 +29,8 @@
 						keyboardDate
 						location="pl-PL"
 					></v-date-input
-				></v-col>
+					>--></v-col
+				>
 				<v-col>
 					<div class="d-flex">
 						<v-btn
@@ -70,7 +76,7 @@
 						select-strategy="single"
 						:row-props="colorRowItem"
 						height="55vh"
-                        fixed-header
+						fixed-header
 					>
 						<template v-slot:top="{}">
 							<v-row class="align-center">
@@ -92,7 +98,9 @@
 </template>
 
 <script>
-import { VDateInput } from 'vuetify/labs/VDateInput';
+// import { VDateInput } from 'vuetify/labs/VDateInput';
+import Datepicker from 'vuejs3-datepicker';
+import moment from 'moment';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -103,13 +111,14 @@ export default {
 
 	components: {
 		productHistory,
-		VDateInput,
+		//VDateInput,
+		Datepicker,
 	},
 	data: () => ({
 		selected: [],
 		searchInTable: '',
 		loading: false,
-		date: new Date(),
+		date: moment().format('YYYY-MM-DD'),
 		dataforxsls: [],
 		IDWarehouse: null,
 		warehouses: [],
@@ -164,6 +173,7 @@ export default {
 							el.wartosc = parseFloat(el.wartosc).toFixed(2);
 							el.m3xstan = parseFloat(el.m3xstan).toFixed(2);
 						});
+						vm.selected[0] = vm.dataforxsls[0][1][0].IDTowaru;
 						vm.loading = false;
 						if (vm.$attrs.user.IDRoli == 1) {
 							vm.headers.push({ title: 'm3xstan', key: 'm3xstan', sortable: false });

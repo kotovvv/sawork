@@ -11,11 +11,7 @@
 				v-if="$attrs.user.IDRoli == 1"
 				>Tarif</v-tab
 			>
-			<v-tab
-				value="oborot"
-				v-if="$attrs.user.IDRoli == 1"
-				>Oborot</v-tab
-			>
+			<v-tab value="oborot">Oborot</v-tab>
 		</v-tabs>
 
 		<v-card-text>
