@@ -1,13 +1,31 @@
 <template>
 	<v-app id="inspire">
-		<v-navigation-drawer
-			:location="$vuetify.display.mobile ? 'bottom' : undefined"
-			:rail="rail"
-			permanent
-			@click="rail = false"
-		>
-			<!-- menu -->
+		<v-app-bar prominent>
+			<v-app-bar-nav-icon
+				variant="text"
+				@click.stop="drawer = !drawer"
+			></v-app-bar-nav-icon>
 
+			<v-toolbar-title></v-toolbar-title>
+
+			<v-spacer></v-spacer>
+
+			<template v-if="$vuetify.display.mdAndUp">
+				{{ $props.user.NazwaUzytkownika }}
+			</template>
+
+			<v-btn
+				icon="mdi-logout"
+				variant="text"
+				@click="$emit('logout')"
+			></v-btn>
+		</v-app-bar>
+
+		<v-navigation-drawer
+			v-model="drawer"
+			:location="$vuetify.display.mobile ? 'bottom' : undefined"
+			temporary
+		>
 			<v-list
 				:lines="false"
 				density="compact"
@@ -21,7 +39,7 @@
 						<v-btn
 							icon="mdi-chevron-left"
 							variant="text"
-							@click.stop="rail = !rail"
+							@click.stop="drawer = !drawer"
 						></v-btn>
 					</template>
 				</v-list-item>
@@ -29,21 +47,9 @@
 					v-for="(item, i) in items"
 					:key="i"
 					color="primary"
-					@click="theMenu = item.name"
+					@click.stop="theMenu = item.name"
 					:title="item.text"
 					:prepend-icon="item.icon"
-				>
-				</v-list-item>
-			</v-list>
-			<v-divider></v-divider>
-			<v-list
-				density="compact"
-				nav
-			>
-				<v-list-item
-					@click="$emit('logout')"
-					prepend-icon="mdi-logout"
-					title="Wyjście"
 				>
 				</v-list-item>
 			</v-list>
@@ -61,7 +67,6 @@
 </template>
 
 <script>
-// import refunds from './refundsComponent.vue';
 import refunds2 from './refunds2Component.vue';
 import sendPDF from './sendPDF.vue';
 
@@ -76,7 +81,6 @@ export default {
 		theMenu: 'refunds2',
 
 		items: [
-			// { text: 'Zwroty', name: 'refunds', icon: 'mdi-restore' },
 			{ text: 'Zwroty', name: 'refunds2', icon: 'mdi-database-plus' },
 			{ text: 'sendPDF', name: 'sendPDF', icon: 'mdi-file-send' },
 		],

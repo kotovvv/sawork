@@ -28,6 +28,16 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::get('loadMagEmail', [MagazynController::class, 'loadMagEmail']);
     Route::post('saveMagEmail', [MagazynController::class, 'saveMagEmail']);
     Route::post('deleteMagEmail', [MagazynController::class, 'deleteMagEmail']);
+    Route::post('getDataForXLS', [MagazynController::class, 'getDataForXLS']);
+    Route::get('getDataForXLSDay/{day}/{idwarehouse}', [MagazynController::class, 'getDataForXLSDay']);
+    Route::get('getDataNotActivProduct/{day}/{idwarehouse}', [MagazynController::class, 'getDataNotActivProduct']);
+    Route::get('getReportTarif/{month}/{idwarehouse}', [MagazynController::class, 'getReportTarif']);
+    Route::get('getClientPriceCondition/{idwarehouse}', [MagazynController::class, 'getClientPriceCondition']);
+    Route::post('setClientPriceCondition', [MagazynController::class, 'setClientPriceCondition']);
+    Route::get('getPriceCondition', [MagazynController::class, 'getPriceCondition']);
+    Route::post('getOborot', [MagazynController::class, 'getOborot']);
+
+    Route::get('getProductHistory/{IDTowaru}', [MagazynController::class, 'getProductHistory']);
     Route::post('getOrder', [ReturnController::class, 'getOrder']);
     Route::get('getProduct/{id}', [LocationController::class, 'getProduct']);
     Route::post('doWz', [ReturnController::class, 'doWz']);
