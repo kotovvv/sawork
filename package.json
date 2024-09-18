@@ -2,6 +2,7 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "cmd": "cmd /k npm run dev -- --host",
         "dev": "vite",
         "build": "vite build"
     },
