@@ -87,7 +87,7 @@ export default {
 			{ text: 'Lokalizacja', name: 'locationComponent', icon: 'mdi-forklift' },
 			{ text: 'Report XLSX', name: 'getXLSX', icon: 'mdi-file-excel' },
 			{ text: 'Raporty', name: 'report', icon: 'mdi-file-chart' },
-			// { text: 'Test', name: 'test', icon: 'mdi-barcode-scan' },
+			{ text: 'Test', name: 'test', icon: 'mdi-barcode-scan' },
 		],
 	}),
 	computed: {
@@ -96,7 +96,7 @@ export default {
 			if (this.theMenu == 'locationComponent') return locationComponent;
 			if (this.theMenu == 'getXLSX') return getXLSX;
 			if (this.theMenu == 'report') return defineAsyncComponent(() => import('../client/clientReport.vue'));
-			//if (this.theMenu == 'test') return test;
+			if (this.theMenu == 'test') return test;
 		},
 	},
 };

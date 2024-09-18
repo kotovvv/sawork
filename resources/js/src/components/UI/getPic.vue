@@ -4,6 +4,68 @@
 			id="qr-reader"
 			style="width: 500px"
 		></div>
+		<p v-if="qrCodeMessage">Результат QR-кода: {{ qrCodeMessage }}</p>
+	</div>
+</template>
+
+<script>
+import { ref, onMounted, onUnmounted } from 'vue';
+import { Html5Qrcode } from 'html5-qrcode';
+
+export default {
+	setup() {
+		const qrCodeMessage = ref(null);
+		const qrCodeReader = ref(null);
+
+		onMounted(() => {
+			const qrReader = new Html5Qrcode('qr-reader');
+			qrCodeReader.value = qrReader;
+
+			qrReader
+				.start(
+					{ facingMode: 'environment' }, // Камера по умолчанию (можно поменять на "user" для фронтальной камеры)
+					{
+						fps: 10, // Частота кадров
+						qrbox: 250, // Размер области для сканирования
+					},
+					(decodedText) => {
+						qrCodeMessage.value = decodedText;
+					},
+					(errorMessage) => {
+						console.error(`QR Error: ${errorMessage}`);
+					},
+				)
+				.catch((err) => {
+					console.error('Ошибка при запуске камеры: ', err);
+				});
+		});
+
+		onUnmounted(() => {
+			if (qrCodeReader.value) {
+				qrCodeReader.value.stop().catch((err) => {
+					console.error('Ошибка при остановке камеры: ', err);
+				});
+			}
+		});
+
+		return { qrCodeMessage };
+	},
+};
+</script>
+
+<style scoped>
+#qr-reader {
+	border: 1px solid #ccc;
+	margin: 10px 0;
+}
+</style>
+
+<!-- <template>
+	<div>
+		<div
+			id="qr-reader"
+			style="width: 500px"
+		></div>
 		<button @click="takePhoto">Сделать фото</button>
 		<canvas
 			ref="canvas"
@@ -20,6 +82,7 @@
 </template>
 
 <script>
+import { ref, onMounted, onUnmounted } from 'vue';
 import { Html5Qrcode } from 'html5-qrcode';
 
 export default {
@@ -85,3 +148,4 @@ export default {
 	margin: 10px 0;
 }
 </style>
+ -->
