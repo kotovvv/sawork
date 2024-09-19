@@ -11,7 +11,7 @@
     {{-- <link rel="stylesheet" href="{{ asset('css/app.css') }}">
 <script src="{{ asset('js/app.js') }}" defer></script> --}}
 
-@production
+{{-- @production --}}
     @php $path = public_path('build\assets'); @endphp
 
 @if (file_exists($path))
@@ -26,9 +26,9 @@
         @endif
     @endforeach
 @endif
-@else
+{{-- @else --}}
 @vite(['resources/css/app.css', 'resources/js/app.js'])
-@endproduction
+{{-- @endproduction --}}
 </head>
 <body>
 <div id="app"></div>
