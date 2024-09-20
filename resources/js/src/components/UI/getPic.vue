@@ -2,7 +2,7 @@
 	<div>
 		<div
 			id="qr-reader"
-			style="width: 500px"
+			style="max-width: 500px"
 		></div>
 		<p v-if="qrCodeMessage">Результат QR-кода: {{ qrCodeMessage }}</p>
 	</div>
@@ -64,7 +64,7 @@ export default {
 	<div>
 		<div
 			id="qr-reader"
-			style="width: 500px"
+			style="max-width: 500px"
 		></div>
 		<button @click="takePhoto">Сделать фото</button>
 		<canvas
@@ -76,6 +76,7 @@ export default {
 			<img
 				:src="photo"
 				alt="Сделанное фото"
+				style="width: 100%; max-width: 600px"
 			/>
 		</div>
 	</div>
