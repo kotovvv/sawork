@@ -1,4 +1,4 @@
-<template>
+<!-- <template>
 	<div>
 		<div
 			id="qr-reader"
@@ -58,9 +58,9 @@ export default {
 	border: 1px solid #ccc;
 	margin: 10px 0;
 }
-</style>
+</style> -->
 
-<!-- <template>
+<template>
 	<div>
 		<div
 			id="qr-reader"
@@ -101,7 +101,7 @@ export default {
 					{ facingMode: 'environment' }, // Камера по умолчанию
 					{
 						fps: 10, // Частота кадров
-						qrbox: 250, // Размер области для сканирования
+						// qrbox: 250, // Размер области для сканирования
 					},
 					(decodedText) => {
 						console.log(`QR код прочитан: ${decodedText}`);
@@ -148,4 +148,4 @@ export default {
 	margin: 10px 0;
 }
 </style>
- -->
+
