@@ -9,27 +9,18 @@
 			ref="canvas"
 			style="display: none"
 		></canvas>
-		<div v-if="photo">
-			<h3>Ваше фото:</h3>
-			<img
-				:src="photo"
-				alt="Сделанное фото"
-				style="width: 100%; max-width: 600px"
-			/>
-		</div>
 	</div>
 </template>
 
 <script>
 import { ref, onMounted, onUnmounted } from 'vue';
 import { Html5Qrcode } from 'html5-qrcode';
-import eventBus from '@/eventBus';
 
 export default {
-	setup() {
+	name: 'GetPic',
+	setup(_, { emit }) {
 		const qrCodeReader = ref(null);
 		const canvas = ref(null);
-		const photo = ref(null);
 
 		onMounted(() => {
 			const qrReader = new Html5Qrcode('qr-reader');
@@ -43,7 +34,8 @@ export default {
 					},
 					(decodedText) => {
 						console.log(`QR код прочитан: ${decodedText}`);
-						eventBus.emit('qrCodeScanned', decodedText);
+						emit('result', { type: 'qrCode', data: decodedText });
+						emit('close');
 					},
 					(errorMessage) => {
 						console.error(`Ошибка QR: ${errorMessage}`);
@@ -71,13 +63,13 @@ export default {
 				canvasElement.height = videoElement.videoHeight;
 				context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
 
-				// Получаем изображение в виде data URL
-				photo.value = canvasElement.toDataURL('image/png');
-				eventBus.emit('photoTaken', photo.value);
+				const photoData = canvasElement.toDataURL('image/png');
+				emit('result', { type: 'photo', data: photoData });
+				emit('close');
 			}
 		};
 
-		return { canvas, photo, takePhoto };
+		return { canvas, takePhoto };
 	},
 };
 </script>

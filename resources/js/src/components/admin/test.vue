@@ -1,49 +1,64 @@
 <template>
 	<div>
-		<h1>Received Data</h1>
-		<div v-if="qrCodeMessage">
-			<h2>QR Code Result:</h2>
-			<p>{{ qrCodeMessage }}</p>
-		</div>
-		<div v-if="photo">
-			<h2>Photo:</h2>
-			<img
-				:src="photo"
-				alt="Received Photo"
-				style="width: 100%; max-width: 600px"
+		<button @click="openModal">Open Camera</button>
+		<Modal
+			v-if="showModal"
+			@close="closeModal"
+		>
+			<GetPic
+				@result="handleResult"
+				@close="closeModal"
 			/>
+		</Modal>
+		<div v-if="result">
+			<h2>Result:</h2>
+			<div v-if="result.type === 'photo'">
+				<img
+					:src="result.data"
+					alt="Captured Photo"
+					style="width: 100%; max-width: 600px"
+				/>
+			</div>
+			<div v-else-if="result.type === 'qrCode'">
+				<p>{{ result.data }}</p>
+			</div>
 		</div>
 	</div>
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue';
-import eventBus from '@/eventBus';
+import { ref } from 'vue';
+import Modal from '../UI/Modal.vue';
+import GetPic from '../UI/GetPic.vue';
 
 export default {
+	components: {
+		Modal,
+		GetPic,
+	},
 	setup() {
-		const qrCodeMessage = ref(null);
-		const photo = ref(null);
+		const showModal = ref(false);
+		const result = ref(null);
 
-		const handleQrCodeScanned = (data) => {
-			qrCodeMessage.value = data;
+		const openModal = () => {
+			showModal.value = true;
 		};
 
-		const handlePhotoTaken = (data) => {
-			photo.value = data;
+		const closeModal = () => {
+			showModal.value = false;
 		};
 
-		onMounted(() => {
-			eventBus.on('qrCodeScanned', handleQrCodeScanned);
-			eventBus.on('photoTaken', handlePhotoTaken);
-		});
+		const handleResult = (data) => {
+			result.value = data;
+		};
 
-		onUnmounted(() => {
-			eventBus.off('qrCodeScanned', handleQrCodeScanned);
-			eventBus.off('photoTaken', handlePhotoTaken);
-		});
-
-		return { qrCodeMessage, photo };
+		return {
+			showModal,
+			result,
+			openModal,
+			closeModal,
+			handleResult,
+		};
 	},
 };
 </script>
