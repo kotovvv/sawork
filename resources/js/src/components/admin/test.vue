@@ -1,6 +1,11 @@
 <template>
 	<div>
-		<button @click="openModal">Open Camera</button>
+		<v-btn
+			@click="openModal"
+			icon="mdi-camera"
+		>
+		</v-btn>
+		<button>Open Camera</button>
 		<Modal
 			v-if="showModal"
 			@close="closeModal"
