@@ -58,8 +58,20 @@ class MagazynController extends Controller
         return false;
     }
 
+    private function logUsers($user, $what, $ip = 0)
+    {
+        $myLogInfo = date('Y-m-d H:i:s') . ', ' . $ip . ', ' . $user->NazwaUzytkownika . ', ' . $what;
+        file_put_contents(
+            storage_path() . '/logs/useReport.log',
+            $myLogInfo . PHP_EOL,
+            FILE_APPEND | LOCK_EX
+        );
+    }
+
     public function getDataNotActivProduct(Request $request, $day, $idwarehouse)
     {
+        $this->logUsers($request->user, 'NotActivProduct', $request->ip());
+
         if ($this->canUseWarehouse($request->user, $idwarehouse)) {
             $MagID = (int) $idwarehouse;
             $days = (int) $day;
@@ -165,6 +177,7 @@ class MagazynController extends Controller
 
     public function getDataForXLSDay(Request $request, $day, $idwarehouse)
     {
+        $this->logUsers($request->user, 'Day', $request->ip());
         if ($this->canUseWarehouse($request->user, $idwarehouse)) {
             $res = [];
             //$date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
@@ -337,6 +350,7 @@ class MagazynController extends Controller
 
     public function getReportTarif(Request $request, $month, $idwarehouse)
     {
+        $this->logUsers($request->user, 'Tarif', $request->ip());
         $now = Carbon::now();
         if ($this->canUseWarehouse($request->user, $idwarehouse)) {
             $year = $now->year;
@@ -360,6 +374,7 @@ class MagazynController extends Controller
 
     public function getProductHistory($IDTowaru)
     {
+
         //$product = DB::table('towar')->where('IDTowaru', $IDTowaru)->first();
         $warehouseId = DB::table('towar')->where('IDTowaru', $IDTowaru)->value('IDMagazynu');
 
@@ -413,6 +428,8 @@ class MagazynController extends Controller
 
     public function getOborot(Request $request)
     {
+        $this->logUsers($request->user, 'Oborot', $request->ip());
+
         $data = $request->all();
         $dataMin = new Carbon($data['dataMin']);
 

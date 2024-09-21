@@ -37,6 +37,14 @@ class AuthUserController extends Controller
         $user = User::select('IDUzytkownika', 'IDRoli', 'NazwaUzytkownika', 'IDDefaultWarehouse', 'Login')->where('login', $request->login)->where('Aktywny', 1)->first();
         // Проверка существования пользователя и совпадения хэшированных паролей
         if ($user && $this->checkPassword($request->password, User::where('IDUzytkownika', $user->IDUzytkownika)->value('Haslo'))) {
+            if ($user->IDRoli == 4) {
+                $myLogInfo = date('Y-m-d H:i:s') . ', ' . $ipAddress . ', ' . $request->login;
+                file_put_contents(
+                    storage_path() . '/logs/Users.log',
+                    $myLogInfo . PHP_EOL,
+                    FILE_APPEND | LOCK_EX
+                );
+            }
             // Сброс попыток после успешного входа
             Cache::forget($loginKey);
 
