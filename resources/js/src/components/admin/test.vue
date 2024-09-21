@@ -50,6 +50,7 @@ export default {
 
 		const handleResult = (data) => {
 			result.value = data;
+			closeModal();
 		};
 
 		return {
