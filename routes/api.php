@@ -6,7 +6,7 @@ use App\Http\Controllers\Api\MagazynController;
 use App\Http\Controllers\Api\SendPDF;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\AuthUserController;
-use App\Http\Controllers\LogController;
+use App\Http\Controllers\Api\LogController;
 
 /*
 |--------------------------------------------------------------------------
