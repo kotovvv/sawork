@@ -35,7 +35,6 @@ export default {
 					(decodedText) => {
 						console.log(`QR код прочитан: ${decodedText}`);
 						emit('result', { type: 'qrCode', data: decodedText });
-						emit('close');
 					},
 					(errorMessage) => {
 						console.error(`Ошибка QR: ${errorMessage}`);
@@ -65,7 +64,6 @@ export default {
 
 				const photoData = canvasElement.toDataURL('image/png');
 				emit('result', { type: 'photo', data: photoData });
-				emit('close');
 			}
 		};
 

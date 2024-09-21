@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\MagazynController;
 use App\Http\Controllers\Api\SendPDF;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\AuthUserController;
+use App\Http\Controllers\Api\FilesController;
 
 /*
 |--------------------------------------------------------------------------
@@ -45,4 +46,6 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('TowarLocationTipTab', [LocationController::class, 'TowarLocationTipTab']);
     Route::get('getWarehouseLocations/{id}', [LocationController::class, 'getWarehouseLocations']);
     Route::post('doRelokacja', [LocationController::class, 'doRelokacja']);
+
+    Route::post('/savePic', [FilesController::class, 'savePic']);
 });
