@@ -4,7 +4,15 @@
 			id="qr-reader"
 			style="max-width: 500px"
 		></div>
-		<button @click="takePhoto">Сделать фото</button>
+		<v-btn
+			@click="takePhoto"
+			icon="mdi-checkbox-blank-circle"
+		>
+			<template v-slot:prepend>
+				<v-icon color="red"></v-icon>
+			</template>
+		</v-btn>
+		<button>Сделать фото</button>
 		<canvas
 			ref="canvas"
 			style="display: none"
