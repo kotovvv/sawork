@@ -27,7 +27,6 @@
 						style="width: 100%; max-width: 600px"
 					/>
 					<v-btn
-						class="absolute left-0 top-0"
 						icon="mdi-delete"
 						@click="delPic(index)"
 					></v-btn>
@@ -54,9 +53,7 @@ export default {
 		GetPic,
 	},
 	data() {
-		return {
-			message: '',
-		};
+		return {};
 	},
 	methods: {
 		delPic(index) {
@@ -66,9 +63,11 @@ export default {
 	setup() {
 		const showModal = ref(false);
 		const results = ref([]);
+		const message = ref('');
 
 		const openModal = () => {
 			showModal.value = true;
+			message.value = '';
 		};
 
 		const closeModal = () => {
@@ -80,13 +79,13 @@ export default {
 		};
 
 		const saveSnapshots = async () => {
-			this.message = '';
+			message.value = '';
 			try {
 				const response = await axios.post('/api/savePic', { snapshots: results.value });
-				this.message = 'Snapshots saved successfully';
+				message.value = 'Snapshots saved successfully';
 				console.log('Snapshots saved successfully:', response.data);
 			} catch (error) {
-				this.message = 'Error saving snapshots';
+				message.value = 'Error saving snapshots';
 				console.error('Error saving snapshots:', error);
 			}
 		};
@@ -94,6 +93,7 @@ export default {
 		return {
 			showModal,
 			results,
+			message,
 			openModal,
 			closeModal,
 			handleResult,

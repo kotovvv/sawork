@@ -4,7 +4,7 @@
 			id="qr-reader"
 			style="max-width: 500px"
 		></div>
-		<v-row>
+		<v-row class="mt-2">
 			<v-btn
 				@click="takePhoto"
 				icon="mdi-checkbox-blank-circle"
