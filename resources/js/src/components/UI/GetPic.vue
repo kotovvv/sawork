@@ -7,12 +7,13 @@
 		<v-btn
 			@click="takePhoto"
 			icon="mdi-checkbox-blank-circle"
+			color="red"
 		>
-			<template v-slot:prepend>
-				<v-icon color="red"></v-icon>
-			</template>
 		</v-btn>
-		<button>Сделать фото</button>
+		<v-btn
+			@click="$emit('close')"
+			icon="mdi-close"
+		></v-btn>
 		<canvas
 			ref="canvas"
 			style="display: none"
