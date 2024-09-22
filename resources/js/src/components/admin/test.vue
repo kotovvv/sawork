@@ -10,24 +10,31 @@
 				@close="closeModal"
 			/>
 		</Modal>
-		<div v-if="result">
-			<h2>Result:</h2>
-			<div v-if="result.type === 'photo'">
-				<img
-					:src="result.data"
-					alt="Captured Photo"
-					style="width: 100%; max-width: 600px"
-				/>
+		<div v-if="results.length">
+			<h2>Results:</h2>
+			<div
+				v-for="(result, index) in results"
+				:key="index"
+			>
+				<div v-if="result.type === 'photo'">
+					<img
+						:src="result.data"
+						alt="Captured Photo"
+						style="width: 100%; max-width: 600px"
+					/>
+				</div>
+				<div v-else-if="result.type === 'qrCode'">
+					<p>{{ result.data }}</p>
+				</div>
 			</div>
-			<div v-else-if="result.type === 'qrCode'">
-				<p>{{ result.data }}</p>
-			</div>
+			<button @click="saveSnapshots">Save Snapshots</button>
 		</div>
 	</div>
 </template>
 
 <script>
 import { ref } from 'vue';
+import axios from 'axios';
 import Modal from '../UI/Modal.vue';
 import GetPic from '../UI/GetPic.vue';
 
@@ -38,7 +45,7 @@ export default {
 	},
 	setup() {
 		const showModal = ref(false);
-		const result = ref(null);
+		const results = ref([]);
 
 		const openModal = () => {
 			showModal.value = true;
@@ -49,16 +56,25 @@ export default {
 		};
 
 		const handleResult = (data) => {
-			result.value = data;
-			closeModal();
+			results.value.push(data);
+		};
+
+		const saveSnapshots = async () => {
+			try {
+				const response = await axios.post('/api/savePic', { snapshots: results.value });
+				console.log('Snapshots saved successfully:', response.data);
+			} catch (error) {
+				console.error('Error saving snapshots:', error);
+			}
 		};
 
 		return {
 			showModal,
-			result,
+			results,
 			openModal,
 			closeModal,
 			handleResult,
+			saveSnapshots,
 		};
 	},
 };
