@@ -1,6 +1,10 @@
 <template>
 	<div>
-		<button @click="openModal">Open Camera</button>
+		<v-btn
+			@click="openModal"
+			icon="mdi-camera"
+		></v-btn>
+
 		<Modal
 			v-if="showModal"
 			@close="closeModal"
@@ -27,7 +31,8 @@
 					<p>{{ result.data }}</p>
 				</div>
 			</div>
-			<button @click="saveSnapshots">Save Snapshots</button>
+			<v-btn @click="saveSnapshots">Save Snapshots</v-btn>
+			<div v-if="message">{{ message }}</div>
 		</div>
 	</div>
 </template>
@@ -42,6 +47,11 @@ export default {
 	components: {
 		Modal,
 		GetPic,
+	},
+	data() {
+		return {
+			message: '',
+		};
 	},
 	setup() {
 		const showModal = ref(false);
@@ -60,10 +70,13 @@ export default {
 		};
 
 		const saveSnapshots = async () => {
+			this.message = '';
 			try {
 				const response = await axios.post('/api/savePic', { snapshots: results.value });
+				this.message = 'Snapshots saved successfully';
 				console.log('Snapshots saved successfully:', response.data);
 			} catch (error) {
+				this.message = 'Error saving snapshots';
 				console.error('Error saving snapshots:', error);
 			}
 		};
