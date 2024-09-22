@@ -4,16 +4,19 @@
 			id="qr-reader"
 			style="max-width: 500px"
 		></div>
-		<v-btn
-			@click="takePhoto"
-			icon="mdi-checkbox-blank-circle"
-			color="red"
-		>
-		</v-btn>
-		<v-btn
-			@click="$emit('close')"
-			icon="mdi-close"
-		></v-btn>
+		<v-row>
+			<v-btn
+				@click="takePhoto"
+				icon="mdi-checkbox-blank-circle"
+				color="red"
+			>
+			</v-btn>
+			<v-spacer></v-spacer>
+			<v-btn
+				@click="$emit('close')"
+				icon="mdi-close"
+			></v-btn>
+		</v-row>
 		<canvas
 			ref="canvas"
 			style="display: none"

@@ -26,6 +26,11 @@
 						alt="Captured Photo"
 						style="width: 100%; max-width: 600px"
 					/>
+					<v-btn
+						class="absolute left-0 top-0"
+						icon="mdi-delete"
+						@click="delPic(index)"
+					></v-btn>
 				</div>
 				<div v-else-if="result.type === 'qrCode'">
 					<p>{{ result.data }}</p>
@@ -52,6 +57,11 @@ export default {
 		return {
 			message: '',
 		};
+	},
+	methods: {
+		delPic(index) {
+			this.results.splice(index, 1);
+		},
 	},
 	setup() {
 		const showModal = ref(false);
