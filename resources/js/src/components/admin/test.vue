@@ -9,7 +9,11 @@
 			v-if="showModal"
 			@close="closeModal"
 		>
-			<GetPic
+			<PhotoCapture
+				@result="handleResult"
+				@close="closeModal"
+			/>
+			<QrCodeScanner
 				@result="handleResult"
 				@close="closeModal"
 			/>
@@ -45,12 +49,14 @@
 import { ref } from 'vue';
 import axios from 'axios';
 import Modal from '../UI/Modal.vue';
-import GetPic from '../UI/GetPic.vue';
+import PhotoCapture from '../UI/PhotoCapture.vue';
+import QrCodeScanner from '../UI/QrCodeScanner.vue';
 
 export default {
 	components: {
 		Modal,
-		GetPic,
+		PhotoCapture,
+		QrCodeScanner,
 	},
 	data() {
 		return {};
