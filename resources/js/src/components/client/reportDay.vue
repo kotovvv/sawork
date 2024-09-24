@@ -161,7 +161,7 @@ export default {
 			vm.loading = true;
 			vm.dataforxsls = [];
 			axios
-				.get('/api/getDataForXLSDay/' + vm.date.toDateString() + '/' + vm.IDWarehouse)
+				.get('/api/getDataForXLSDay/' + moment(vm.date).format('YYYY-MM-DD') + '/' + vm.IDWarehouse)
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = Object.entries(res.data);
