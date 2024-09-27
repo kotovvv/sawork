@@ -174,7 +174,7 @@ export default {
 			data.eMailAddress = item.eMailAddress;
 			data.cod = item.cod;
 			data.IDLokalizaciiZwrot = item.IDLokalizaciiZwrot;
-			console.log(data);
+
 			// save the record
 			axios
 				.post('api/saveMagEmail', data, {
