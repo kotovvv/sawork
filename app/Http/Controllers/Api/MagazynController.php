@@ -38,7 +38,7 @@ class MagazynController extends Controller
                 return response('Not updated', '404');
             }
         } else {
-            $res =  DB::statement('INSERT INTO dbo.EMailMagazyn (IDMagazyn,eMailAddress,cod) VALUES (' . $IDMagazyn . ',\'' . $eMailAddress . '\',\'' . $cod . '\')');
+            $res =  DB::statement('INSERT INTO dbo.EMailMagazyn (IDMagazyn,eMailAddress,cod,IDLokalizaciiZwrot) VALUES (' . $IDMagazyn . ',\'' . $eMailAddress . '\',\'' . $cod . '\',\'' . $IDLokalizaciiZwrot . '\')');
             if ($res) {
                 return DB::getPdo()->lastInsertId();
             } else {
