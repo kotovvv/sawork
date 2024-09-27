@@ -22,8 +22,16 @@ class MagazynController extends Controller
         $IDMagazyn = $data['IDMagazynu'];
         $eMailAddress = $data['eMailAddress'];
         $cod = $data['cod'];
+        $IDLokalizaciiZwrot = $data['IDLokalizaciiZwrot'];
         if (isset($data['id'])) {
-            $res = DB::update('update dbo.EMailMagazyn SET IDMagazyn = ' . $IDMagazyn . ', eMailAddress = \'' . $eMailAddress . '\', cod =\'' . $cod . '\' WHERE ID = ' . (int) $data['id']);
+            $res = DB::table('dbo.EMailMagazyn')
+                ->where('ID', (int) $data['id'])
+                ->update([
+                    'IDMagazyn' => $IDMagazyn,
+                    'eMailAddress' => $eMailAddress,
+                    'cod' => $cod,
+                    'IDLokalizaciiZwrot' => $IDLokalizaciiZwrot
+                ]);
             if ($res) {
                 return 0;
             } else {

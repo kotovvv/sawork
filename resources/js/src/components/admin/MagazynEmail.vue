@@ -173,6 +173,7 @@ export default {
 			data.IDMagazynu = item.IDMagazynu;
 			data.eMailAddress = item.eMailAddress;
 			data.cod = item.cod;
+			data.IDLokalizaciiZwrot = item.IDLokalizaciiZwrot;
 
 			// save the record
 			axios
