@@ -105,7 +105,9 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.warehouses = res.data;
-						vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+						if (vm.warehouses.length > 0) {
+							vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+						}
 					}
 				})
 				.catch((error) => console.log(error));
@@ -123,7 +125,7 @@ export default {
 						vm.dataforxsls.forEach((el) => {
 							el.price = parseFloat(el.price);
 						});
-                        vm.selected[0] = vm.dataforxsls[0].IDTowaru;
+						vm.selected[0] = vm.dataforxsls[0].IDTowaru;
 						vm.loading = false;
 					}
 				})
