@@ -156,9 +156,6 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.warehouses = res.data;
-						// if(vm.warehouses.length>0){
-vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
-};
 					}
 				})
 				.catch((error) => console.log(error));

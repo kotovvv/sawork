@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\SendPDF;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\AuthUserController;
 use App\Http\Controllers\Api\LogController;
+use App\Http\Controllers\Api\ComingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -49,4 +50,6 @@ Route::middleware(['jwt.verify'])->group(function () {
 
     Route::get('/logs/useReport', [LogController::class, 'getUseReportLog']);
     Route::get('/logs/users', [LogController::class, 'getUsersLog']);
+
+    Route::post('getDM', [ComingController::class, 'getDM']);
 });

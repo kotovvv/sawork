@@ -89,6 +89,7 @@ export default {
 			{ text: 'Raporty', name: 'report', icon: 'mdi-file-chart' },
 			// { text: 'Test', name: 'test', icon: 'mdi-barcode-scan' },
 			{ text: 'logView', name: 'logViewer', icon: 'mdi-file-account' },
+			{ text: 'Coming', name: 'coming', icon: 'mdi-file-account' },
 		],
 	}),
 	computed: {
@@ -98,6 +99,7 @@ export default {
 			if (this.theMenu == 'getXLSX') return getXLSX;
 			if (this.theMenu == 'report') return defineAsyncComponent(() => import('../client/clientReport.vue'));
 			if (this.theMenu == 'logViewer') return defineAsyncComponent(() => import('./LogViewer.vue'));
+			if (this.theMenu == 'coming') return defineAsyncComponent(() => import('../client/comingComponent.vue'));
 			//if (this.theMenu == 'test') return test;
 		},
 	},

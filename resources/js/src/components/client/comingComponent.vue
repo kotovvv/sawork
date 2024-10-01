@@ -1,5 +1,25 @@
 <template>
-	<div style="min-height: 100vh">
+	<div>
+		<v-container
+			fluid
+			v-if="selectedItem"
+			:id="selectedItem.IDRuchuMagazynowego"
+			style="min-height: 100vh"
+			:key="selectedItem"
+		>
+			<v-row>
+				<v-col>
+					<h3
+						>{{ selectedItem.NrDokumentu }} <small>{{ selectedItem.Data.substring(0, 10) }}</small></h3
+					>
+				</v-col>
+				<v-spacer></v-spacer>
+				<v-btn
+					icon="mdi-close"
+					@click="selectedItem = null"
+				></v-btn>
+			</v-row>
+		</v-container>
 		<v-container fluid>
 			<v-row>
 				<v-col>
@@ -28,29 +48,46 @@
 				</v-col>
 			</v-row>
 		</v-container>
+		<v-container fluid>
+			<v-row>
+				<v-col>
+					<ComingTable
+						:IDWarehouse="IDWarehouse"
+						:key="IDWarehouse"
+						@item-selected="handleItemSelected"
+					/>
+				</v-col>
+			</v-row>
+		</v-container>
 	</div>
 </template>
 
 <script>
-import moment from 'moment';
 import axios from 'axios';
+import ComingTable from './coming/ComingTable.vue';
 
 export default {
 	name: 'Coming',
 
-	components: {},
+	components: { ComingTable },
 	data: () => ({
 		loading: false,
-
+		docsDM: [],
 		IDWarehouse: null,
 		warehouses: [],
+		selectedItem: null,
 	}),
 	mounted() {
 		this.getWarehouse();
 	},
+
 	methods: {
+		handleItemSelected(item) {
+			this.selectedItem = item;
+		},
 		getWarehouse() {
 			const vm = this;
+			vm.loading = true;
 			axios
 				.get('/api/getWarehouse')
 				.then((res) => {
@@ -58,6 +95,7 @@ export default {
 						vm.warehouses = res.data;
 						if (vm.warehouses.length > 0) {
 							vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+							vm.loading = false;
 						}
 					}
 				})

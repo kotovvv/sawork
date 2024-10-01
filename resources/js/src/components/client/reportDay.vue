@@ -66,7 +66,6 @@
 		>
 			<v-row>
 				<v-col cols="12">
-					<!-- :headers="headers" -->
 					<v-data-table
 						:items="dataforxsls[0][1]"
 						:headers="headers"
