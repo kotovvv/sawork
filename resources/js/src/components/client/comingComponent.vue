@@ -19,6 +19,10 @@
 					@click="selectedItem = null"
 				></v-btn>
 			</v-row>
+			<v-row>
+				<v-btn @click="createPZ">create PZ</v-btn>
+				<v-btn @click="showProducts">Show products</v-btn>
+			</v-row>
 		</v-container>
 		<v-container fluid>
 			<v-row>

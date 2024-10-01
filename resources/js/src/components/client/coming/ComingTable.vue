@@ -29,6 +29,10 @@
 							clearable
 						></v-text-field>
 					</v-col>
+					<v-btn
+						@click="getDM"
+						icon="mdi-refresh"
+					></v-btn>
 				</v-row>
 			</template>
 		</v-data-table>
