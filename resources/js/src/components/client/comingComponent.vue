@@ -23,6 +23,12 @@
 				<v-btn @click="createPZ">create PZ</v-btn>
 				<v-btn @click="showProducts">Show products</v-btn>
 			</v-row>
+			<v-row>
+				<v-textarea
+					label="Uwaga"
+					v-model="Uwaga"
+				></v-textarea>
+			</v-row>
 		</v-container>
 		<v-container fluid>
 			<v-row>
@@ -75,6 +81,7 @@ export default {
 
 	components: { ComingTable },
 	data: () => ({
+		Uwaga: '',
 		loading: false,
 		docsDM: [],
 		IDWarehouse: null,
@@ -84,8 +91,23 @@ export default {
 	mounted() {
 		this.getWarehouse();
 	},
-
 	methods: {
+		createPZ() {
+			const vm = this;
+			let data = {};
+			data.IDMagazynu = vm.IDWarehouse;
+			data.IDRuchuMagazynowego = vm.selectedItem.IDRuchuMagazynowego;
+			data.Uwagi = vm.Uwaga;
+			axios
+				.post('/api/createPZ', data)
+				.then((res) => {
+					if (res.status == 200) {
+						console.log(res.data);
+					}
+				})
+				.catch((error) => console.log(error));
+		},
+
 		handleItemSelected(item) {
 			this.selectedItem = item;
 		},
