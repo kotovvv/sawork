@@ -15,11 +15,12 @@ class ComingController extends Controller
         return DB::table('dbo.RuchMagazynowy')->select('IDRuchuMagazynowego', 'Data', 'NrDokumentu', 'WartoscDokumentu')->where('IDRodzajuRuchuMagazynowego', 200)->where('IDMagazynu', $IDMagazynu)->orderBy('Data', 'DESC')->get();
     }
 
-    public function createPZfromDM1(Request $request)
+    public function createPZ(Request $request)
     {
         $data = $request->all();
         $IDMagazynu = $data['IDMagazynu'];
-        $IDRuchuMagazynowego = $data['IDRuchuMagazynowego'];
+        $Symbol = DB::table('dbo.Magazyn')->where('IDMagazynu', $IDMagazynu)->first()->Symbol;
+        $IDKontrahenta = DB::table('dbo.EMailMagazyn')->where('IDMagazyn', $IDMagazynu)->where('IDKontrahenta', '>', 0)->first()->IDKontrahenta;
 
         // create PZ
         $createPZ = [];
@@ -29,33 +30,52 @@ class ComingController extends Controller
         $createPZ['IDUzytkownika'] = 1;
         $createPZ['Operator'] = 1;
         $createPZ['IDCompany'] = 1;
-        $createPZ['IDKontrahenta'] = '';
+        $createPZ['IDKontrahenta'] = $IDKontrahenta;
         $createPZ['Uwagi'] = $data['Uwagi'];
-        $createPZ['_RuchMagazynowyTempDecimal1'] = $order->_OrdersTempDecimal2;
-        $createPZ['_RuchMagazynowyTempString2'] = $order->_OrdersTempString1;
-        $createPZ['_RuchMagazynowyTempString1'] = $order->_OrdersTempString2;
-        $createPZ['_RuchMagazynowyTempString4'] = $order->_OrdersTempString4;
-        $createPZ['_RuchMagazynowyTempString5'] = $order->_OrdersTempString5;
+
 
 
         $ndoc = DB::selectOne("SELECT TOP 1 NrDokumentu n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '1' AND IDMagazynu = " . $IDMagazynu . " AND year( Utworzono ) = " . date('Y') . " ORDER BY Data DESC");
         preg_match('/^PZ(.*)\/.*/', $ndoc->n, $a_ndoc);
-        $createPZ['NrDokumentu'] = 'PZ' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $data["magazin"]["Symbol"];
+        $createPZ['NrDokumentu'] = 'PZ' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $Symbol;
         // check if NrDokumentu exist in base
-        // if (DB::select("select * from dbo.RuchMagazynowy where NrDokumentu = '" . $createPZ['NrDokumentu'] . "'")) {
-        //     return response($createPZ['NrDokumentu'] . ' Został już utworzony', 200);
-        // }
-        $pz = DB::table('dbo.RuchMagazynowy')->insert($createPZ);
+        if (DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $createPZ['NrDokumentu'])->exists()) {
+            return response($createPZ['NrDokumentu'] . ' Został już utworzony', 200);
+        }
+
+        DB::table('dbo.RuchMagazynowy')->insert($createPZ);
+        $pzID = DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $createPZ['NrDokumentu'])->first()->IDRuchuMagazynowego;
 
         // products
+        $products = DB::table('dbo.ElementRuchuMagazynowego')->select('Ilosc', 'Uwagi', 'CenaJednostkowa', 'IDTowaru', 'Uzytkownik')->where('IDRuchuMagazynowego', $data['IDRuchuMagazynowego'])->get();
+        $productsArray = [];
+        foreach ($products as $product) {
+            $productsArray[] = [
+                'IDRuchuMagazynowego' => $pzID,
+                'Ilosc' => $product->Ilosc,
+                'Uwagi' => $product->Uwagi,
+                'CenaJednostkowa' => $product->CenaJednostkowa,
+                'IDTowaru' => $product->IDTowaru,
+                'Uzytkownik' => $product->Uzytkownik
+            ];
+        }
+
+        // Ensure the parent record exists before inserting child records
+        if (DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $pzID)->exists()) {
+            DB::table('dbo.ElementRuchuMagazynowego')->insert($productsArray);
+        } else {
+            return response('Parent record does not exist', 400);
+        }
+
 
         // relation
         $rel = [
-            'ID1' => $pz->IDRuchuMagazynowego,
+            'ID1' => $pzID,
             'IDType1' => 1,
             'ID2' => $data['IDRuchuMagazynowego'],
             'IDType2' => 200
         ];
         DB::table('dbo.DocumentRelations')->insert($rel);
+        return response($createPZ['NrDokumentu'] . ' Został już utworzony', 200);
     }
 }
