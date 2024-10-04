@@ -12,7 +12,7 @@ class ComingController extends Controller
     {
         $data = $request->all();
         $IDMagazynu = $data['IDMagazynu'];
-        return DB::table('dbo.RuchMagazynowy')->select('IDRuchuMagazynowego', 'Data', 'NrDokumentu', 'WartoscDokumentu')->where('IDRodzajuRuchuMagazynowego', 200)->where('IDMagazynu', $IDMagazynu)->orderBy('Data', 'DESC')->get();
+        return DB::table('dbo.RuchMagazynowy')->select('IDRuchuMagazynowego', 'Data', 'NrDokumentu', 'WartoscDokumentu', 'ID1')->leftJoin('DocumentRelations', 'ID2', '=', 'IDRuchuMagazynowego')->where('IDType2', 200)->where('IDRodzajuRuchuMagazynowego', 200)->where('IDMagazynu', $IDMagazynu)->orderBy('Data', 'DESC')->get();
     }
 
     public function createPZ(Request $request)
