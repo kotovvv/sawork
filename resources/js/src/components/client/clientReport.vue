@@ -12,6 +12,7 @@
 				>Tarif</v-tab
 			>
 			<v-tab value="oborot">Oborot</v-tab>
+			<v-tab value="zamovlen">Zamawianie towarów</v-tab>
 		</v-tabs>
 
 		<v-card-text>
@@ -28,6 +29,9 @@
 				<v-tabs-window-item value="oborot">
 					<ReportOborot :user="$attrs.user" />
 				</v-tabs-window-item>
+				<v-tabs-window-item value="zamovlen">
+					<ReportQuantity :user="$attrs.user" />
+				</v-tabs-window-item>
 			</v-tabs-window>
 		</v-card-text>
 	</v-card>
@@ -37,9 +41,10 @@ import ReportDay from './reportDay.vue';
 import ReportNotActiveProducts from './reportNotActiveProducts.vue';
 import ReportTarif from './reportTraif.vue';
 import ReportOborot from './reportOborot.vue';
+import ReportQuantity from './reportQuantity.vue';
 export default {
 	name: 'clientReport',
-	components: { ReportDay, ReportNotActiveProducts, ReportTarif, ReportOborot },
+	components: { ReportDay, ReportNotActiveProducts, ReportTarif, ReportOborot, ReportQuantity },
 	data: () => ({
 		tab: null,
 	}),

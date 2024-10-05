@@ -37,6 +37,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('setClientPriceCondition', [MagazynController::class, 'setClientPriceCondition']);
     Route::get('getPriceCondition', [MagazynController::class, 'getPriceCondition']);
     Route::post('getOborot', [MagazynController::class, 'getOborot']);
+    Route::post('getQuantity', [MagazynController::class, 'getQuantity']);
 
     Route::get('getProductHistory/{IDTowaru}', [MagazynController::class, 'getProductHistory']);
     Route::post('getOrder', [ReturnController::class, 'getOrder']);

@@ -123,7 +123,7 @@ export default {
 		IDWarehouse: null,
 		warehouses: [],
 		headers: [
-			{ title: 'nazwa towaru', key: 'Nazwa towaru' },
+			{ title: 'nazwa towaru', key: 'Nazwa' },
 			{ title: 'kod kreskowy', key: 'KodKreskowy' },
 			{ title: 'sku', key: 'sku' },
 			{ title: 'Wartość', key: 'wartosc' },

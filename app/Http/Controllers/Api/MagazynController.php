@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
+
 
 class MagazynController extends Controller
 {
@@ -225,7 +225,7 @@ class MagazynController extends Controller
         return DB::table('Towar as t')
             ->select([
                 't.IDTowaru',
-                DB::raw('t.Nazwa as "Nazwa towaru"'),
+                DB::raw('t.Nazwa as "Nazwa"'),
                 't.KodKreskowy',
                 DB::raw('t._TowarTempString1 as sku'),
                 DB::raw('CAST(SUM(DostawyMinusWydania.Wartosc) as decimal(32,2)) as wartosc'),
@@ -436,7 +436,9 @@ class MagazynController extends Controller
 
     public function getOborot(Request $request)
     {
-        $this->logUsers($request->user, 'Oborot', $request->ip());
+        if (isset($request->user)) {
+            $this->logUsers($request->user, 'Oborot', $request->ip());
+        }
 
         $data = $request->all();
         $dataMin = new Carbon($data['dataMin']);
@@ -445,7 +447,7 @@ class MagazynController extends Controller
         $dataMax = new Carbon($data['dataMax']);
         $dataMax = $dataMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
         $IDMagazynu = $data['IDMagazynu'];
-        $IDKontrahenta = $data['IDKontrahenta'];
+        // $IDKontrahenta = $data['IDKontrahenta'];
         $AllowDiscountDocs = 0;
         $AllowZLDocs = 0;
 
@@ -493,5 +495,68 @@ class MagazynController extends Controller
         // $sql_with_bindings = Str::replaceArray('?', $results->getBindings(), $results->toSql());
         // dd($sql_with_bindings);
         return $results;
+    }
+    public function getQuantity(Request $request)
+    {
+        $data = $request->all();
+        $dateMin = new Carbon($data['dataMin']);
+        $dateMinF = $dateMin->format('Y-m-d');
+        $dateMax = new Carbon($data['dataMax']);
+        $dateMaxF = $dateMax->format('Y-m-d');
+        $DaysOn = $data['DaysOn'];
+        $fordays = $dateMax->diffInDays($dateMin);
+        $dateOld = $dateMin->copy()->subDays($fordays + 1);
+        $dateOldF = $dateOld->setTime(23, 59, 59)->format('Y-m-d');
+        $IDMagazynu = $data['IDMagazynu'];
+
+        $a_products = [];
+        for ($date = $dateOld->copy(); $date->lte($dateMin); $date->addDay()) {
+
+            $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
+            // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('Y-m-d H:i:s'), $IDMagazynu);
+            foreach ($products as $product) {
+
+                if (isset($a_products[$product->IDTowaru])) {
+                    $a_products[$product->IDTowaru]['qtyOld']++;
+                } else {
+                    $a_products[$product->IDTowaru] = [
+                        "Nazwa towaru" => $product->Nazwa,
+                        'KodKreskowy' => $product->KodKreskowy,
+                        'sku' => $product->sku,
+                        'qtyOld' => 0,
+                        'qtyNew' => 0,
+                        'oborotOld' => 0,
+                        'oborotNew' => 0,
+                    ];
+                }
+            }
+        }
+        for ($date = $dateMin->copy(); $date->lte($dateMax); $date->addDay()) {
+
+            $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
+            // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('Y-m-d H:i:s'), $IDMagazynu);
+            foreach ($products as $product) {
+
+                if (isset($a_products[$product->IDTowaru])) {
+                    $a_products[$product->IDTowaru]['qtyNew']++;
+                } else {
+                    $a_products[$product->IDTowaru] = [
+                        "Nazwa towaru" => $product->Nazwa,
+                        'KodKreskowy' => $product->KodKreskowy,
+                        'sku' => $product->sku,
+                        'qtyOld' => 0,
+                        'qtyNew' => 0,
+                        'oborotOld' => 0,
+                        'oborotNew' => 0,
+                    ];
+                }
+            }
+        }
+        $products = [];
+        $request = new \Illuminate\Http\Request();
+        $request->replace(['dataMin' => $dateOldF, 'dataMax' => $dateMinF, 'IDMagazynu' => $IDMagazynu]);
+        $a_oborotOld = $this->getOborot($request);
+
+        return $a_oborotOld;
     }
 }

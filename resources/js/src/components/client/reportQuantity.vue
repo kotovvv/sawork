@@ -30,7 +30,7 @@
 				<v-col>
 					<v-text-field
 						v-model="DaysOn"
-						label="Дней на поставку"
+						label="Dni na dostawę"
 						type="number"
 					></v-text-field>
 				</v-col>
@@ -61,13 +61,13 @@
 				</v-col>
 			</v-row>
 		</v-container>
-		<v-container
+		<!-- <v-container
 			fluid
 			v-if="dataforxsls.length"
 		>
 			<v-row>
 				<v-col cols="12">
-					<!-- :headers="headers" -->
+
 					<v-data-table
 						:items="dataforxsls"
 						item-value="IDTowaru"
@@ -77,7 +77,7 @@
 					</v-data-table>
 				</v-col>
 			</v-row>
-		</v-container>
+		</v-container> -->
 	</div>
 </template>
 
@@ -119,37 +119,37 @@ export default {
 			vm.dataforxsls = [];
 			data.dataMin = vm.dateMin;
 			data.dataMax = vm.dateMax;
+			data.DaysOn = vm.DaysOn;
 			data.IDMagazynu = vm.IDWarehouse;
 
 			axios
-				.post('/api/getOborot', data)
+				.post('/api/getQuantity', data)
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = res.data;
-						vm.dataforxsls.forEach((el) => {
-							el.StanPoczatkowy = parseInt(el.StanPoczatkowy);
-							el.IlośćWchodząca = parseInt(el.IlośćWchodząca);
-							el.IlośćWychodząca = parseInt(el.IlośćWychodząca);
-							el.StanKoncowy = parseInt(el.StanKoncowy);
-							el.StanKoncowy = parseInt(el.StanKoncowy);
-
-							if (vm.$attrs.user.IDRoli != 1) {
-								delete el.WartośćPoczątkowa;
-								delete el.WartośćWchodząca;
-								delete el.WartośćWychodząca;
-								delete el.WartośćKoncowa;
-							}
-						});
-						vm.selected[0] = vm.dataforxsls[0].IDTowaru;
+						// vm.dataforxsls.forEach((el) => {
+						// 	// el.StanPoczatkowy = parseInt(el.StanPoczatkowy);
+						// 	// el.IlośćWchodząca = parseInt(el.IlośćWchodząca);
+						// 	// el.IlośćWychodząca = parseInt(el.IlośćWychodząca);
+						// 	// el.StanKoncowy = parseInt(el.StanKoncowy);
+						// 	// el.StanKoncowy = parseInt(el.StanKoncowy);
+						// 	// if (vm.$attrs.user.IDRoli != 1) {
+						// 	// 	delete el.WartośćPoczątkowa;
+						// 	// 	delete el.WartośćWchodząca;
+						// 	// 	delete el.WartośćWychodząca;
+						// 	// 	delete el.WartośćKoncowa;
+						// 	// }
+						// });
+						// vm.selected[0] = vm.dataforxsls[0].IDTowaru;
 						vm.loading = false;
-						if (vm.$attrs.user.IDRoli == 1) {
-							vm.headers.push(
-								{ title: 'Wartość Początkowa', key: 'WartośćPoczątkowa', align: 'end' },
-								{ title: 'Wartość Wychodząca', key: 'WartośćWychodząca', align: 'end' },
-								{ title: 'Wartość Wchodząca', key: 'WartośćWchodząca', align: 'end' },
-								{ title: 'Wartość Koncowa', key: 'WartośćKoncowa', align: 'end' },
-							);
-						}
+						// if (vm.$attrs.user.IDRoli == 1) {
+						// 	vm.headers.push(
+						// 		{ title: 'Wartość Początkowa', key: 'WartośćPoczątkowa', align: 'end' },
+						// 		{ title: 'Wartość Wychodząca', key: 'WartośćWychodząca', align: 'end' },
+						// 		{ title: 'Wartość Wchodząca', key: 'WartośćWchodząca', align: 'end' },
+						// 		{ title: 'Wartość Koncowa', key: 'WartośćKoncowa', align: 'end' },
+						// 	);
+						// }
 					}
 				})
 				.catch((error) => {
