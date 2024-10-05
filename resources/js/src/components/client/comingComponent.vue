@@ -83,7 +83,7 @@ export default {
 	data: () => ({
 		Uwaga: '',
 		loading: false,
-		docsDM: [],
+
 		IDWarehouse: null,
 		warehouses: [],
 		selectedItem: null,

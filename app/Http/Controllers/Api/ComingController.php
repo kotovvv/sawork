@@ -12,7 +12,28 @@ class ComingController extends Controller
     {
         $data = $request->all();
         $IDMagazynu = $data['IDMagazynu'];
-        return DB::table('dbo.RuchMagazynowy')->select('IDRuchuMagazynowego', 'Data', 'NrDokumentu', 'WartoscDokumentu', 'ID1')->leftJoin('DocumentRelations', 'ID2', '=', 'IDRuchuMagazynowego')->where('IDType2', 200)->where('IDRodzajuRuchuMagazynowego', 200)->where('IDMagazynu', $IDMagazynu)->orderBy('Data', 'DESC')->get();
+        return DB::table('dbo.RuchMagazynowy as rm1')
+            ->select(
+                'rm1.IDRuchuMagazynowego',
+                'rm1.Data',
+                'rm1.NrDokumentu',
+                'rm1.WartoscDokumentu',
+                'DocumentRelations.ID1',
+                'rm2.Data as RelatedData',
+                'rm2.NrDokumentu as RelatedNrDokumentu'
+                // DB::raw('COALESCE(DocumentRelations.ID1, 0) as ID1'),
+                // DB::raw('COALESCE(rm2.Data, "") as RelatedData'),
+                // DB::raw('COALESCE(rm2.NrDokumentu, "") as RelatedNrDokumentu')
+            )
+            ->leftJoin('dbo.DocumentRelations', function ($join) {
+                $join->on('DocumentRelations.ID2', '=', 'rm1.IDRuchuMagazynowego')
+                    ->on('DocumentRelations.IDType2', '=', DB::raw('200'));
+            })
+            ->leftJoin('dbo.RuchMagazynowy as rm2', 'rm2.IDRuchuMagazynowego', '=', 'DocumentRelations.ID1')
+            ->where('rm1.IDRodzajuRuchuMagazynowego', 200)
+            ->where('rm1.IDMagazynu', $IDMagazynu)
+            ->orderBy('rm1.Data', 'DESC')
+            ->get();
     }
 
     public function createPZ(Request $request)

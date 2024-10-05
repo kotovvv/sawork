@@ -52,7 +52,7 @@ export default {
 			{ title: 'Data', key: 'Data' },
 			{ title: 'Nr Dokumentu', key: 'NrDokumentu', sortable: false },
 			{ title: 'Wartość Dokumentu', key: 'WartoscDokumentu', sortable: false, align: 'end' },
-			{ title: 'Status' },
+			{ title: 'Stan', key: 'status', sortable: false },
 			{ title: 'Uwaga' },
 		],
 		searchInTable: '',
@@ -87,6 +87,11 @@ export default {
 						vm.docsDM = res.data;
 						vm.docsDM.forEach((el) => {
 							el.WartoscDokumentu = parseFloat(el.WartoscDokumentu).toFixed(2);
+							if (el.ID1) {
+								el.status = 'Towary przyjęte na magazyn (' + el.RelatedNrDokumentu + ')';
+							} else {
+								el.status = 'Oczekiwanie na dostawę';
+							}
 						});
 					}
 					vm.loading = false;
