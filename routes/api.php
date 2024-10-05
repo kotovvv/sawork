@@ -52,5 +52,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::get('/logs/users', [LogController::class, 'getUsersLog']);
 
     Route::post('getDM', [ComingController::class, 'getDM']);
+    Route::post('getPZ', [ComingController::class, 'getPZ']);
+    Route::post('connectDMPZ', [ComingController::class, 'connectDMPZ']);
     Route::post('createPZ', [ComingController::class, 'createPZ']);
 });

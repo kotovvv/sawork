@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<v-container
+		<!-- <v-container
 			fluid
 			v-if="selectedItem"
 			:id="selectedItem.IDRuchuMagazynowego"
@@ -29,7 +29,7 @@
 					v-model="Uwaga"
 				></v-textarea>
 			</v-row>
-		</v-container>
+		</v-container> -->
 		<v-container fluid>
 			<v-row>
 				<v-col>

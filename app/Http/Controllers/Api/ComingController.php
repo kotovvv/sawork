@@ -8,6 +8,45 @@ use Illuminate\Support\Facades\DB;
 
 class ComingController extends Controller
 {
+    public function getPZ(Request $request)
+    {
+        $data = $request->all();
+        $IDMagazynu = $data['IDMagazynu'];
+        return DB::table('dbo.RuchMagazynowy')
+            ->select(
+                'IDRuchuMagazynowego',
+                'Data',
+                'NrDokumentu',
+                'WartoscDokumentu',
+
+            )
+            ->whereNotIn('IDRuchuMagazynowego', function ($query) {
+                $query->select('ID1')->from('dbo.DocumentRelations')->where('IDType2', 200)->get();
+            })
+            ->where('IDMagazynu', $IDMagazynu)
+            ->where('IDRodzajuRuchuMagazynowego', 1)
+            ->orderBy('Data', 'DESC')
+            ->get();
+    }
+
+    public function connectDMPZ(Request $request)
+    {
+        $data = $request->all();
+        $ID1 = $data['ID1'];
+        $ID2 = $data['ID2'];
+        $IDType1 = 1;
+        $IDType2 = 200;
+
+        $rel = [
+            'ID1' => $ID1,
+            'IDType1' => $IDType1,
+            'ID2' => $ID2,
+            'IDType2' => $IDType2
+        ];
+        DB::table('dbo.DocumentRelations')->insert($rel);
+        return response('success', 200);
+    }
+
     public function getDM(Request $request)
     {
         $data = $request->all();
@@ -21,9 +60,7 @@ class ComingController extends Controller
                 'DocumentRelations.ID1',
                 'rm2.Data as RelatedData',
                 'rm2.NrDokumentu as RelatedNrDokumentu'
-                // DB::raw('COALESCE(DocumentRelations.ID1, 0) as ID1'),
-                // DB::raw('COALESCE(rm2.Data, "") as RelatedData'),
-                // DB::raw('COALESCE(rm2.NrDokumentu, "") as RelatedNrDokumentu')
+
             )
             ->leftJoin('dbo.DocumentRelations', function ($join) {
                 $join->on('DocumentRelations.ID2', '=', 'rm1.IDRuchuMagazynowego')
