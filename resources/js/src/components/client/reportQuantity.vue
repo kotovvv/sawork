@@ -70,6 +70,7 @@
 					<v-data-table
 						:items="dataforxsls"
 						item-value="IDTowaru"
+						:headers="headers"
 						height="55vh"
 						fixed-header
 					>
@@ -103,6 +104,19 @@ export default {
 			IDWarehouse: null,
 			searchInTable: '',
 			DaysOn: 21,
+			headers: [
+				{ title: 'Nazwa', key: 'Nazwa', nowrap: true },
+				{ title: 'Kod Kreskowy', key: 'KodKreskowy' },
+				{ title: 'SKU', key: 'sku' },
+				{ title: 'Stan', key: 'stan', align: 'end' },
+				{ title: 'Dni na dostawę', key: 'DaysOn', align: 'end' },
+				{ title: 'Trend w %', key: 'tendent', align: 'end' },
+				{ title: 'Days in stock', key: 'qtyNew', align: 'end' },
+				{ title: 'Liczba sprzedaży w okresie', key: 'oborotNew', align: 'end' },
+				{ title: 'Sprzedaż w dniu magazynowania', key: 'selonday', align: 'end' },
+				{ title: 'Zamówienie', key: 'zamov', align: 'end' },
+				{ title: 'Dni do końca', key: 'haveDay', align: 'end' },
+			],
 		};
 	},
 

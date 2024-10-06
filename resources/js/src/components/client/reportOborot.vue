@@ -116,7 +116,7 @@ export default {
 		searchInTable: '',
 		selected: [],
 		headers: [
-			{ title: 'nazwa towaru', key: 'Towar' },
+			{ title: 'nazwa towaru', key: 'Towar', nowrap: true },
 			{ title: 'kod kreskowy', key: 'KodKreskowy' },
 			{ title: 'sku', key: 'sku' },
 			{ title: 'Stan Poczatkowy', key: 'StanPoczatkowy', align: 'end' },

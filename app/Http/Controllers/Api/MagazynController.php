@@ -503,6 +503,7 @@ class MagazynController extends Controller
     public function getQuantity(Request $request)
     {
         $data = $request->all();
+        $datecur = new Carbon();
         $dateMin = new Carbon($data['dataMin']);
         $dateMinF = $dateMin->format('Y-m-d');
         $dateMax = new Carbon($data['dataMax']);
@@ -560,13 +561,19 @@ class MagazynController extends Controller
             }
         }
 
+        $products = $this->getWarehouseData($datecur->setTime(23, 59, 59)->format('Y-m-d H:i:s'), $IDMagazynu);
+        foreach ($products as $product) {
+            if (isset($a_products[$product->IDTowaru])) {
+                $a_products[$product->IDTowaru]['stan'] = $product->stan;
+            }
+        }
+
         $request = new \Illuminate\Http\Request();
         $request->replace(['dataMin' => $dateOldF, 'dataMax' => $dateMinF, 'IDMagazynu' => $IDMagazynu]);
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
                 $a_products[$product->IDTowaru]['oborotOld'] = $product->IlośćWchodząca;
-                $a_products[$product->IDTowaru]['stan'] = $product->StanKoncowy;
             }
         }
         $request->replace(['dataMin' => $dateMinF, 'dataMax' => $dateMaxF, 'IDMagazynu' => $IDMagazynu]);
@@ -574,7 +581,6 @@ class MagazynController extends Controller
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
                 $a_products[$product->IDTowaru]['oborotNew'] = $product->IlośćWchodząca;
-                $a_products[$product->IDTowaru]['stan'] = $product->StanKoncowy;
             }
         }
         $products = [];
@@ -582,18 +588,29 @@ class MagazynController extends Controller
             $tendent = $product['qtyOld'] > 0 ? round(($product['qtyNew'] - $product['qtyOld']) / $product['qtyOld'] * 100, 2) : 0;
             $selonday = $product['qtyNew'] > 0 ? round($product['oborotNew'] / $product['qtyNew'], 2) : 0;
             $zamov = $tendent > 0 ? round(($DaysOn * $selonday - $product['stan']) + ($DaysOn * $selonday - $product['stan']) / 100 * $tendent, 2) : 0;
-            $products[] =                         [
+            $haveDay = $selonday > 0 ? $product['stan'] / $selonday : 0;
+            $products[] = [
                 'IDTowaru' => $IDTowaru,
                 'Nazwa' => $product['Nazwa'],
                 'KodKreskowy' => $product['KodKreskowy'],
                 'sku' => $product['sku'],
-                'stan' => $product['stan'],
-                'DaysOn' => $DaysOn,
-                'Тенденция в %' => $tendent,
-                'КОЛ.ДНЕЙ.НА.СКЛАДЕ' => $product['qtyNew'],
-                'КОЛ.ПРОДАЖ.ЗА.ПЕРИОД' => $product['oborotNew'],
-                'ПРОДАЖ В ДЕНЬ ХРАНЕНИЯ' => $selonday,
-                'ЗАКАЗАТЬ' => $zamov,
+                'stan' => (int)$product['stan'],
+                'DaysOn' => (int)$DaysOn,
+                'tendent' => round(
+                    $tendent,
+                    2
+                ),
+                'qtyNew' => (int)$product['qtyNew'],
+                'oborotNew' => round(
+                    $product['oborotNew'],
+                    2
+                ),
+                'selonday' => round(
+                    $selonday,
+                    2
+                ),
+                'zamov' => (int)$zamov,
+                'haveDay' => (int)$haveDay
             ];
         }
 
