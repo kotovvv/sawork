@@ -443,13 +443,13 @@ class MagazynController extends Controller
         $data = $request->all();
         $c_dataMin = new Carbon($data['dataMin']);
 
-        // $dataMin = $c_dataMin->format('Y-m-d H:i:s');
+        $dataMin = $c_dataMin->format('Y-m-d H:i:s');
         // $dataMin = $c_dataMin->format('Y/d/m H:i:s');
-        $dataMin = $c_dataMin->format('d.m.Y H:i:s');
+        // $dataMin = $c_dataMin->format('d.m.Y H:i:s');
         $c_dataMax = new Carbon($data['dataMax']);
-        // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
+        $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y/d/m H:i:s');
-        $dataMax = $c_dataMax->setTime(23, 59, 59)->format('d.m.Y H:i:s');
+        // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('d.m.Y H:i:s');
         $IDMagazynu = $data['IDMagazynu'];
         // $IDKontrahenta = $data['IDKontrahenta'];
         $AllowDiscountDocs = 0;
@@ -516,8 +516,8 @@ class MagazynController extends Controller
         $a_products = [];
         for ($date = $dateOld->copy(); $date->lte($dateMin); $date->addDay()) {
 
-            $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
-            // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('Y-m-d H:i:s'), $IDMagazynu);
+            // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
+            $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('Y-m-d H:i:s'), $IDMagazynu);
             foreach ($products as $product) {
 
                 if (isset($a_products[$product->IDTowaru])) {
@@ -539,8 +539,8 @@ class MagazynController extends Controller
         }
         for ($date = $dateMin->copy(); $date->lte($dateMax); $date->addDay()) {
 
-            $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
-            // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('Y-m-d H:i:s'), $IDMagazynu);
+            // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
+            $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('Y-m-d H:i:s'), $IDMagazynu);
             foreach ($products as $product) {
 
                 if (isset($a_products[$product->IDTowaru])) {
