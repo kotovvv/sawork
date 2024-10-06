@@ -441,11 +441,13 @@ class MagazynController extends Controller
         }
 
         $data = $request->all();
-        $dataMin = new Carbon($data['dataMin']);
+        $c_dataMin = new Carbon($data['dataMin']);
 
-        $dataMin = $dataMin->format('Y-m-d H:i:s');
-        $dataMax = new Carbon($data['dataMax']);
-        $dataMax = $dataMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
+        $dataMin = $c_dataMin->format('Y-m-d H:i:s');
+        // $dataMin = $c_dataMin->format('Y/d/m H:i:s');
+        $c_dataMax = new Carbon($data['dataMax']);
+        $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
+        // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y/d/m H:i:s');
         $IDMagazynu = $data['IDMagazynu'];
         // $IDKontrahenta = $data['IDKontrahenta'];
         $AllowDiscountDocs = 0;
@@ -505,7 +507,7 @@ class MagazynController extends Controller
         $dateMaxF = $dateMax->format('Y-m-d');
         $DaysOn = $data['DaysOn'];
         $fordays = $dateMax->diffInDays($dateMin);
-        $dateOld = $dateMin->copy()->subDays($fordays + 1);
+        $dateOld = $dateMin->copy()->subDays($fordays + 0); //+1
         $dateOldF = $dateOld->setTime(23, 59, 59)->format('Y-m-d');
         $IDMagazynu = $data['IDMagazynu'];
 
@@ -552,11 +554,23 @@ class MagazynController extends Controller
                 }
             }
         }
-        $products = [];
+
         $request = new \Illuminate\Http\Request();
         $request->replace(['dataMin' => $dateOldF, 'dataMax' => $dateMinF, 'IDMagazynu' => $IDMagazynu]);
-        $a_oborotOld = $this->getOborot($request);
+        $products = $this->getOborot($request);
+        foreach ($products as $product) {
+            if (isset($a_products[$product->IDTowaru])) {
+                $a_products[$product->IDTowaru]['oborotOld'] = $product->IlośćWchodząca;
+            }
+        }
+        $request->replace(['dataMin' => $dateMinF, 'dataMax' => $dateMaxF, 'IDMagazynu' => $IDMagazynu]);
+        $products = $this->getOborot($request);
+        foreach ($products as $product) {
+            if (isset($a_products[$product->IDTowaru])) {
+                $a_products[$product->IDTowaru]['oborotNew'] = $product->IlośćWchodząca;
+            }
+        }
 
-        return $a_oborotOld;
+        return $a_products;
     }
 }

@@ -61,13 +61,12 @@
 				</v-col>
 			</v-row>
 		</v-container>
-		<!-- <v-container
+		<v-container
 			fluid
 			v-if="dataforxsls.length"
 		>
 			<v-row>
 				<v-col cols="12">
-
 					<v-data-table
 						:items="dataforxsls"
 						item-value="IDTowaru"
@@ -77,7 +76,7 @@
 					</v-data-table>
 				</v-col>
 			</v-row>
-		</v-container> -->
+		</v-container>
 	</div>
 </template>
 
