@@ -443,11 +443,13 @@ class MagazynController extends Controller
         $data = $request->all();
         $c_dataMin = new Carbon($data['dataMin']);
 
-        $dataMin = $c_dataMin->format('Y-m-d H:i:s');
+        // $dataMin = $c_dataMin->format('Y-m-d H:i:s');
         // $dataMin = $c_dataMin->format('Y/d/m H:i:s');
+        $dataMin = $c_dataMin->format('d.m.Y H:i:s');
         $c_dataMax = new Carbon($data['dataMax']);
-        $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
+        // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y/d/m H:i:s');
+        $dataMax = $c_dataMax->setTime(23, 59, 59)->format('d.m.Y H:i:s');
         $IDMagazynu = $data['IDMagazynu'];
         // $IDKontrahenta = $data['IDKontrahenta'];
         $AllowDiscountDocs = 0;
@@ -522,13 +524,15 @@ class MagazynController extends Controller
                     $a_products[$product->IDTowaru]['qtyOld']++;
                 } else {
                     $a_products[$product->IDTowaru] = [
-                        "Nazwa towaru" => $product->Nazwa,
+                        // 'IDTowaru'=> $product->IDTowaru,
+                        "Nazwa" => $product->Nazwa,
                         'KodKreskowy' => $product->KodKreskowy,
                         'sku' => $product->sku,
                         'qtyOld' => 0,
                         'qtyNew' => 0,
                         'oborotOld' => 0,
                         'oborotNew' => 0,
+                        'stan' => 0,
                     ];
                 }
             }
@@ -543,13 +547,14 @@ class MagazynController extends Controller
                     $a_products[$product->IDTowaru]['qtyNew']++;
                 } else {
                     $a_products[$product->IDTowaru] = [
-                        "Nazwa towaru" => $product->Nazwa,
+                        "Nazwa" => $product->Nazwa,
                         'KodKreskowy' => $product->KodKreskowy,
                         'sku' => $product->sku,
                         'qtyOld' => 0,
                         'qtyNew' => 0,
                         'oborotOld' => 0,
                         'oborotNew' => 0,
+                        'stan' => 0,
                     ];
                 }
             }
@@ -561,6 +566,7 @@ class MagazynController extends Controller
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
                 $a_products[$product->IDTowaru]['oborotOld'] = $product->IlośćWchodząca;
+                $a_products[$product->IDTowaru]['stan'] = $product->StanKoncowy;
             }
         }
         $request->replace(['dataMin' => $dateMinF, 'dataMax' => $dateMaxF, 'IDMagazynu' => $IDMagazynu]);
@@ -568,9 +574,29 @@ class MagazynController extends Controller
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
                 $a_products[$product->IDTowaru]['oborotNew'] = $product->IlośćWchodząca;
+                $a_products[$product->IDTowaru]['stan'] = $product->StanKoncowy;
             }
         }
+        $products = [];
+        foreach ($a_products as $IDTowaru => $product) {
+            $tendent = $product['qtyOld'] > 0 ? round(($product['qtyNew'] - $product['qtyOld']) / $product['qtyOld'] * 100, 2) : 0;
+            $selonday = $product['qtyNew'] > 0 ? round($product['oborotNew'] / $product['qtyNew'], 2) : 0;
+            $zamov = $tendent > 0 ? round(($DaysOn * $selonday - $product['stan']) + ($DaysOn * $selonday - $product['stan']) / 100 * $tendent, 2) : 0;
+            $products[] =                         [
+                'IDTowaru' => $IDTowaru,
+                'Nazwa' => $product['Nazwa'],
+                'KodKreskowy' => $product['KodKreskowy'],
+                'sku' => $product['sku'],
+                'stan' => $product['stan'],
+                'DaysOn' => $DaysOn,
+                'Тенденция в %' => $tendent,
+                'КОЛ.ДНЕЙ.НА.СКЛАДЕ' => $product['qtyNew'],
+                'КОЛ.ПРОДАЖ.ЗА.ПЕРИОД' => $product['oborotNew'],
+                'ПРОДАЖ В ДЕНЬ ХРАНЕНИЯ' => $selonday,
+                'ЗАКАЗАТЬ' => $zamov,
+            ];
+        }
 
-        return $a_products;
+        return $products;
     }
 }
