@@ -140,29 +140,8 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = res.data;
-						// vm.dataforxsls.forEach((el) => {
-						// 	// el.StanPoczatkowy = parseInt(el.StanPoczatkowy);
-						// 	// el.IlośćWchodząca = parseInt(el.IlośćWchodząca);
-						// 	// el.IlośćWychodząca = parseInt(el.IlośćWychodząca);
-						// 	// el.StanKoncowy = parseInt(el.StanKoncowy);
-						// 	// el.StanKoncowy = parseInt(el.StanKoncowy);
-						// 	// if (vm.$attrs.user.IDRoli != 1) {
-						// 	// 	delete el.WartośćPoczątkowa;
-						// 	// 	delete el.WartośćWchodząca;
-						// 	// 	delete el.WartośćWychodząca;
-						// 	// 	delete el.WartośćKoncowa;
-						// 	// }
-						// });
-						// vm.selected[0] = vm.dataforxsls[0].IDTowaru;
+
 						vm.loading = false;
-						// if (vm.$attrs.user.IDRoli == 1) {
-						// 	vm.headers.push(
-						// 		{ title: 'Wartość Początkowa', key: 'WartośćPoczątkowa', align: 'end' },
-						// 		{ title: 'Wartość Wychodząca', key: 'WartośćWychodząca', align: 'end' },
-						// 		{ title: 'Wartość Wchodząca', key: 'WartośćWchodząca', align: 'end' },
-						// 		{ title: 'Wartość Koncowa', key: 'WartośćKoncowa', align: 'end' },
-						// 	);
-						// }
 					}
 				})
 				.catch((error) => {
@@ -185,17 +164,14 @@ export default {
 		},
 		prepareXLSX() {
 			// Создание новой книги
-			this.dataforxsls.forEach((el) => {
-				el.StanPoczatkowy = parseInt(el.StanPoczatkowy);
-				el.IlośćWchodząca = parseInt(el.IlośćWchodząca);
-				el.IlośćWychodząca = parseInt(el.IlośćWychodząca);
-				el.StanKoncowy = parseInt(el.StanKoncowy);
-				el.StanKoncowy = parseInt(el.StanKoncowy);
-				// el.WartośćPoczątkowa = parseFloat(el.WartośćPoczątkowa);
-				// el.WartośćWchodząca = parseFloat(el.WartośćWchodząca);
-				// el.WartośćWychodząca = parseFloat(el.WartośćWychodząca);
-				// el.WartośćKoncowa = parseFloat(el.WartośćKoncowa);
-			});
+			// this.dataforxsls.forEach((el) => {
+			// 	el.StanPoczatkowy = parseInt(el.StanPoczatkowy);
+			// 	el.IlośćWchodząca = parseInt(el.IlośćWchodząca);
+			// 	el.IlośćWychodząca = parseInt(el.IlośćWychodząca);
+			// 	el.StanKoncowy = parseInt(el.StanKoncowy);
+			// 	el.StanKoncowy = parseInt(el.StanKoncowy);
+
+			// });
 			const wb = XLSX.utils.book_new();
 			const ws = XLSX.utils.json_to_sheet(this.dataforxsls);
 			XLSX.utils.book_append_sheet(wb, ws, '');
