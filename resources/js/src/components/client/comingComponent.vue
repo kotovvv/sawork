@@ -19,15 +19,39 @@
 					@click="selectedItem = null"
 				></v-btn>
 			</v-row>
-			<v-row>
+			<v-row v-if="selectedItem.ID1 == 0">
 				<v-btn @click="createPZ">create PZ</v-btn>
-				<v-btn @click="showProducts">Show products</v-btn>
-			</v-row>
-			<v-row>
+
 				<v-textarea
 					label="Uwaga"
 					v-model="Uwaga"
 				></v-textarea>
+			</v-row>
+			<v-row v-else>
+				<v-col>
+					<v-card>
+						<v-tabs
+							v-model="tab"
+							bg-color="primary"
+						>
+							<v-tab value="doc">Documents</v-tab>
+							<v-tab value="photo">Photo</v-tab>
+							<v-card-text>
+								<v-tabs-window v-model="tab">
+									<v-tabs-window-item value="doc">
+										<div> Documents </div>
+									</v-tabs-window-item>
+									<v-tabs-window-item value="photo">
+										<div>Photo</div>
+									</v-tabs-window-item>
+								</v-tabs-window>
+							</v-card-text>
+						</v-tabs>
+					</v-card>
+				</v-col>
+				<v-col cols="12">
+					<v-btn @click="showProducts">Show products</v-btn>
+				</v-col>
 			</v-row>
 		</v-container>
 		<v-container fluid>
@@ -81,6 +105,7 @@ export default {
 
 	components: { ComingTable },
 	data: () => ({
+		tab: 'doc',
 		Uwaga: '',
 		loading: false,
 
