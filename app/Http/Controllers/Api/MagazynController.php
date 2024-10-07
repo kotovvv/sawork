@@ -609,8 +609,14 @@ class MagazynController extends Controller
                     $selonday,
                     2
                 ),
-                'zamov' => (int)$zamov,
-                'haveDay' => (int)$haveDay
+                'zamov' => ceil($zamov),
+                'haveDay' => (int)$haveDay,
+
+                // 'qtyOld' => $product['qtyOld'],
+                // 'qtyNew' => $product['qtyNew'],
+                // 'oborotOld' => $product['oborotOld'],
+                // 'oborotNew' => $product['oborotNew'],
+                // 'stan' => $product['stan'],
             ];
         }
 
