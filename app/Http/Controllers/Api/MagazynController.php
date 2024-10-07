@@ -573,14 +573,14 @@ class MagazynController extends Controller
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
-                $a_products[$product->IDTowaru]['oborotOld'] = $product->IlośćWchodząca;
+                $a_products[$product->IDTowaru]['oborotOld'] = $product->IlośćWychodząca;
             }
         }
         $request->replace(['dataMin' => $dateMinF, 'dataMax' => $dateMaxF, 'IDMagazynu' => $IDMagazynu]);
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
-                $a_products[$product->IDTowaru]['oborotNew'] = $product->IlośćWchodząca;
+                $a_products[$product->IDTowaru]['oborotNew'] = $product->IlośćWychodząca;
             }
         }
         $products = [];
