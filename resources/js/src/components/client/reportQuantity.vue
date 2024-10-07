@@ -37,7 +37,8 @@
 				<v-col>
 					<v-btn
 						@click="getQuantity()"
-						size="x-large"
+						:size="x - large"
+						:disabled="loading"
 						>uzyskać dane</v-btn
 					>
 					<v-btn
@@ -78,6 +79,23 @@
 				</v-col>
 			</v-row>
 		</v-container>
+		<v-snackbar
+			v-model="snackbar"
+			:timeout="4000"
+			location="top"
+		>
+			{{ message }}
+
+			<template v-slot:actions>
+				<v-btn
+					color="pink"
+					variant="text"
+					@click="snackbar = false"
+				>
+					<v-icon icon="mdi:close"></v-icon>
+				</v-btn>
+			</template>
+		</v-snackbar>
 	</div>
 </template>
 
@@ -117,6 +135,8 @@ export default {
 				{ title: 'Zamówienie', key: 'zamov', align: 'end' },
 				{ title: 'Dni do końca', key: 'haveDay', align: 'end' },
 			],
+			message: '',
+			snackbar: false,
 		};
 	},
 
@@ -128,6 +148,7 @@ export default {
 		getQuantity() {
 			const vm = this;
 			vm.loading = true;
+			vm.message = '';
 			let data = {};
 			vm.dataforxsls = [];
 			data.dataMin = vm.dateMin;
@@ -140,9 +161,11 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataforxsls = res.data;
-
-						vm.loading = false;
+					} else {
+						vm.message = res.data.message;
+						vm.snackbar = true;
 					}
+					vm.loading = false;
 				})
 				.catch((error) => {
 					console.log(error);
