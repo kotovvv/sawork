@@ -92,7 +92,7 @@
 					variant="text"
 					@click="snackbar = false"
 				>
-					<v-icon icon="mdi:close"></v-icon>
+					<v-icon icon="mdi-close"></v-icon>
 				</v-btn>
 			</template>
 		</v-snackbar>
