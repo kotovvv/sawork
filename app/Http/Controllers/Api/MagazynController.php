@@ -573,21 +573,21 @@ class MagazynController extends Controller
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
-                $a_products[$product->IDTowaru]['oborotOld'] = $product->IlośćWchodząca;
+                $a_products[$product->IDTowaru]['oborotOld'] = $product->IlośćWychodząca;
             }
         }
         $request->replace(['dataMin' => $dateMinF, 'dataMax' => $dateMaxF, 'IDMagazynu' => $IDMagazynu]);
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
-                $a_products[$product->IDTowaru]['oborotNew'] = $product->IlośćWchodząca;
+                $a_products[$product->IDTowaru]['oborotNew'] = $product->IlośćWychodząca;
             }
         }
         $products = [];
         foreach ($a_products as $IDTowaru => $product) {
             $tendent = $product['qtyOld'] > 0 ? round(($product['qtyNew'] - $product['qtyOld']) / $product['qtyOld'] * 100, 2) : 0;
             $selonday = $product['qtyNew'] > 0 ? round($product['oborotNew'] / $product['qtyNew'], 2) : 0;
-            $zamov = $tendent > 0 ? round(($DaysOn * $selonday - $product['stan']) + ($DaysOn * $selonday - $product['stan']) / 100 * $tendent, 2) : 0;
+            $zamov = $tendent > 0 ? round(($DaysOn * $selonday - $product['stan']) + ($DaysOn * $selonday - $product['stan']) /  $tendent, 2) : round($DaysOn * $selonday - $product['stan'], 2);
             $haveDay = $selonday > 0 ? $product['stan'] / $selonday : 0;
             $products[] = [
                 'IDTowaru' => $IDTowaru,
@@ -609,8 +609,14 @@ class MagazynController extends Controller
                     $selonday,
                     2
                 ),
-                'zamov' => (int)$zamov,
-                'haveDay' => (int)$haveDay
+                'zamov' => $zamov,
+                'haveDay' => (int)$haveDay,
+
+                // 'qtyOld' => $product['qtyOld'],
+                // 'qtyNew' => $product['qtyNew'],
+                // 'oborotOld' => $product['oborotOld'],
+                // 'oborotNew' => $product['oborotNew'],
+                // 'stan' => $product['stan'],
             ];
         }
 
