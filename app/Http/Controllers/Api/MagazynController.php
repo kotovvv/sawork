@@ -637,10 +637,10 @@ class MagazynController extends Controller
                 'Zamówienie' => $zamov,
                 'DniDoKońca' => (int)$haveDay,
 
-                'DaysInStockOkres1' => (int) $product['qtyOld'],
-                'DaysInStockOkres2' => (int) $product['qtyNew'],
-                'ObrótOkres1' => (int) $product['oborotOld'],
-                'ObrótOkres2' => round(
+                'DaysInStockOkresOld' => (int) $product['qtyOld'],
+                'DaysInStockOkresNew' => (int) $product['qtyNew'],
+                'ObrótOkresOld' => (int) $product['oborotOld'],
+                'ObrótOkresNew' => round(
                     $product['oborotNew'],
                     2
                 ),

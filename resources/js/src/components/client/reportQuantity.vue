@@ -17,21 +17,10 @@
 					></v-select>
 				</v-col>
 				<v-col>
-					<p>Okres 1</p>
-					<datepicker
-						v-model="dateDoMin"
-						format="yyyy-MM-dd"
-						monday-first
-					></datepicker>
+					<p
+						>Okres New <span v-if="daysBetween !== 0">({{ daysBetween }} days)</span></p
+					>
 
-					<datepicker
-						v-model="dateDoMax"
-						format="yyyy-MM-dd"
-						monday-first
-					></datepicker>
-				</v-col>
-				<v-col>
-					<p>Okres 2</p>
 					<datepicker
 						v-model="dateMin"
 						format="yyyy-MM-dd"
@@ -44,6 +33,21 @@
 						monday-first
 					></datepicker>
 				</v-col>
+				<v-col>
+					<p>Okres Old ({{ daysBetweenOld }} days)</p>
+					<datepicker
+						v-model="dateDoMin"
+						format="yyyy-MM-dd"
+						monday-first
+					></datepicker>
+
+					<datepicker
+						v-model="dateDoMax"
+						format="yyyy-MM-dd"
+						monday-first
+					></datepicker>
+				</v-col>
+
 				<v-col
 					cols="12"
 					md="2"
@@ -140,11 +144,13 @@ export default {
 			dateDoMin: moment()
 				.subtract(1, 'months')
 				.endOf('month')
-				.subtract(moment().date(), 'days')
+				.subtract(moment().date() - 1, 'days')
 				.format('YYYY-MM-DD'),
 			dateDoMax: moment().subtract(1, 'months').endOf('month').format('YYYY-MM-DD'),
 			dateMin: moment().format('YYYY-MM-01'),
 			dateMax: moment().format('YYYY-MM-DD'),
+			daysBetween: 0,
+			daysBetweenOld: 0,
 			dataforxsls: [],
 			warehouses: [],
 			IDWarehouse: null,
@@ -161,10 +167,10 @@ export default {
 				{ title: 'Sprzedaż w dniu magazynowania', key: 'SprzedażWdniuMagazynowania', align: 'end' },
 				{ title: 'Zamówienie', key: 'Zamówienie', align: 'end' },
 				{ title: 'Dni do końca', key: 'DniDoKońca', align: 'end' },
-				{ title: 'Days in stock Okres1', key: 'DaysInStockOkres1', align: 'end' },
-				{ title: 'Days in stock Okres2', key: 'DaysInStockOkres2', align: 'end' },
-				{ title: 'Obrót Okres1', key: 'ObrótOkres1', align: 'end' },
-				{ title: 'Obrót Okres2', key: 'ObrótOkres2', align: 'end' },
+				{ title: 'Days in stock OkresOld', key: 'DaysInStockOkresOld', align: 'end' },
+				{ title: 'Days in stock OkresNew', key: 'DaysInStockOkresNew', align: 'end' },
+				{ title: 'Obrót OkresOld', key: 'ObrótOkresOld', align: 'end' },
+				{ title: 'Obrót OkresNew', key: 'ObrótOkresNew', align: 'end' },
 			],
 			message: '',
 			snackbar: false,
@@ -173,9 +179,32 @@ export default {
 
 	mounted() {
 		this.getWarehouse();
+		this.calculateDaysBetween();
+		this.calculateDaysBetweenOld();
+	},
+	watch: {
+		dateDoMin() {
+			this.calculateDaysBetweenOld();
+		},
+		dateDoMax() {
+			this.calculateDaysBetweenOld();
+		},
+		dateMin() {
+			this.calculateDaysBetween();
+		},
+		dateMax() {
+			this.calculateDaysBetween();
+		},
 	},
 
 	methods: {
+		calculateDaysBetween() {
+			this.daysBetween = moment(this.dateMax).diff(moment(this.dateMin), 'days');
+			console.log(this.daysBetween);
+		},
+		calculateDaysBetweenOld() {
+			this.daysBetweenOld = moment(this.dateDoMax).diff(moment(this.dateDoMin), 'days');
+		},
 		getQuantity() {
 			const vm = this;
 			vm.loading = true;
@@ -232,7 +261,7 @@ export default {
 			saveAs(
 				new Blob([wbout], { type: 'application/octet-stream' }),
 				'zamovlen_' +
-					moment(this.dateDiMin).format('YYYY-MM-DD') +
+					moment(this.dateDoMin).format('YYYY-MM-DD') +
 					'_' +
 					moment(this.dateDoMax).format('YYYY-MM-DD') +
 					'_' +
