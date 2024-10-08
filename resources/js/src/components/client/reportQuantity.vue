@@ -153,18 +153,17 @@ export default {
 			headers: [
 				{ title: 'Nazwa', key: 'Nazwa', nowrap: true },
 				{ title: 'Kod Kreskowy', key: 'KodKreskowy' },
-				{ title: 'SKU', key: 'sku' },
+				{ title: 'SKU', key: 'SKU' },
 				{ title: 'Stan', key: 'stan', align: 'end' },
-				{ title: 'Dni na dostawę', key: 'DaysOn', align: 'end' },
-				{ title: 'Trend w %', key: 'tendent', align: 'end' },
-				{ title: 'Liczba sprzedaży w okresie', key: 'oborotNew', align: 'end' },
-				{ title: 'Sprzedaż w dniu magazynowania', key: 'selonday', align: 'end' },
-				{ title: 'Zamówienie', key: 'zamov', align: 'end' },
-				{ title: 'Dni do końca', key: 'haveDay', align: 'end' },
-				{ title: 'Days in stock Okres1', key: 'qtyOld', align: 'end' },
-				{ title: 'Days in stock Okres2', key: 'qtyNew', align: 'end' },
-				{ title: 'Obrót Okres1', key: 'oborotOld', align: 'end' },
-				{ title: 'Obrót Okres2', key: 'oborotNew', align: 'end' },
+				{ title: 'Dni na dostawę', key: 'DniNaDostawę', align: 'end' },
+				{ title: 'Trend w %', key: 'Trend', align: 'end' },
+				{ title: 'Sprzedaż w dniu magazynowania', key: 'SprzedażWdniuMagazynowania', align: 'end' },
+				{ title: 'Zamówienie', key: 'Zamówienie', align: 'end' },
+				{ title: 'Dni do końca', key: 'DniDoKońca', align: 'end' },
+				{ title: 'Days in stock Okres1', key: 'DaysInStockOkres1', align: 'end' },
+				{ title: 'Days in stock Okres2', key: 'DaysInStockOkres2', align: 'end' },
+				{ title: 'Obrót Okres1', key: 'ObrótOkres1', align: 'end' },
+				{ title: 'Obrót Okres2', key: 'ObrótOkres2', align: 'end' },
 			],
 			message: '',
 			snackbar: false,
@@ -220,14 +219,9 @@ export default {
 		},
 		prepareXLSX() {
 			// Создание новой книги
-			// this.dataforxsls.forEach((el) => {
-			// 	el.StanPoczatkowy = parseInt(el.StanPoczatkowy);
-			// 	el.IlośćWchodząca = parseInt(el.IlośćWchodząca);
-			// 	el.IlośćWychodząca = parseInt(el.IlośćWychodząca);
-			// 	el.StanKoncowy = parseInt(el.StanKoncowy);
-			// 	el.StanKoncowy = parseInt(el.StanKoncowy);
-
-			// });
+			this.dataforxsls.forEach((el) => {
+				el.KodKreskowy = parseInt(el.KodKreskowy);
+			});
 			const wb = XLSX.utils.book_new();
 			const ws = XLSX.utils.json_to_sheet(this.dataforxsls);
 			XLSX.utils.book_append_sheet(wb, ws, '');
@@ -236,7 +230,7 @@ export default {
 			const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 			saveAs(
 				new Blob([wbout], { type: 'application/octet-stream' }),
-				'quantity ' +
+				'zamovlen_' +
 					moment(this.dateMin).format('YYYY-MM-DD') +
 					'_' +
 					moment(this.dateMax).format('YYYY-MM-DD') +

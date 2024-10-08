@@ -520,36 +520,38 @@ class MagazynController extends Controller
     {
         $data = $request->all();
         $datecur = new Carbon();
-        $dateDoMin = new Carbon($data['dataMin']);
+
+        $dateDoMin = new Carbon($data['dataDoMin']);
         $dateDoMinF = $dateDoMin->format('Y-m-d');
-        $dateDoMax = new Carbon($data['dataMax']);
+
+        $dateDoMax = new Carbon($data['dataDoMax']);
         $dateDoMaxF = $dateDoMax->format('Y-m-d');
+
         $dateMin = new Carbon($data['dataMin']);
         $dateMinF = $dateMin->format('Y-m-d');
+
         $dateMax = new Carbon($data['dataMax']);
         $dateMaxF = $dateMax->format('Y-m-d');
+
         $DaysOn = $data['DaysOn'];
-        $fordays = $dateMax->diffInDays($dateMin);
-        $dateOld = $dateMin->copy()->subDays($fordays + 0); //+1
-        $dateOldF = $dateOld->setTime(23, 59, 59)->format('Y-m-d');
+
         $IDMagazynu = $data['IDMagazynu'];
 
         $a_products = [];
         for ($date = $dateDoMin->copy(); $date->lte($dateDoMax); $date->addDay()) {
 
             // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
-            $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('Y-m-d H:i:s'), $IDMagazynu);
+            $products = $this->getWarehouseData($date->setTime(00, 00, 00)->format('Y-m-d H:i:s'), $IDMagazynu);
             foreach ($products as $product) {
 
                 if (isset($a_products[$product->IDTowaru])) {
                     $a_products[$product->IDTowaru]['qtyOld']++;
                 } else {
                     $a_products[$product->IDTowaru] = [
-                        // 'IDTowaru'=> $product->IDTowaru,
                         "Nazwa" => $product->Nazwa,
                         'KodKreskowy' => $product->KodKreskowy,
                         'sku' => $product->sku,
-                        'qtyOld' => 0,
+                        'qtyOld' => 1,
                         'qtyNew' => 0,
                         'oborotOld' => 0,
                         'oborotNew' => 0,
@@ -561,7 +563,7 @@ class MagazynController extends Controller
         for ($date = $dateMin->copy(); $date->lte($dateMax); $date->addDay()) {
 
             // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
-            $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('Y-m-d H:i:s'), $IDMagazynu);
+            $products = $this->getWarehouseData($date->setTime(00, 00, 00)->format('Y-m-d H:i:s'), $IDMagazynu);
             foreach ($products as $product) {
 
                 if (isset($a_products[$product->IDTowaru])) {
@@ -572,7 +574,7 @@ class MagazynController extends Controller
                         'KodKreskowy' => $product->KodKreskowy,
                         'sku' => $product->sku,
                         'qtyOld' => 0,
-                        'qtyNew' => 0,
+                        'qtyNew' => 1,
                         'oborotOld' => 0,
                         'oborotNew' => 0,
                         'stan' => 0,
@@ -613,31 +615,30 @@ class MagazynController extends Controller
             $products[] = [
                 'IDTowaru' => $IDTowaru,
                 'Nazwa' => $product['Nazwa'],
-                'KodKreskowy' => $product['KodKreskowy'],
-                'sku' => $product['sku'],
+                'KodKreskowy' => (int)$product['KodKreskowy'],
+                'SKU' => $product['sku'],
                 'stan' => (int)$product['stan'],
-                'DaysOn' => (int)$DaysOn,
-                'tendent' => round(
+                'DniNaDostawę' => (int)$DaysOn,
+                'Trend' => round(
                     $tendent,
                     2
                 ),
-                'qtyNew' => (int)$product['qtyNew'],
-                'oborotNew' => round(
-                    $product['oborotNew'],
-                    2
-                ),
-                'selonday' => round(
+
+                'SprzedażWdniuMagazynowania' => round(
                     $selonday,
                     2
                 ),
-                'zamov' => $zamov,
-                'haveDay' => (int)$haveDay,
+                'Zamówienie' => $zamov,
+                'DniDoKońca' => (int)$haveDay,
 
+                'DaysInStockOkres1' => (int) $product['qtyOld'],
+                'DaysInStockOkres2' => (int) $product['qtyNew'],
+                'ObrótOkres1' => (int) $product['oborotOld'],
 
-                'qtyOld' => (int)$product['qtyOld'],
-                'qtyNew' => (int)$product['qtyNew'],
-                'oborotOld' => (int)$product['oborotOld'],
-                'oborotNew' => (int)$product['oborotNew'],
+                'ObrótOkres2' => round(
+                    $product['oborotNew'],
+                    2
+                ),
 
             ];
         }
