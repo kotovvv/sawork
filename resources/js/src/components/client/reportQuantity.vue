@@ -68,10 +68,10 @@
 		>
 			<v-row>
 				<v-col cols="12">
+					<!-- :headers="headers" -->
 					<v-data-table
 						:items="dataforxsls"
 						item-value="IDTowaru"
-						:headers="headers"
 						height="55vh"
 						fixed-header
 					>

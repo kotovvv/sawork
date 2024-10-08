@@ -585,8 +585,9 @@ class MagazynController extends Controller
         }
         $products = [];
         foreach ($a_products as $IDTowaru => $product) {
-            $tendent = $product['qtyOld'] > 0 ? round(($product['qtyNew'] - $product['qtyOld']) / $product['qtyOld'] * 100, 2) : 0;
+            $selondayOld = $product['qtyOld'] > 0 ? round($product['oborotOld'] / $product['qtyOld'], 2) : 0;
             $selonday = $product['qtyNew'] > 0 ? round($product['oborotNew'] / $product['qtyNew'], 2) : 0;
+            $tendent = $selondayOld > 0 && $selonday > 0 ? round(($selonday - $selondayOld) / $selondayOld * 100, 2) : 0;
             $zamov = $tendent > 0 ? round(($DaysOn * $selonday - $product['stan']) + ($DaysOn * $selonday - $product['stan']) /  $tendent, 2) : round($DaysOn * $selonday - $product['stan'], 2);
             $haveDay = $selonday > 0 ? $product['stan'] / $selonday : 0;
             $products[] = [
@@ -612,11 +613,12 @@ class MagazynController extends Controller
                 'zamov' => $zamov,
                 'haveDay' => (int)$haveDay,
 
-                // 'qtyOld' => $product['qtyOld'],
-                // 'qtyNew' => $product['qtyNew'],
-                // 'oborotOld' => $product['oborotOld'],
-                // 'oborotNew' => $product['oborotNew'],
-                // 'stan' => $product['stan'],
+
+                'qtyOld' => $product['qtyOld'],
+                'qtyNew' => $product['qtyNew'],
+                'oborotOld' => $product['oborotOld'],
+                'oborotNew' => $product['oborotNew'],
+                'stan' => $product['stan'],
             ];
         }
 
