@@ -2,7 +2,11 @@
 	<div style="min-height: 100vh">
 		<v-container fluid>
 			<v-row>
-				<v-col>
+				<v-col
+					cols="12"
+					md="2"
+					lg="2"
+				>
 					<v-select
 						label="Magazyn"
 						v-model="IDWarehouse"
@@ -10,11 +14,24 @@
 						item-title="Nazwa"
 						item-value="IDMagazynu"
 						hide-details="auto"
-						width="368"
-						max-width="400"
 					></v-select>
 				</v-col>
 				<v-col>
+					<p>Okres 1</p>
+					<datepicker
+						v-model="dateDoMin"
+						format="yyyy-MM-dd"
+						monday-first
+					></datepicker>
+
+					<datepicker
+						v-model="dateDoMax"
+						format="yyyy-MM-dd"
+						monday-first
+					></datepicker>
+				</v-col>
+				<v-col>
+					<p>Okres 2</p>
 					<datepicker
 						v-model="dateMin"
 						format="yyyy-MM-dd"
@@ -27,7 +44,11 @@
 						monday-first
 					></datepicker>
 				</v-col>
-				<v-col>
+				<v-col
+					cols="12"
+					md="2"
+					lg="2"
+				>
 					<v-text-field
 						v-model="DaysOn"
 						label="Dni na dostawę"
@@ -37,7 +58,7 @@
 				<v-col>
 					<v-btn
 						@click="getQuantity()"
-						:size="x - large"
+						size="x-large"
 						:disabled="loading"
 						>uzyskać dane</v-btn
 					>
@@ -72,6 +93,7 @@
 					<v-data-table
 						:items="dataforxsls"
 						item-value="IDTowaru"
+						:headers="headers"
 						height="55vh"
 						fixed-header
 					>
@@ -115,6 +137,12 @@ export default {
 	data() {
 		return {
 			loading: false,
+			dateDoMin: moment()
+				.subtract(1, 'months')
+				.endOf('month')
+				.subtract(moment().date(), 'days')
+				.format('YYYY-MM-DD'),
+			dateDoMax: moment().subtract(1, 'months').endOf('month').format('YYYY-MM-DD'),
 			dateMin: moment().format('YYYY-MM-01'),
 			dateMax: moment().format('YYYY-MM-DD'),
 			dataforxsls: [],
@@ -129,11 +157,14 @@ export default {
 				{ title: 'Stan', key: 'stan', align: 'end' },
 				{ title: 'Dni na dostawę', key: 'DaysOn', align: 'end' },
 				{ title: 'Trend w %', key: 'tendent', align: 'end' },
-				{ title: 'Days in stock', key: 'qtyNew', align: 'end' },
 				{ title: 'Liczba sprzedaży w okresie', key: 'oborotNew', align: 'end' },
 				{ title: 'Sprzedaż w dniu magazynowania', key: 'selonday', align: 'end' },
 				{ title: 'Zamówienie', key: 'zamov', align: 'end' },
 				{ title: 'Dni do końca', key: 'haveDay', align: 'end' },
+				{ title: 'Days in stock Okres1', key: 'qtyOld', align: 'end' },
+				{ title: 'Days in stock Okres2', key: 'qtyNew', align: 'end' },
+				{ title: 'Obrót Okres1', key: 'oborotOld', align: 'end' },
+				{ title: 'Obrót Okres2', key: 'oborotNew', align: 'end' },
 			],
 			message: '',
 			snackbar: false,
@@ -151,6 +182,8 @@ export default {
 			vm.message = '';
 			let data = {};
 			vm.dataforxsls = [];
+			data.dataDoMin = vm.dateDoMin;
+			data.dataDoMax = vm.dateDoMax;
 			data.dataMin = vm.dateMin;
 			data.dataMax = vm.dateMax;
 			data.DaysOn = vm.DaysOn;

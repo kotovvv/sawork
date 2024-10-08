@@ -127,6 +127,14 @@ export default {
 	}),
 	mounted() {
 		this.getWarehouse();
+		if (this.$attrs.user.IDRoli == 1) {
+			this.headers.push(
+				{ title: 'Wartość Początkowa', key: 'WartośćPoczątkowa', align: 'end' },
+				{ title: 'Wartość Wychodząca', key: 'WartośćWychodząca', align: 'end' },
+				{ title: 'Wartość Wchodząca', key: 'WartośćWchodząca', align: 'end' },
+				{ title: 'Wartość Koncowa', key: 'WartośćKoncowa', align: 'end' },
+			);
+		}
 	},
 	methods: {
 		colorRowItem(item) {
@@ -184,14 +192,6 @@ export default {
 						});
 						vm.selected[0] = vm.dataforxsls[0].IDTowaru;
 						vm.loading = false;
-						if (vm.$attrs.user.IDRoli == 1) {
-							vm.headers.push(
-								{ title: 'Wartość Początkowa', key: 'WartośćPoczątkowa', align: 'end' },
-								{ title: 'Wartość Wychodząca', key: 'WartośćWychodząca', align: 'end' },
-								{ title: 'Wartość Wchodząca', key: 'WartośćWchodząca', align: 'end' },
-								{ title: 'Wartość Koncowa', key: 'WartośćKoncowa', align: 'end' },
-							);
-						}
 					}
 				})
 				.catch((error) => {

@@ -381,57 +381,73 @@ class MagazynController extends Controller
     }
 
     public function getProductHistory($IDTowaru)
+
     {
+        // Получаем IDMagazynu для указанного товара
+        $IDMagazynu = DB::table('Towar')
+            ->where('IDTowaru', $IDTowaru)
+            ->value('IDMagazynu');
 
-        //$product = DB::table('towar')->where('IDTowaru', $IDTowaru)->first();
-        $warehouseId = DB::table('towar')->where('IDTowaru', $IDTowaru)->value('IDMagazynu');
+        // Инициализируем StanMagazynu
+        $StanMagazynu = 0;
 
+        // Получаем последнюю дату начала инвентаризации
+        $BODate = DB::select('SELECT dbo.MostRecentOBDateScalar(?, ?) as BODate', [now(), $IDMagazynu])[0]->BODate;
 
-        $boDateResult = DB::select('SELECT dbo.MostRecentOBDateScalar(?, ?) as BODate', [now(), $warehouseId]);
-        $boDate = $boDateResult[0]->BODate;
+        // Основной запрос для получения истории товара
+        $results = DB::select('
+            WITH CTE AS (
+            SELECT
+            ROW_NUMBER() OVER(ORDER BY Data ASC) as ID,
+            r.IDRuchuMagazynowego,
+            CASE
+            WHEN pmm.IDPrzesunieciaMM IS NULL THEN r.Data
+            ELSE DATEADD(ms, 333, r.Data)
+            END AS Data,
+            r.Uwagi,
+            r.IDRodzajuRuchuMagazynowego,
+            r.IDMagazynu,
+            r.NrDokumentu,
+            r.IDKontrahenta,
+            Kontrahent.Nazwa AS NazwaKontrahenta,
+            RodzajRuchuMagazynowego.Nazwa AS NazwaRuchu,
+            CAST(r.Operator * (
+            SELECT SUM(e_X.Ilosc)
+            FROM ElementRuchuMagazynowego e_X
+            WHERE e_X.IDTowaru = ?
+            AND e_X.IDRuchuMagazynowego = r.IDRuchuMagazynowego
+            ) as decimal(32,2)) AS ilosc,
+            CAST(0 AS decimal(18,7)) AS StanMagazynu,
+            (
+            SELECT
+                CASE
+                WHEN SUM(Ilosc) = 0 THEN 0
+                ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc)
+                END
+            FROM ElementRuchuMagazynowego
+            WHERE IDTowaru = ?
+            AND IDRuchuMagazynowego = r.IDRuchuMagazynowego
+            ) AS CenaJednostkowa
+            FROM RuchMagazynowy r
+            LEFT JOIN Kontrahent ON r.IDKontrahenta = Kontrahent.IDKontrahenta
+            INNER JOIN RodzajRuchuMagazynowego ON r.IDRodzajuRuchuMagazynowego = RodzajRuchuMagazynowego.IDRodzajuRuchuMagazynowego
+            LEFT JOIN dbo.PrzesunieciaMM pmm ON pmm.IDRuchuMagazynowegoDo = r.IDRuchuMagazynowego
+            WHERE EXISTS (
+            SELECT 1
+            FROM ElementRuchuMagazynowego
+            WHERE IDTowaru = ?
+            AND IDRuchuMagazynowego = r.IDRuchuMagazynowego
+            )
+            AND r.Data >= ?
+            AND r.Operator <> 0
+            AND r.IDRodzajuRuchuMagazynowego <> 27
+            )
+            SELECT *, ISNULL(CAST(SUM(ilosc) OVER (ORDER BY Data ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) as decimal(32,2)),0) AS StanMagazynu
+            FROM CTE
+            ORDER BY Data DESC
+        ', [$IDTowaru, $IDTowaru, $IDTowaru, $BODate]);
 
-        // Fetch movements and handle stock calculations
-        $movements = DB::table('RuchMagazynowy as r')
-            ->leftJoin('Kontrahent', 'r.IDKontrahenta', '=', 'Kontrahent.IDKontrahenta')
-            ->join('RodzajRuchuMagazynowego', 'r.IDRodzajuRuchuMagazynowego', '=', 'RodzajRuchuMagazynowego.IDRodzajuRuchuMagazynowego')
-            ->leftJoin('PrzesunieciaMM as pmm', 'pmm.IDRuchuMagazynowegoDo', '=', 'r.IDRuchuMagazynowego')
-            ->whereExists(function ($query) use ($IDTowaru) {
-                $query->select(DB::raw(1))
-                    ->from('ElementRuchuMagazynowego as e_X')
-                    ->whereColumn('e_X.IDRuchuMagazynowego', 'r.IDRuchuMagazynowego')
-                    ->where('e_X.IDTowaru', $IDTowaru);
-            })
-            ->where('r.Data', '>=', $boDate)
-            ->where('r.Operator', '<>', 0)
-            ->where('r.IDRodzajuRuchuMagazynowego', '<>', 27)
-            ->select([
-                'r.IDRuchuMagazynowego as movement_id',
-                DB::raw('CASE WHEN pmm.IDPrzesunieciaMM IS NULL THEN r.Data ELSE DATEADD(ms, 333, r.Data) END AS date'),
-                'r.Uwagi as remarks',
-                'r.IDRodzajuRuchuMagazynowego as movement_type_id',
-                'r.IDMagazynu as warehouse_id',
-                'r.NrDokumentu as document_number',
-                'r.IDKontrahenta as contractor_id',
-                'Kontrahent.Nazwa as contractor_name',
-                'RodzajRuchuMagazynowego.Nazwa as movement_name',
-                DB::raw('CAST(r.Operator * (SELECT SUM(e_X.Ilosc) FROM ElementRuchuMagazynowego e_X WHERE e_X.IDTowaru = ' . $IDTowaru . ' AND e_X.IDRuchuMagazynowego = r.IDRuchuMagazynowego) as INT) AS quantity'),
-                DB::raw('0 AS stock_level')
-                // ,
-                //                 DB::raw('ROUND((SELECT CASE WHEN SUM(Ilosc) = 0 THEN 0 ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc) END FROM ElementRuchuMagazynowego WHERE IDTowaru = ' . $IDTowaru . ' AND IDRuchuMagazynowego = r.IDRuchuMagazynowego),2) AS unit_price')
-                // ,
-                // DB::raw('ROUND((SELECT CASE WHEN SUM(Ilosc) = 0 THEN 0 ELSE SUM(CenaJednostkowa * Ilosc) / SUM(Ilosc) END FROM ElementRuchuMagazynowego WHERE IDTowaru = ' . $IDTowaru . ' AND IDRuchuMagazynowego = r.IDRuchuMagazynowego) * (r.Operator * (SELECT SUM(e_X.Ilosc) FROM ElementRuchuMagazynowego e_X WHERE e_X.IDTowaru = ' . $IDTowaru . ' AND e_X.IDRuchuMagazynowego = r.IDRuchuMagazynowego)),2) as wartosc')
-            ])
-            ->orderBy('date', 'DESC')
-            ->get();
-
-        // Updating stock levels in memory
-        $stockLevel = 0;
-        foreach ($movements as $movement) {
-            $stockLevel += $movement->quantity;
-            $movement->stock_level = $stockLevel;
-        }
-
-        return response()->json($movements);
+        return $results;
     }
 
     public function getOborot(Request $request)
@@ -504,6 +520,10 @@ class MagazynController extends Controller
     {
         $data = $request->all();
         $datecur = new Carbon();
+        $dateDoMin = new Carbon($data['dataMin']);
+        $dateDoMinF = $dateDoMin->format('Y-m-d');
+        $dateDoMax = new Carbon($data['dataMax']);
+        $dateDoMaxF = $dateDoMax->format('Y-m-d');
         $dateMin = new Carbon($data['dataMin']);
         $dateMinF = $dateMin->format('Y-m-d');
         $dateMax = new Carbon($data['dataMax']);
@@ -515,7 +535,7 @@ class MagazynController extends Controller
         $IDMagazynu = $data['IDMagazynu'];
 
         $a_products = [];
-        for ($date = $dateOld->copy(); $date->lte($dateMin); $date->addDay()) {
+        for ($date = $dateDoMin->copy(); $date->lte($dateDoMax); $date->addDay()) {
 
             // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
             $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('Y-m-d H:i:s'), $IDMagazynu);
@@ -569,7 +589,7 @@ class MagazynController extends Controller
         }
 
         $request = new \Illuminate\Http\Request();
-        $request->replace(['dataMin' => $dateOldF, 'dataMax' => $dateMinF, 'IDMagazynu' => $IDMagazynu]);
+        $request->replace(['dataMin' => $dateDoMinF, 'dataMax' => $dateDoMaxF, 'IDMagazynu' => $IDMagazynu]);
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
@@ -614,11 +634,11 @@ class MagazynController extends Controller
                 'haveDay' => (int)$haveDay,
 
 
-                'qtyOld' => $product['qtyOld'],
-                'qtyNew' => $product['qtyNew'],
-                'oborotOld' => $product['oborotOld'],
-                'oborotNew' => $product['oborotNew'],
-                'stan' => $product['stan'],
+                'qtyOld' => (int)$product['qtyOld'],
+                'qtyNew' => (int)$product['qtyNew'],
+                'oborotOld' => (int)$product['oborotOld'],
+                'oborotNew' => (int)$product['oborotNew'],
+
             ];
         }
 

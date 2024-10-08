@@ -80,15 +80,15 @@ export default {
 			dialog: false,
 			dataHistory: [],
 			headers: [
-				{ title: 'Numer Dokumentu', key: 'document_number', sortable: false },
-				{ title: 'Rodzaj Dokumentu', key: 'movement_name', sortable: false },
-				{ title: 'Ilość', key: 'stock_level', sortable: false },
+				{ title: 'Numer Dokumentu', key: 'NrDokumentu', sortable: false },
+				{ title: 'Rodzaj Dokumentu', key: 'NazwaRuchu', sortable: false },
+				{ title: 'Ilość', key: 'ilosc', sortable: false },
 				// { title: 'Cena jednostkowa', key: 'unit_price', sortable: false },
-				{ title: 'Stan magazynu', key: 'quantity', sortable: false },
+				{ title: 'Stan magazynu', key: 'StanMagazynu', sortable: false },
 				// { title: 'Wartość', key: 'wartosc', sortable: false },
-				{ title: 'Data', key: 'date', sortable: false },
-				{ title: 'Nazwa kontrahenta', key: 'contractor_name', sortable: false },
-				{ title: 'Uwagi', key: 'remarks', sortable: false },
+				{ title: 'Data', key: 'Data', sortable: false },
+				{ title: 'Nazwa kontrahenta', key: 'NazwaKontrahenta', sortable: false },
+				{ title: 'Uwagi', key: 'Uwagi', sortable: false },
 				// { title: 'Twórca dokumentu', key: 'min_value', sortable: false },
 			],
 			product: {},
@@ -115,6 +115,10 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.dataHistory = res.data;
+						vm.dataHistory.forEach((el) => {
+							el.ilosc = parseInt(el.ilosc);
+							el.StanMagazynu = parseInt(el.StanMagazynu);
+						});
 						axios
 							.get('api/getProduct/' + this.product_id)
 							.then((pr) => {

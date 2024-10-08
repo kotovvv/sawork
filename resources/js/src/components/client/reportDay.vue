@@ -134,6 +134,9 @@ export default {
 	}),
 	mounted() {
 		this.getWarehouse();
+		if (this.$attrs.user.IDRoli == 1) {
+			this.headers.push({ title: 'm3xstan', key: 'm3xstan', sortable: false });
+		}
 	},
 	methods: {
 		colorRowItem(item) {
@@ -175,9 +178,6 @@ export default {
 						});
 						vm.selected[0] = vm.dataforxsls[0][1][0].IDTowaru;
 						vm.loading = false;
-						if (vm.$attrs.user.IDRoli == 1) {
-							vm.headers.push({ title: 'm3xstan', key: 'm3xstan', sortable: false });
-						}
 					}
 				})
 				.catch((error) => {
