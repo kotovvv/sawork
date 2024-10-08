@@ -200,7 +200,6 @@ export default {
 	methods: {
 		calculateDaysBetween() {
 			this.daysBetween = moment(this.dateMax).diff(moment(this.dateMin), 'days');
-			console.log(this.daysBetween);
 		},
 		calculateDaysBetweenOld() {
 			this.daysBetweenOld = moment(this.dateDoMax).diff(moment(this.dateDoMin), 'days');
