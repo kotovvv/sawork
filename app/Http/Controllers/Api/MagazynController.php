@@ -227,6 +227,7 @@ class MagazynController extends Controller
                 't.IDTowaru',
                 DB::raw('t.Nazwa as "Nazwa"'),
                 't.KodKreskowy',
+                'GrupyTowarow.Nazwa as GrupaTowarów',
                 DB::raw('t._TowarTempString1 as sku'),
                 DB::raw('CAST(SUM(DostawyMinusWydania.Wartosc) as decimal(32,2)) as wartosc'),
                 DB::raw('CAST(ISNULL(SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2, 0) as decimal(32,2)) as m3xstan'),
@@ -306,6 +307,7 @@ class MagazynController extends Controller
                     ->groupBy('ol.IDItem');
             }, 'ol', 'ol.IDTowaru', '=', 't.IDTowaru')
             ->join('JednostkaMiary as j', 'j.IDJednostkiMiary', '=', 't.IDJednostkiMiary')
+            ->leftJoin('GrupyTowarow', 'GrupyTowarow.IDGrupyTowarow', '=', 't.IDGrupyTowarow')
             ->where('t.IDMagazynu', $idMagazynu)
             ->groupBy([
                 'DostawyMinusWydania.IdTowaru',
@@ -318,6 +320,7 @@ class MagazynController extends Controller
                 't.Archiwalny',
                 't.Usluga',
                 't._TowarTempDecimal2',
+                'GrupyTowarow.Nazwa',
                 '_TowarTempString1',
                 'j.Nazwa',
                 'ol.ProductCountWithoutWZ'
@@ -476,6 +479,7 @@ class MagazynController extends Controller
                 't.IDTowaru',
                 't.Nazwa as Towar',
                 't.KodKreskowy as KodKreskowy',
+                // 'GrupyTowarow.Nazwa as GrupaTowarów',
                 DB::raw('t._TowarTempString1 as sku'),
                 DB::raw('CAST(ISNULL(MAX(StanPoczatkowy.ilosc), 0) as INT) as StanPoczatkowy'),
                 DB::raw('CAST(ISNULL(MAX(StanPoczatkowy.wartosc), 0) as decimal(32,2)) as WartośćPoczątkowa'),
@@ -496,9 +500,8 @@ class MagazynController extends Controller
                 $join->on('el.IDRuchuMagazynowego', '=', 'RuchMagazynowy.IDRuchuMagazynowego')
                     ->whereBetween('RuchMagazynowy.Data', [$dataMin,  $dataMax]);
             })
-            ->leftJoin('GrupyTowarow', 't.IDGrupyTowarow', '=', 'GrupyTowarow.IDGrupyTowarow')
+            // ->leftJoin('GrupyTowarow', 't.IDGrupyTowarow', '=', 'GrupyTowarow.IDGrupyTowarow')
             ->where('Magazyn.IDMagazynu', $IDMagazynu)
-
             ->where('Magazyn.Hidden', 0)
             ->where(function ($query) use ($AllowDiscountDocs, $AllowZLDocs) {
                 if ($AllowDiscountDocs == 0) {
@@ -551,6 +554,7 @@ class MagazynController extends Controller
                         "Nazwa" => $product->Nazwa,
                         'KodKreskowy' => $product->KodKreskowy,
                         'sku' => $product->sku,
+                        'GrupaTowarów' => $product->GrupaTowarów,
                         'qtyOld' => 1,
                         'qtyNew' => 0,
                         'oborotOld' => 0,
@@ -573,6 +577,7 @@ class MagazynController extends Controller
                         "Nazwa" => $product->Nazwa,
                         'KodKreskowy' => $product->KodKreskowy,
                         'sku' => $product->sku,
+                        'GrupaTowarów' => $product->GrupaTowarów,
                         'qtyOld' => 0,
                         'qtyNew' => 1,
                         'oborotOld' => 0,
@@ -617,6 +622,7 @@ class MagazynController extends Controller
                 'Nazwa' => $product['Nazwa'],
                 'KodKreskowy' => (int)$product['KodKreskowy'],
                 'SKU' => $product['sku'],
+                'GrupaTowarów' => $product['GrupaTowarów'],
                 'stan' => (int)$product['stan'],
                 'DniNaDostawę' => (int)$DaysOn,
                 'Trend' => round(
@@ -634,7 +640,6 @@ class MagazynController extends Controller
                 'DaysInStockOkres1' => (int) $product['qtyOld'],
                 'DaysInStockOkres2' => (int) $product['qtyNew'],
                 'ObrótOkres1' => (int) $product['oborotOld'],
-
                 'ObrótOkres2' => round(
                     $product['oborotNew'],
                     2

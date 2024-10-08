@@ -155,6 +155,7 @@ export default {
 				{ title: 'Kod Kreskowy', key: 'KodKreskowy' },
 				{ title: 'SKU', key: 'SKU' },
 				{ title: 'Stan', key: 'stan', align: 'end' },
+				{ title: 'Grupa Towarów', key: 'GrupaTowarów', align: 'end' },
 				{ title: 'Dni na dostawę', key: 'DniNaDostawę', align: 'end' },
 				{ title: 'Trend w %', key: 'Trend', align: 'end' },
 				{ title: 'Sprzedaż w dniu magazynowania', key: 'SprzedażWdniuMagazynowania', align: 'end' },
