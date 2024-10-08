@@ -232,6 +232,10 @@ export default {
 			saveAs(
 				new Blob([wbout], { type: 'application/octet-stream' }),
 				'zamovlen_' +
+					moment(this.dateDiMin).format('YYYY-MM-DD') +
+					'_' +
+					moment(this.dateDoMax).format('YYYY-MM-DD') +
+					'_' +
 					moment(this.dateMin).format('YYYY-MM-DD') +
 					'_' +
 					moment(this.dateMax).format('YYYY-MM-DD') +
