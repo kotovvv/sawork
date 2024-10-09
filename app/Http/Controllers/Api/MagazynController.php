@@ -511,7 +511,7 @@ class MagazynController extends Controller
                     $query->where('RuchMagazynowy.IDRodzajuRuchuMagazynowego', '<>', 27);
                 }
             })
-            ->groupBy('t.IDTowaru', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy', 'GrupyTowarow.Nazwa', 'JednostkaMiary.Nazwa', 't.Uwagi')
+            ->groupBy('t.IDTowaru', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy',  'JednostkaMiary.Nazwa', 't.Uwagi')
             ->havingRaw('ISNULL(MAX(StanPoczatkowy.ilosc), 0) > 0 OR ISNULL(MAX(StanKoncowy.ilosc), 0) > 0 OR SUM(ABS(el.Ilosc * RuchMagazynowy.Operator)) > 0')
             ->get();
 
