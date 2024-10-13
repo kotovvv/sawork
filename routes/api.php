@@ -53,4 +53,6 @@ Route::middleware(['jwt.verify'])->group(function () {
 
     Route::post('getDM', [ComingController::class, 'getDM']);
     Route::post('createPZ', [ComingController::class, 'createPZ']);
+    Route::post('uploadFiles', [ComingController::class, 'uploadFiles']);
+    Route::get('getFiles/{IDRuchuMagazynowego}', [ComingController::class, 'getFiles']);
 });

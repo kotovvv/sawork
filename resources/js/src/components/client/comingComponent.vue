@@ -27,32 +27,61 @@
 					v-model="Uwaga"
 				></v-textarea>
 			</v-row>
-			<v-row v-else>
-				<v-col>
-					<v-card>
-						<v-tabs
-							v-model="tab"
-							bg-color="primary"
-						>
-							<v-tab value="doc">Documents</v-tab>
-							<v-tab value="photo">Photo</v-tab>
-							<v-card-text>
-								<v-tabs-window v-model="tab">
-									<v-tabs-window-item value="doc">
-										<div> Documents </div>
-									</v-tabs-window-item>
-									<v-tabs-window-item value="photo">
-										<div>Photo</div>
-									</v-tabs-window-item>
-								</v-tabs-window>
-							</v-card-text>
-						</v-tabs>
-					</v-card>
-				</v-col>
+			<template v-else>
+				<v-card>
+					<v-tabs
+						v-model="tab"
+						bg-color="primary"
+					>
+						<v-tab value="doc"> Documents </v-tab>
+						<v-tab value="photo"> Photo </v-tab>
+					</v-tabs>
+					<v-tabs-window
+						v-model="tab"
+						style="height: 80vh"
+						class="mt-3"
+					>
+						<v-tabs-window-item value="doc">
+							<v-row>
+								<v-file-input
+									class="v-col-md-3 v-col-sm-12"
+									clearable
+									v-model="files"
+									label="Files input"
+									multiple
+								></v-file-input>
+								<v-btn
+									class="mt-4"
+									size="x-large"
+									@click="uploadFiles"
+									>Save</v-btn
+								>
+							</v-row>
+							<v-row>
+								<v-col>
+									<v-btn @click="getFiles">get files</v-btn>
+									<v-list>
+										<v-list-item-group>
+											<v-list-item
+												v-for="file in docFiles"
+												:key="file.id"
+											>
+											</v-list-item>
+										</v-list-item-group>
+									</v-list>
+								</v-col>
+							</v-row>
+						</v-tabs-window-item>
+						<v-tabs-window-item value="photo">
+							<div> Photo </div>
+						</v-tabs-window-item>
+					</v-tabs-window>
+				</v-card>
+
 				<v-col cols="12">
 					<v-btn @click="showProducts">Show products</v-btn>
 				</v-col>
-			</v-row>
+			</template>
 		</v-container>
 		<v-container fluid>
 			<v-row>
@@ -105,10 +134,11 @@ export default {
 
 	components: { ComingTable },
 	data: () => ({
-		tab: 'doc',
+		tab: null,
 		Uwaga: '',
 		loading: false,
-
+		files: null,
+		docFiles: [],
 		IDWarehouse: null,
 		warehouses: [],
 		selectedItem: null,
@@ -117,6 +147,45 @@ export default {
 		this.getWarehouse();
 	},
 	methods: {
+		uploadFiles() {
+			const vm = this;
+			let formData = new FormData();
+			if (vm.files && vm.files.length) {
+				for (let i = 0; i < vm.files.length; i++) {
+					formData.append('files[]', vm.files[i]);
+				}
+			}
+			formData.append('IDRuchuMagazynowego', vm.selectedItem.IDRuchuMagazynowego);
+			axios
+				.post('/api/uploadFiles', formData, {
+					headers: {
+						'Content-Type': 'multipart/form-data',
+					},
+				})
+				.then((res) => {
+					if (res.status == 200) {
+						console.log(res.data);
+					}
+				})
+				.catch((error) => console.log(error));
+		},
+		getFiles() {
+			const vm = this;
+			axios
+				.get('/api/getFiles/' + vm.selectedItem.IDRuchuMagazynowego)
+				// .get('/api/getFiles', {
+				// 	params: {
+				// 		IDRuchuMagazynowego: vm.selectedItem.IDRuchuMagazynowego,
+				// 	},
+				// })
+				.then((res) => {
+					if (res.status == 200) {
+						vm.docFiles = res.data.files;
+					}
+				})
+				.catch((error) => console.log(error));
+		},
+		showProducts() {},
 		createPZ() {
 			const vm = this;
 			let data = {};

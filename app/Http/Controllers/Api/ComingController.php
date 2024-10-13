@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ComingController extends Controller
 {
@@ -98,5 +99,61 @@ class ComingController extends Controller
         ];
         DB::table('dbo.DocumentRelations')->insert($rel);
         return response($createPZ['NrDokumentu'] . ' Został już utworzony', 200);
+    }
+
+
+    public function getFiles(Request $request, $IDRuchuMagazynowego)
+    {
+        $data = $request->all();
+
+        // Define the path to retrieve the files
+        $path =  $IDRuchuMagazynowego . '/doc';
+
+        // Get all files from the directory
+        $files = Storage::disk('local')->allFiles($path);
+
+
+        // Check if files exist
+        if (empty($files)) {
+            return response()->json(['message' => 'No files found'], 404);
+        }
+
+        // Prepare file URLs
+        $fileUrls = [];
+        foreach ($files as $file) {
+            $fileUrls[] = Storage::disk('local')->url($file);
+        }
+
+        return response()->json(['message' => 'Files retrieved successfully', 'files' => $fileUrls], 200);
+    }
+
+    public function uploadFiles(Request $request)
+    {
+        $request->validate([
+            'files.*' => 'required|file',
+            'IDRuchuMagazynowego' => 'required|integer'
+        ]);
+
+        $files = $request->file('files');
+        $IDRuchuMagazynowego = $request->input('IDRuchuMagazynowego');
+
+        // Define the path to save the files
+        $path =  $IDRuchuMagazynowego . '/doc';
+
+        $uploadedFiles = [];
+
+        foreach ($files as $file) {
+            // Store each file
+            $filePath = Storage::disk('local')->putFileAs($path, $file, $file->getClientOriginalName());
+
+            // Check if the file was successfully stored
+            if ($filePath) {
+                $uploadedFiles[] = $filePath;
+            } else {
+                return response()->json(['message' => 'File upload failed'], 500);
+            }
+        }
+
+        return response()->json(['message' => 'Files uploaded successfully', 'paths' => $uploadedFiles], 200);
     }
 }
