@@ -20,11 +20,11 @@ class JWTMiddleware
             // Сохраняем пользователя в запросе, чтобы получить его в контроллерах
             $request->user = $user;
         } catch (TokenExpiredException $e) {
-            return response()->json(['error' => 'Token wygasł'], 401);
+            return response()->json(['error' => 'Token wygasł'], 401)->header('Refresh', '1;url=' . $request->fullUrl());
         } catch (TokenInvalidException $e) {
-            return response()->json(['error' => 'Token jest nieprawidłowy'], 401);
+            return response()->json(['error' => 'Token jest nieprawidłowy'], 401)->header('Refresh', '1;url=' . $request->fullUrl());
         } catch (JWTException $e) {
-            return response()->json(['error' => 'Token nie został dostarczony'], 401);
+            return response()->json(['error' => 'Token nie został dostarczony'], 401)->header('Refresh', '1;url=' . $request->fullUrl());
         }
 
         return $next($request);

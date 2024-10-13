@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\AuthUserController;
 use App\Http\Controllers\Api\LogController;
 use App\Http\Controllers\Api\ComingController;
+use App\Http\Controllers\Api\FileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -53,6 +54,7 @@ Route::middleware(['jwt.verify'])->group(function () {
 
     Route::post('getDM', [ComingController::class, 'getDM']);
     Route::post('createPZ', [ComingController::class, 'createPZ']);
-    Route::post('uploadFiles', [ComingController::class, 'uploadFiles']);
-    Route::get('getFiles/{IDRuchuMagazynowego}', [ComingController::class, 'getFiles']);
+    Route::post('uploadFiles', [FileController::class, 'uploadFiles']);
+    Route::get('getFiles/{IDRuchuMagazynowego}', [FileController::class, 'getFiles']);
+    Route::get('files/{filename}', [FileController::class, 'getFile']);
 });
