@@ -10,27 +10,25 @@ class FileController extends Controller
 {
     public function downloadFile(Request $request, $filename)
     {
-
-        dd(storage_path($filename));
         // Check if the file exists in the storage
-        if (!Storage::disk('local')->exists($filename)) {
+        if (!Storage::disk('public')->exists($filename)) {
             return response()->json(['error' => 'File not found.'], 404);
         }
 
         // Serve the file
-        return Storage::disk('local')->download($filename);
+        return Storage::disk('public')->download($filename);
     }
 
     public function getFile($filename)
     {
         dd($filename);
         // Check if the file exists in the storage
-        if (!Storage::disk('local')->exists($filename)) {
+        if (!Storage::disk('public')->exists($filename)) {
             return response()->json(['error' => 'File not found.'], 404);
         }
 
         // Serve the file
-        return Storage::disk('local')->download($filename);
+        return Storage::disk('public')->download($filename);
     }
 
     public function getFiles(Request $request, $IDRuchuMagazynowego)
@@ -41,7 +39,7 @@ class FileController extends Controller
         $path =  $IDRuchuMagazynowego . '/doc/';
 
         // Get all files from the directory
-        $files = Storage::disk('local')->allFiles($path);
+        $files = Storage::disk('public')->allFiles($path);
 
 
         // Check if files exist
@@ -54,7 +52,7 @@ class FileController extends Controller
         foreach ($files as $file) {
             $fileUrls[] = [
                 'name' => basename($file),
-                'url' => Storage::disk('local')->url($file)
+                'url' => Storage::disk('public')->url($file)
             ];
         }
 
@@ -80,17 +78,23 @@ class FileController extends Controller
             // Store each file
             $filename = $file->getClientOriginalName(); // Retrieve the original filename
 
-            $filePath = Storage::disk('local')->put($path . $filename, file_get_contents($file));
-            // $filePath = $file->storeAs($path, $file->getClientOriginalName(), 'public');
+            $filePath = Storage::disk('public')->putFileAs($path, $file, $filename);
+
+            // Get the file URL
+            $fileUrl = Storage::disk('public')->url($filePath);
 
             // Check if the file was successfully stored
             if ($filePath) {
-                $uploadedFiles[] = $filePath;
+                // Add file name and URL to the uploaded files array
+                $uploadedFiles[] = [
+                    'name' => $filename,
+                    'url' => $fileUrl
+                ];
             } else {
                 return response()->json(['message' => 'File upload failed'], 500);
             }
         }
 
-        return response()->json(['message' => 'Files uploaded successfully', 'paths' => $uploadedFiles], 200);
+        return response()->json(['message' => 'Files uploaded successfully', 'files' => $uploadedFiles], 200);
     }
 }

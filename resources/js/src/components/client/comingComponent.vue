@@ -59,17 +59,18 @@
 							</v-row>
 							<v-row>
 								<v-col>
-									<v-btn @click="getFiles">get files</v-btn>
+									<!-- <v-btn @click="getFiles">get files</v-btn> -->
 									<v-list>
 										<v-list-item-group>
 											<v-list-item
 												v-for="file in docFiles"
 												:key="file.name"
 											>
-												<v-btn @click="downloadFile(file.url, file.name)">{{
-													file.name
-												}}</v-btn>
-												<!-- <a :href="'api/files' + file.url">{{ file.name }}</a> -->
+												<v-list-item-action>
+													<v-btn @click="downloadFile(file.url, file.name)">
+														{{ file.name }}<v-icon>mdi-download</v-icon>
+													</v-btn>
+												</v-list-item-action>
 											</v-list-item>
 										</v-list-item-group>
 									</v-list>
@@ -149,16 +150,15 @@ export default {
 	}),
 	mounted() {
 		this.getWarehouse();
+		this.getFiles();
 	},
 	methods: {
 		downloadFile(url, name) {
 			axios
-				.get('/api/downloadFile' + url, {
+				.get(url, {
 					responseType: 'blob',
 				})
 				.then((res) => {
-					console.log(res.data);
-					return;
 					const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
 					const link = document.createElement('a');
 					link.href = blobUrl;
@@ -168,7 +168,6 @@ export default {
 					document.body.removeChild(link);
 				})
 				.catch((error) => console.log(error));
-			console.log(url);
 		},
 		uploadFiles() {
 			const vm = this;
@@ -187,13 +186,20 @@ export default {
 				})
 				.then((res) => {
 					if (res.status == 200) {
-						console.log(res.data);
+						const a_files = res.data.files;
+						if (a_files.length > 0) {
+							a_files.forEach((file) => {
+								vm.docFiles.unshift(file);
+							});
+						}
+						vm.files = null;
 					}
 				})
 				.catch((error) => console.log(error));
 		},
 		getFiles() {
 			const vm = this;
+			vm.docFiles = [];
 			axios
 				.get('/api/getFiles/' + vm.selectedItem.IDRuchuMagazynowego)
 				// .get('/api/getFiles', {
