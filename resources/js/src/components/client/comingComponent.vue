@@ -64,8 +64,12 @@
 										<v-list-item-group>
 											<v-list-item
 												v-for="file in docFiles"
-												:key="file.id"
+												:key="file.name"
 											>
+												<v-btn @click="downloadFile(file.url, file.name)">{{
+													file.name
+												}}</v-btn>
+												<!-- <a :href="'api/files' + file.url">{{ file.name }}</a> -->
 											</v-list-item>
 										</v-list-item-group>
 									</v-list>
@@ -147,6 +151,25 @@ export default {
 		this.getWarehouse();
 	},
 	methods: {
+		downloadFile(url, name) {
+			axios
+				.get('/api/downloadFile' + url, {
+					responseType: 'blob',
+				})
+				.then((res) => {
+					console.log(res.data);
+					return;
+					const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
+					const link = document.createElement('a');
+					link.href = blobUrl;
+					link.setAttribute('download', name);
+					document.body.appendChild(link);
+					link.click();
+					document.body.removeChild(link);
+				})
+				.catch((error) => console.log(error));
+			console.log(url);
+		},
 		uploadFiles() {
 			const vm = this;
 			let formData = new FormData();

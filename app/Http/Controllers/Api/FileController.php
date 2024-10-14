@@ -8,22 +8,37 @@ use Illuminate\Support\Facades\Storage;
 
 class FileController extends Controller
 {
-    public function getFile($filename)
+    public function downloadFile(Request $request, $filename)
     {
+
+        dd(storage_path($filename));
         // Check if the file exists in the storage
-        if (!Storage::disk('public')->exists($filename)) {
+        if (!Storage::disk('local')->exists($filename)) {
             return response()->json(['error' => 'File not found.'], 404);
         }
 
         // Serve the file
-        return Storage::disk('public')->download($filename);
+        return Storage::disk('local')->download($filename);
     }
+
+    public function getFile($filename)
+    {
+        dd($filename);
+        // Check if the file exists in the storage
+        if (!Storage::disk('local')->exists($filename)) {
+            return response()->json(['error' => 'File not found.'], 404);
+        }
+
+        // Serve the file
+        return Storage::disk('local')->download($filename);
+    }
+
     public function getFiles(Request $request, $IDRuchuMagazynowego)
     {
         $data = $request->all();
 
         // Define the path to retrieve the files
-        $path =  $IDRuchuMagazynowego . '/doc';
+        $path =  $IDRuchuMagazynowego . '/doc/';
 
         // Get all files from the directory
         $files = Storage::disk('local')->allFiles($path);
@@ -37,7 +52,10 @@ class FileController extends Controller
         // Prepare file URLs
         $fileUrls = [];
         foreach ($files as $file) {
-            $fileUrls[] = Storage::disk('local')->url($file);
+            $fileUrls[] = [
+                'name' => basename($file),
+                'url' => Storage::disk('local')->url($file)
+            ];
         }
 
         return response()->json(['message' => 'Files retrieved successfully', 'files' => $fileUrls], 200);
@@ -54,13 +72,16 @@ class FileController extends Controller
         $IDRuchuMagazynowego = $request->input('IDRuchuMagazynowego');
 
         // Define the path to save the files
-        $path =  $IDRuchuMagazynowego . '/doc';
+        $path =  $IDRuchuMagazynowego . '/doc/';
 
         $uploadedFiles = [];
 
         foreach ($files as $file) {
             // Store each file
-            $filePath = Storage::disk('local')->putFileAs($path, $file, $file->getClientOriginalName());
+            $filename = $file->getClientOriginalName(); // Retrieve the original filename
+
+            $filePath = Storage::disk('local')->put($path . $filename, file_get_contents($file));
+            // $filePath = $file->storeAs($path, $file->getClientOriginalName(), 'public');
 
             // Check if the file was successfully stored
             if ($filePath) {
