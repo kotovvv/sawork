@@ -57,9 +57,8 @@
 									>Save</v-btn
 								>
 							</v-row>
-							<v-row>
+							<v-row v-if="docFiles.length">
 								<v-col>
-									<!-- <v-btn @click="getFiles">get files</v-btn> -->
 									<v-list>
 										<v-list-item-group>
 											<v-list-item
@@ -199,6 +198,7 @@ export default {
 		},
 		getFiles() {
 			const vm = this;
+			if (!vm.selectedItem) return;
 			vm.docFiles = [];
 			axios
 				.get('/api/getFiles/' + vm.selectedItem.IDRuchuMagazynowego)
@@ -233,6 +233,7 @@ export default {
 
 		handleItemSelected(item) {
 			this.selectedItem = item;
+			this.getFiles();
 		},
 		getWarehouse() {
 			const vm = this;
