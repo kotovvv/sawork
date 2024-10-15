@@ -72,18 +72,18 @@
 										<img
 											:src="result.data"
 											alt="Captured Photo"
-											style="width: 100%; max-width: 600px"
+											style="width: 100%; max-width: 200px"
 										/>
 										<v-btn
 											icon="mdi-delete"
 											@click="delPic(index)"
 										></v-btn>
 									</div>
-									<div v-else-if="result.type === 'qrCode'">
+									<!-- <div v-else-if="result.type === 'qrCode'">
 										<p>{{ result.data }}</p>
-									</div>
+									</div> -->
 								</div>
-								<v-btn @click="uploadFiles('doc', results)">Save Snapshots</v-btn>
+								<v-btn @click="uploadSnapshots">Save Snapshots</v-btn>
 								<div v-if="message">{{ message }}</div>
 							</div>
 							<v-row v-if="docFiles.length">
@@ -216,35 +216,35 @@ export default {
 			results.value.push(data);
 		};
 
-		const uploadFiles = (folder, snapshots) => {
-			const vm = this;
-			let formData = new FormData();
-			if (snapshots && snapshots.length) {
-				for (let i = 0; i < snapshots.length; i++) {
-					formData.append('snapshots[]', snapshots[i]);
-				}
-			}
-			formData.append('IDRuchuMagazynowego', vm.selectedItem.IDRuchuMagazynowego);
-			formData.append('dir', folder);
-			axios
-				.post('/api/uploadFiles', formData, {
-					headers: {
-						'Content-Type': 'multipart/form-data',
-					},
-				})
-				.then((res) => {
-					if (res.status == 200) {
-						const a_files = res.data.files;
-						if (a_files.length > 0) {
-							a_files.forEach((file) => {
-								vm.docFiles.unshift(file);
-							});
-						}
-						vm.files = null;
-					}
-				})
-				.catch((error) => console.log(error));
-		};
+		// const uploadFiles = (folder, snapshots) => {
+		// 	const vm = this;
+		// 	let formData = new FormData();
+		// 	if (snapshots && snapshots.length) {
+		// 		for (let i = 0; i < snapshots.length; i++) {
+		// 			formData.append('snapshots[]', snapshots[i]);
+		// 		}
+		// 	}
+		// 	formData.append('IDRuchuMagazynowego', vm.selectedItem.IDRuchuMagazynowego);
+		// 	formData.append('dir', folder);
+		// 	axios
+		// 		.post('/api/uploadFiles', formData, {
+		// 			headers: {
+		// 				'Content-Type': 'multipart/form-data',
+		// 			},
+		// 		})
+		// 		.then((res) => {
+		// 			if (res.status == 200) {
+		// 				const a_files = res.data.files;
+		// 				if (a_files.length > 0) {
+		// 					a_files.forEach((file) => {
+		// 						vm.docFiles.unshift(file);
+		// 					});
+		// 				}
+		// 				vm.files = null;
+		// 			}
+		// 		})
+		// 		.catch((error) => console.log(error));
+		// };
 
 		return {
 			showModal,
@@ -253,7 +253,7 @@ export default {
 			openModal,
 			closeModal,
 			handleResult,
-			uploadFiles,
+			// uploadFiles,
 		};
 	},
 	mounted() {
@@ -261,6 +261,12 @@ export default {
 		this.getFiles();
 	},
 	methods: {
+		uploadSnapshots() {
+			this.uploadFiles('doc', this.results);
+		},
+		delPic(index) {
+			this.results.splice(index, 1);
+		},
 		downloadFile(url, name) {
 			axios
 				.get(url, {
@@ -302,6 +308,7 @@ export default {
 							});
 						}
 						vm.files = null;
+						vm.results = [];
 					}
 				})
 				.catch((error) => console.log(error));

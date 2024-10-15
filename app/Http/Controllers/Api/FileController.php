@@ -69,31 +69,56 @@ class FileController extends Controller
         ]);
 
         $files = $request->file('files');
+        $snapshots = $request->input('snapshots');
         $IDRuchuMagazynowego = $request->input('IDRuchuMagazynowego');
         $dir = $request->input('dir');
         // Define the path to save the files
         $path =  $IDRuchuMagazynowego . '/' . $dir;
 
         $uploadedFiles = [];
+        if ($snapshots) {
+            foreach ($snapshots as $snapshot) {
+                // Store each file
+                $filename = 'doc-' . time() . '.jpg'; // Generate a unique <filename></filename>
 
-
-        foreach ($files as $file) {
-            // Store each file
-            $filename = $file->getClientOriginalName(); // Retrieve the original filename
-            $filePath = Storage::disk('public')->putFileAs($path, $file, $filename);
-            // Check if the file was successfully stored
-            if ($filePath) {
-                // Get the file URL
-                $fileUrl = Storage::disk('public')->url($filePath);
-                // Add file name and URL to the uploaded files array
-                $uploadedFiles[] = [
-                    'name' => $filename,
-                    'url' => $fileUrl
-                ];
-            } else {
-                return response()->json(['message' => 'File upload failed'], 500);
+                $imageData = str_replace('data:image/jpeg;base64,', '', $snapshot);
+                $imageData = base64_decode($imageData);
+                $filePath = Storage::disk('public')->put($path . '/' . $filename, $imageData);
+                // Check if the file was successfully stored
+                if ($filePath) {
+                    // Get the file URL
+                    $fileUrl = Storage::disk('public')->url($filePath);
+                    // Add file name and URL to the uploaded files array
+                    $uploadedFiles[] = [
+                        'name' => $filename,
+                        'url' => $fileUrl
+                    ];
+                } else {
+                    return response()->json(['message' => 'File upload failed'], 500);
+                }
             }
         }
+
+        if ($files) {
+            foreach ($files as $file) {
+                // Store each file
+                $filename = $file->getClientOriginalName(); // Retrieve the original filename
+                $filePath = Storage::disk('public')->putFileAs($path, $file, $filename);
+                // Check if the file was successfully stored
+                if ($filePath) {
+                    // Get the file URL
+                    $fileUrl = Storage::disk('public')->url($filePath);
+                    // Add file name and URL to the uploaded files array
+                    $uploadedFiles[] = [
+                        'name' => $filename,
+                        'url' => $fileUrl
+                    ];
+                } else {
+                    return response()->json(['message' => 'File upload failed'], 500);
+                }
+            }
+        }
+
 
         return response()->json(['message' => 'Files uploaded successfully', 'files' => $uploadedFiles], 200);
     }

@@ -47,9 +47,9 @@ export default {
 			canvas.width = video.videoWidth;
 			canvas.height = video.videoHeight;
 			context.drawImage(video, 0, 0, canvas.width, canvas.height);
-			// const dataUrl = canvas.toDataURL('image/png');
-			const photoData = canvasElement.toDataURL('image/jpeg');
-			emit('result', { type: 'photo', data: photoData });
+			const photoData = canvas.toDataURL('image/jpeg');
+			console.log(photoData);
+			this.$emit('result', { type: 'photo', data: photoData });
 		},
 	},
 	mounted() {
