@@ -20,7 +20,7 @@ export default {
 		async startCamera() {
 			try {
 				const stream = await navigator.mediaDevices.getUserMedia({
-					video: { facingMode: { exact: 'environment' } },
+					video: true,
 				});
 				this.$refs.video.srcObject = stream;
 			} catch (error) {
