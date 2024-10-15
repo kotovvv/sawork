@@ -176,7 +176,7 @@ import { ref } from 'vue';
 import axios from 'axios';
 import Modal from '../UI/Modal.vue';
 import PhotoCapture from '../UI/PhotoCapture.vue';
-// import QrCodeScanner from '../UI/QrCodeScanner.vue';
+import QrCodeScanner from '../UI/QrCodeScanner.vue';
 import ComingTable from './coming/ComingTable.vue';
 
 export default {
@@ -186,7 +186,7 @@ export default {
 		ComingTable,
 		Modal,
 		PhotoCapture,
-		// QrCodeScanner,
+		QrCodeScanner,
 	},
 	data: () => ({
 		tab: null,
@@ -216,6 +216,36 @@ export default {
 			results.value.push(data);
 		};
 
+		const uploadFiles = (folder, snapshots) => {
+			const vm = this;
+			let formData = new FormData();
+			if (snapshots && snapshots.length) {
+				for (let i = 0; i < snapshots.length; i++) {
+					formData.append('snapshots[]', snapshots[i]);
+				}
+			}
+			formData.append('IDRuchuMagazynowego', vm.selectedItem.IDRuchuMagazynowego);
+			formData.append('dir', folder);
+			axios
+				.post('/api/uploadFiles', formData, {
+					headers: {
+						'Content-Type': 'multipart/form-data',
+					},
+				})
+				.then((res) => {
+					if (res.status == 200) {
+						const a_files = res.data.files;
+						if (a_files.length > 0) {
+							a_files.forEach((file) => {
+								vm.docFiles.unshift(file);
+							});
+						}
+						vm.files = null;
+					}
+				})
+				.catch((error) => console.log(error));
+		};
+
 		return {
 			showModal,
 			results,
@@ -223,7 +253,7 @@ export default {
 			openModal,
 			closeModal,
 			handleResult,
-			uploadFiles, // Ensure uploadFiles is available in setup
+			uploadFiles,
 		};
 	},
 	mounted() {
@@ -231,7 +261,6 @@ export default {
 		this.getFiles();
 	},
 	methods: {
-		openModal() {},
 		downloadFile(url, name) {
 			axios
 				.get(url, {
