@@ -53,7 +53,7 @@
 								<v-btn
 									class="mt-4"
 									size="x-large"
-									@click="uploadFiles"
+									@click="uploadFiles('doc')"
 									>Save</v-btn
 								>
 							</v-row>
@@ -168,7 +168,7 @@ export default {
 				})
 				.catch((error) => console.log(error));
 		},
-		uploadFiles() {
+		uploadFiles(folder) {
 			const vm = this;
 			let formData = new FormData();
 			if (vm.files && vm.files.length) {
@@ -177,6 +177,7 @@ export default {
 				}
 			}
 			formData.append('IDRuchuMagazynowego', vm.selectedItem.IDRuchuMagazynowego);
+			formData.append('dir', folder);
 			axios
 				.post('/api/uploadFiles', formData, {
 					headers: {

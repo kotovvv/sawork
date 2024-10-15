@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\File;
 
 class FileController extends Controller
 {
@@ -63,28 +64,27 @@ class FileController extends Controller
     {
         $request->validate([
             'files.*' => 'required|file',
-            'IDRuchuMagazynowego' => 'required|integer'
+            'IDRuchuMagazynowego' => 'required|integer',
+            'dir' => 'required|string|max:64'
         ]);
 
         $files = $request->file('files');
         $IDRuchuMagazynowego = $request->input('IDRuchuMagazynowego');
-
+        $dir = $request->input('dir');
         // Define the path to save the files
-        $path =  $IDRuchuMagazynowego . '/doc/';
+        $path =  $IDRuchuMagazynowego . '/' . $dir;
 
         $uploadedFiles = [];
+
 
         foreach ($files as $file) {
             // Store each file
             $filename = $file->getClientOriginalName(); // Retrieve the original filename
-
             $filePath = Storage::disk('public')->putFileAs($path, $file, $filename);
-
-            // Get the file URL
-            $fileUrl = Storage::disk('public')->url($filePath);
-
             // Check if the file was successfully stored
             if ($filePath) {
+                // Get the file URL
+                $fileUrl = Storage::disk('public')->url($filePath);
                 // Add file name and URL to the uploaded files array
                 $uploadedFiles[] = [
                     'name' => $filename,
