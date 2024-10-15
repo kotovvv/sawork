@@ -291,6 +291,11 @@ export default {
 					formData.append('snapshots[]', snapshots[i]);
 				}
 			}
+			if (vm.files && vm.files.length) {
+				for (let i = 0; i < vm.files.length; i++) {
+					formData.append('files[]', vm.files[i]);
+				}
+			}
 			formData.append('IDRuchuMagazynowego', vm.selectedItem.IDRuchuMagazynowego);
 			formData.append('dir', folder);
 			axios
