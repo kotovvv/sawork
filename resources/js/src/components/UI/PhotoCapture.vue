@@ -1,18 +1,11 @@
 <template>
 	<div>
-		<v-row class="mt-2">
-			<v-btn
-				@click="$emit('close')"
-				icon="mdi-close"
-			></v-btn>
-			<v-spacer></v-spacer>
-			<v-btn
-				@click="takePhoto"
-				icon="mdi-checkbox-blank-circle"
-				color="red"
-			>
-			</v-btn>
-		</v-row>
+		<video
+			ref="video"
+			autoplay
+			playsinline
+		></video>
+		<v-btn @click="capturePhoto">Capture Photo</v-btn>
 		<canvas
 			ref="canvas"
 			style="display: none"
@@ -21,35 +14,45 @@
 </template>
 
 <script>
-import { ref } from 'vue';
-
 export default {
 	name: 'PhotoCapture',
-	setup(_, { emit }) {
-		const canvas = ref(null);
-
-		const takePhoto = () => {
-			const videoElement = document.querySelector('#qr-reader video');
-			if (videoElement) {
-				const canvasElement = canvas.value;
-				const context = canvasElement.getContext('2d');
-				canvasElement.width = videoElement.videoWidth;
-				canvasElement.height = videoElement.videoHeight;
-				context.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
-
-				const photoData = canvasElement.toDataURL('image/jpeg');
-				emit('result', { type: 'photo', data: photoData });
+	methods: {
+		async startCamera() {
+			try {
+				const stream = await navigator.mediaDevices.getUserMedia({
+					video: { facingMode: { exact: 'environment' } },
+				});
+				this.$refs.video.srcObject = stream;
+			} catch (error) {
+				console.error('Error accessing camera:', error);
 			}
-		};
-
-		return { canvas, takePhoto };
+		},
+		capturePhoto() {
+			const video = this.$refs.video;
+			const canvas = this.$refs.canvas;
+			const context = canvas.getContext('2d');
+			canvas.width = video.videoWidth;
+			canvas.height = video.videoHeight;
+			context.drawImage(video, 0, 0, canvas.width, canvas.height);
+			const dataUrl = canvas.toDataURL('image/png');
+			console.log('Captured photo data URL:', dataUrl);
+		},
+	},
+	mounted() {
+		this.startCamera();
+	},
+	beforeDestroy() {
+		const video = this.$refs.video;
+		const stream = video.srcObject;
+		const tracks = stream.getTracks();
+		tracks.forEach((track) => track.stop());
 	},
 };
 </script>
 
 <style scoped>
-#qr-reader {
-	border: 1px solid #ccc;
-	margin: 10px 0;
+video {
+	width: 100%;
+	height: auto;
 }
 </style>

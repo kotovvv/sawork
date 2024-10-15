@@ -176,7 +176,7 @@ import { ref } from 'vue';
 import axios from 'axios';
 import Modal from '../UI/Modal.vue';
 import PhotoCapture from '../UI/PhotoCapture.vue';
-import QrCodeScanner from '../UI/QrCodeScanner.vue';
+// import QrCodeScanner from '../UI/QrCodeScanner.vue';
 import ComingTable from './coming/ComingTable.vue';
 
 export default {
@@ -186,7 +186,7 @@ export default {
 		ComingTable,
 		Modal,
 		PhotoCapture,
-		QrCodeScanner,
+		// QrCodeScanner,
 	},
 	data: () => ({
 		tab: null,
