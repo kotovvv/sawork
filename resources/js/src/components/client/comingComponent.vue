@@ -56,7 +56,36 @@
 									@click="uploadFiles('doc')"
 									>Save</v-btn
 								>
+								<v-spacer></v-spacer>
+								<v-btn
+									@click="openModal"
+									icon="mdi-camera"
+								></v-btn>
 							</v-row>
+							<div v-if="results.length">
+								<h2>Results:</h2>
+								<div
+									v-for="(result, index) in results"
+									:key="index"
+								>
+									<div v-if="result.type === 'photo'">
+										<img
+											:src="result.data"
+											alt="Captured Photo"
+											style="width: 100%; max-width: 600px"
+										/>
+										<v-btn
+											icon="mdi-delete"
+											@click="delPic(index)"
+										></v-btn>
+									</div>
+									<div v-else-if="result.type === 'qrCode'">
+										<p>{{ result.data }}</p>
+									</div>
+								</div>
+								<v-btn @click="uploadFiles('doc', results)">Save Snapshots</v-btn>
+								<div v-if="message">{{ message }}</div>
+							</div>
 							<v-row v-if="docFiles.length">
 								<v-col>
 									<v-list>
@@ -126,17 +155,39 @@
 				</v-col>
 			</v-row>
 		</v-container>
+		<Modal
+			v-if="showModal"
+			@close="closeModal"
+		>
+			<PhotoCapture
+				@result="handleResult"
+				@close="closeModal"
+			/>
+			<!-- <QrCodeScanner
+				@result="handleResult"
+				@close="closeModal"
+			/> -->
+		</Modal>
 	</div>
 </template>
 
 <script>
+import { ref } from 'vue';
 import axios from 'axios';
+import Modal from '../UI/Modal.vue';
+import PhotoCapture from '../UI/PhotoCapture.vue';
+// import QrCodeScanner from '../UI/QrCodeScanner.vue';
 import ComingTable from './coming/ComingTable.vue';
 
 export default {
 	name: 'Coming',
 
-	components: { ComingTable },
+	components: {
+		ComingTable,
+		Modal,
+		PhotoCapture,
+		// QrCodeScanner,
+	},
 	data: () => ({
 		tab: null,
 		Uwaga: '',
@@ -147,11 +198,40 @@ export default {
 		warehouses: [],
 		selectedItem: null,
 	}),
+	setup() {
+		const showModal = ref(false);
+		const results = ref([]);
+		const message = ref('');
+
+		const openModal = () => {
+			showModal.value = true;
+			message.value = '';
+		};
+
+		const closeModal = () => {
+			showModal.value = false;
+		};
+
+		const handleResult = (data) => {
+			results.value.push(data);
+		};
+
+		return {
+			showModal,
+			results,
+			message,
+			openModal,
+			closeModal,
+			handleResult,
+			uploadFiles, // Ensure uploadFiles is available in setup
+		};
+	},
 	mounted() {
 		this.getWarehouse();
 		this.getFiles();
 	},
 	methods: {
+		openModal() {},
 		downloadFile(url, name) {
 			axios
 				.get(url, {
@@ -168,12 +248,12 @@ export default {
 				})
 				.catch((error) => console.log(error));
 		},
-		uploadFiles(folder) {
+		uploadFiles(folder, snapshots) {
 			const vm = this;
 			let formData = new FormData();
-			if (vm.files && vm.files.length) {
-				for (let i = 0; i < vm.files.length; i++) {
-					formData.append('files[]', vm.files[i]);
+			if (snapshots && snapshots.length) {
+				for (let i = 0; i < snapshots.length; i++) {
+					formData.append('snapshots[]', snapshots[i]);
 				}
 			}
 			formData.append('IDRuchuMagazynowego', vm.selectedItem.IDRuchuMagazynowego);
@@ -231,7 +311,6 @@ export default {
 				})
 				.catch((error) => console.log(error));
 		},
-
 		handleItemSelected(item) {
 			this.selectedItem = item;
 			this.getFiles();
