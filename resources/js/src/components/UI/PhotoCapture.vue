@@ -19,9 +19,22 @@ export default {
 	methods: {
 		async startCamera() {
 			try {
-				const stream = await navigator.mediaDevices.getUserMedia({
-					video: true,
-				});
+				const constraints = {
+					video: {
+						facingMode: 'user', // Default to front camera
+					},
+				};
+
+				// Check if the device is a smartphone
+				const isSmartphone = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+					navigator.userAgent,
+				);
+
+				if (isSmartphone) {
+					constraints.video.facingMode = { exact: 'environment' }; // Use back camera on smartphones
+				}
+
+				const stream = await navigator.mediaDevices.getUserMedia(constraints);
 				this.$refs.video.srcObject = stream;
 			} catch (error) {
 				console.error('Error accessing camera:', error);
@@ -34,8 +47,9 @@ export default {
 			canvas.width = video.videoWidth;
 			canvas.height = video.videoHeight;
 			context.drawImage(video, 0, 0, canvas.width, canvas.height);
-			const dataUrl = canvas.toDataURL('image/png');
-			console.log('Captured photo data URL:', dataUrl);
+			// const dataUrl = canvas.toDataURL('image/png');
+			const photoData = canvasElement.toDataURL('image/jpeg');
+			emit('result', { type: 'photo', data: photoData });
 		},
 	},
 	mounted() {
