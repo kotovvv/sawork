@@ -82,6 +82,7 @@ class FileController extends Controller
                 $filename = 'doc-' . time() . '.jpg'; // Generate a unique <filename></filename>
 
                 $imageData = str_replace('data:image/jpeg;base64,', '', $snapshot);
+
                 $imageData = base64_decode($imageData);
                 $filePath = Storage::disk('public')->put($path . '/' . $filename, $imageData);
                 // Check if the file was successfully stored

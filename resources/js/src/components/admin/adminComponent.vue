@@ -89,7 +89,7 @@ export default {
 			{ text: 'Raporty', name: 'report', icon: 'mdi-file-chart' },
 			// { text: 'Test', name: 'test', icon: 'mdi-barcode-scan' },
 			{ text: 'logView', name: 'logViewer', icon: 'mdi-file-account' },
-			{ text: 'Coming', name: 'coming', icon: 'mdi-file-account' },
+			{ text: 'Coming', name: 'coming', icon: 'mdi-van-utility' },
 		],
 	}),
 	computed: {

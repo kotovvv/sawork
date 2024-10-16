@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div id="top">
 		<v-container
 			fluid
 			v-if="selectedItem"
@@ -288,7 +288,7 @@ export default {
 			let formData = new FormData();
 			if (snapshots && snapshots.length) {
 				for (let i = 0; i < snapshots.length; i++) {
-					formData.append('snapshots[]', snapshots[i]);
+					formData.append('snapshots[]', snapshots[i].data);
 				}
 			}
 			if (vm.files && vm.files.length) {
