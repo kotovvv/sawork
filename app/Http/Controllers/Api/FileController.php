@@ -74,7 +74,6 @@ class FileController extends Controller
         $dir = $request->input('dir');
         // Define the path to save the files
         $path =  $IDRuchuMagazynowego . '/' . $dir;
-
         $uploadedFiles = [];
         if ($snapshots) {
             foreach ($snapshots as $snapshot) {
@@ -88,7 +87,8 @@ class FileController extends Controller
                 // Check if the file was successfully stored
                 if ($filePath) {
                     // Get the file URL
-                    $fileUrl = Storage::disk('public')->url($filePath);
+                    $fileUrl = Storage::disk('public')->url($path . '/' . $filename);
+
                     // Add file name and URL to the uploaded files array
                     $uploadedFiles[] = [
                         'name' => $filename,
