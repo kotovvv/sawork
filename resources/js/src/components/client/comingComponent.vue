@@ -108,8 +108,8 @@
 														<v-icon>mdi-download</v-icon>
 													</v-btn>
 													<v-btn
-														icon="'mdi-delete'"
-														@click="deleteFile(file)"
+														icon="mdi-delete"
+														@click="deleteFile(file.url)"
 													></v-btn>
 												</v-list-item-action>
 											</v-list-item>
@@ -250,17 +250,16 @@ export default {
 		delPic(index) {
 			this.results.splice(index, 1);
 		},
-		deleteFile(file) {
+		deleteFile(file_url) {
 			const vm = this;
-			console.log(file);
-			return;
+
 			axios
 				.post('/api/deleteFile', {
-					file: file,
+					file_url: file_url,
 				})
 				.then((res) => {
 					if (res.status == 200) {
-						vm.docFiles = vm.docFiles.filter((f) => f.name !== file.name);
+						vm.docFiles = vm.docFiles.filter((f) => f.url !== file_url);
 					}
 				})
 				.catch((error) => console.log(error));
