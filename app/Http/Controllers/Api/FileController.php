@@ -51,9 +51,13 @@ class FileController extends Controller
         // Prepare file URLs
         $fileUrls = [];
         foreach ($files as $file) {
+            $fileType = Storage::disk('public')->mimeType($file);
+            $isImage = strpos($fileType, 'image/') === 0;
+
             $fileUrls[] = [
                 'name' => basename($file),
-                'url' => Storage::disk('public')->url($file)
+                'url' => Storage::disk('public')->url($file),
+                'is_image' => $isImage
             ];
         }
 

@@ -42,7 +42,7 @@
 						class="mt-3"
 					>
 						<v-tabs-window-item value="doc">
-							<v-row>
+							<div class="d-flex">
 								<v-file-input
 									class="v-col-md-3 v-col-sm-12"
 									clearable
@@ -61,7 +61,7 @@
 									@click="openModal"
 									icon="mdi-camera"
 								></v-btn>
-							</v-row>
+							</div>
 							<div v-if="results.length">
 								<h2>Results:</h2>
 								<div
@@ -96,7 +96,16 @@
 											>
 												<v-list-item-action>
 													<v-btn @click="downloadFile(file.url, file.name)">
-														{{ file.name }}<v-icon>mdi-download</v-icon>
+														<img
+															:src="file.url"
+															:alt="file.name"
+															style="height: 36px; width: auto"
+															v-if="file.is_image == true"
+														/>
+														<v-icon v-else>mdi-file</v-icon>
+
+														{{ file.name }}
+														<v-icon>mdi-download</v-icon>
 													</v-btn>
 												</v-list-item-action>
 											</v-list-item>
@@ -215,36 +224,6 @@ export default {
 		const handleResult = (data) => {
 			results.value.push(data);
 		};
-
-		// const uploadFiles = (folder, snapshots) => {
-		// 	const vm = this;
-		// 	let formData = new FormData();
-		// 	if (snapshots && snapshots.length) {
-		// 		for (let i = 0; i < snapshots.length; i++) {
-		// 			formData.append('snapshots[]', snapshots[i]);
-		// 		}
-		// 	}
-		// 	formData.append('IDRuchuMagazynowego', vm.selectedItem.IDRuchuMagazynowego);
-		// 	formData.append('dir', folder);
-		// 	axios
-		// 		.post('/api/uploadFiles', formData, {
-		// 			headers: {
-		// 				'Content-Type': 'multipart/form-data',
-		// 			},
-		// 		})
-		// 		.then((res) => {
-		// 			if (res.status == 200) {
-		// 				const a_files = res.data.files;
-		// 				if (a_files.length > 0) {
-		// 					a_files.forEach((file) => {
-		// 						vm.docFiles.unshift(file);
-		// 					});
-		// 				}
-		// 				vm.files = null;
-		// 			}
-		// 		})
-		// 		.catch((error) => console.log(error));
-		// };
 
 		return {
 			showModal,
