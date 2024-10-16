@@ -57,4 +57,5 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('uploadFiles', [FileController::class, 'uploadFiles']);
     Route::get('getFiles/{IDRuchuMagazynowego}/{folder_name}', [FileController::class, 'getFiles']);
     Route::get('dowloadFile/{filename}', [FileController::class, 'dowloadFile']);
+    Route::get('deleteFile/{filename}', [FileController::class, 'deleteFile']);
 });

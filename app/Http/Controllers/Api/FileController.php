@@ -9,6 +9,19 @@ use Illuminate\Http\File;
 
 class FileController extends Controller
 {
+    public function deleteFile(Request $request, $filename)
+    {
+        // Check if the file exists in the storage
+        if (!Storage::disk('public')->exists($filename)) {
+            return response()->json(['error' => 'File not found.'], 404);
+        }
+
+        // Delete the file
+        Storage::disk('public')->delete($filename);
+
+        return response()->json(['message' => 'File deleted successfully'], 200);
+    }
+
     public function downloadFile(Request $request, $filename)
     {
         // Check if the file exists in the storage

@@ -107,6 +107,10 @@
 														{{ file.name }}
 														<v-icon>mdi-download</v-icon>
 													</v-btn>
+													<v-btn
+														icon="'mdi-delete'"
+														@click="deleteFile(file)"
+													></v-btn>
 												</v-list-item-action>
 											</v-list-item>
 										</v-list-item-group>
@@ -245,6 +249,21 @@ export default {
 		},
 		delPic(index) {
 			this.results.splice(index, 1);
+		},
+		deleteFile(file) {
+			const vm = this;
+			console.log(file);
+			return;
+			axios
+				.post('/api/deleteFile', {
+					file: file,
+				})
+				.then((res) => {
+					if (res.status == 200) {
+						vm.docFiles = vm.docFiles.filter((f) => f.name !== file.name);
+					}
+				})
+				.catch((error) => console.log(error));
 		},
 		downloadFile(url, name) {
 			axios
