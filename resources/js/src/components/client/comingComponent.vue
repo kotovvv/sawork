@@ -38,7 +38,7 @@
 					</v-tabs>
 					<v-tabs-window
 						v-model="tab"
-						style="height: 80vh"
+						style="height: 80vh; overflow-y: auto"
 						class="mt-3"
 					>
 						<v-tabs-window-item value="doc">
@@ -237,7 +237,7 @@ export default {
 	},
 	mounted() {
 		this.getWarehouse();
-		this.getFiles();
+		this.getFiles('doc');
 	},
 	methods: {
 		uploadSnapshots() {
@@ -297,12 +297,12 @@ export default {
 				})
 				.catch((error) => console.log(error));
 		},
-		getFiles() {
+		getFiles(folder_name) {
 			const vm = this;
 			if (!vm.selectedItem) return;
 			vm.docFiles = [];
 			axios
-				.get('/api/getFiles/' + vm.selectedItem.IDRuchuMagazynowego)
+				.get('/api/getFiles/' + vm.selectedItem.IDRuchuMagazynowego + '/' + folder_name)
 				// .get('/api/getFiles', {
 				// 	params: {
 				// 		IDRuchuMagazynowego: vm.selectedItem.IDRuchuMagazynowego,
@@ -333,7 +333,7 @@ export default {
 		},
 		handleItemSelected(item) {
 			this.selectedItem = item;
-			this.getFiles();
+			this.getFiles('doc');
 		},
 		getWarehouse() {
 			const vm = this;

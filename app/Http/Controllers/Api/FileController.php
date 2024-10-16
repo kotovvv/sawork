@@ -32,12 +32,12 @@ class FileController extends Controller
         return Storage::disk('public')->download($filename);
     }
 
-    public function getFiles(Request $request, $IDRuchuMagazynowego)
+    public function getFiles(Request $request, $IDRuchuMagazynowego, $folder_name)
     {
         $data = $request->all();
 
         // Define the path to retrieve the files
-        $path =  $IDRuchuMagazynowego . '/doc/';
+        $path =  $IDRuchuMagazynowego . '/' . $folder_name . '/';
 
         // Get all files from the directory
         $files = Storage::disk('public')->allFiles($path);
