@@ -19,7 +19,7 @@
 					@click="selectedItem = null"
 				></v-btn>
 			</v-row>
-			<v-row v-if="selectedItem.ID1 == 0">
+			<v-row v-if="selectedItem.ID1 == null">
 				<v-btn @click="createPZ">create PZ</v-btn>
 
 				<v-textarea
@@ -317,7 +317,7 @@ export default {
 		},
 		getFiles(folder_name) {
 			const vm = this;
-			if (!vm.selectedItem) return;
+			if (!vm.selectedItem || vm.selectedItem.ID1 == null) return;
 			vm.docFiles = [];
 			axios
 				.get('/api/getFiles/' + vm.selectedItem.IDRuchuMagazynowego + '/' + folder_name)
