@@ -27,6 +27,7 @@
 							label="odzyskiwanie"
 							v-model="searchInTable"
 							clearable
+							hide-details
 						></v-text-field>
 					</v-col>
 					<v-btn
@@ -52,8 +53,8 @@ export default {
 			{ title: 'Data', key: 'Data' },
 			{ title: 'Nr Dokumentu', key: 'NrDokumentu', sortable: false },
 			{ title: 'Wartość Dokumentu', key: 'WartoscDokumentu', sortable: false, align: 'end' },
-			{ title: 'Stan', key: 'status', sortable: false },
-			{ title: 'Uwaga' },
+			{ title: 'Status', key: 'status', nowrap: true },
+			{ title: 'Uwaga', nowrap: true },
 		],
 		searchInTable: '',
 		loading: false,

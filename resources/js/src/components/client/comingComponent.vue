@@ -1,24 +1,26 @@
 <template>
 	<div id="top">
-		<v-container
+		<div
 			fluid
 			v-if="selectedItem"
 			:id="selectedItem.IDRuchuMagazynowego"
 			style="min-height: 100vh"
 			:key="selectedItem"
 		>
-			<v-row>
-				<v-col>
-					<h3
-						>{{ selectedItem.NrDokumentu }} <small>{{ selectedItem.Data.substring(0, 10) }}</small></h3
-					>
-				</v-col>
-				<v-spacer></v-spacer>
-				<v-btn
-					icon="mdi-close"
-					@click="selectedItem = null"
-				></v-btn>
-			</v-row>
+			<v-col>
+				<v-row>
+					<v-col>
+						<h3
+							>{{ selectedItem.NrDokumentu }} <small>{{ selectedItem.Data.substring(0, 10) }}</small></h3
+						>
+					</v-col>
+					<v-spacer></v-spacer>
+					<v-btn
+						icon="mdi-close"
+						@click="selectedItem = null"
+					></v-btn>
+				</v-row>
+			</v-col>
 			<v-row v-if="selectedItem.ID1 == null">
 				<v-btn @click="createPZ">create PZ</v-btn>
 
@@ -42,26 +44,34 @@
 						class="mt-3"
 					>
 						<v-tabs-window-item value="doc">
-							<div class="d-flex">
-								<v-file-input
-									class="v-col-md-3 v-col-sm-12"
-									clearable
-									v-model="files"
-									label="Files input"
-									multiple
-								></v-file-input>
-								<v-btn
-									class="mt-4"
-									size="x-large"
-									@click="uploadFiles('doc')"
-									>Save</v-btn
+							<v-row>
+								<v-col
+									cols="12"
+									md="3"
+									lg="2"
 								>
-								<v-spacer></v-spacer>
-								<v-btn
-									@click="openModal"
-									icon="mdi-camera"
-								></v-btn>
-							</div>
+									<v-file-input
+										clearable
+										v-model="files"
+										label="Files input"
+										multiple
+										hide-details
+									></v-file-input
+								></v-col>
+								<v-col cols="6">
+									<v-btn
+										size="x-large"
+										@click="uploadFiles('doc')"
+										>Save</v-btn
+									></v-col
+								>
+								<v-col cols="4">
+									<v-btn
+										@click="openModal"
+										icon="mdi-camera"
+									></v-btn
+								></v-col>
+							</v-row>
 							<div v-if="results.length">
 								<h2>Results:</h2>
 								<div
@@ -94,12 +104,12 @@
 												v-for="file in docFiles"
 												:key="file.name"
 											>
-												<v-list-item-action>
+												<v-list-item-action class="overflow-auto">
 													<v-btn @click="downloadFile(file.url, file.name)">
 														<img
 															:src="file.url"
 															:alt="file.name"
-															style="height: 36px; width: auto"
+															style="height: 38px; width: auto"
 															v-if="file.is_image == true"
 														/>
 														<v-icon v-else>mdi-file</v-icon>
@@ -110,6 +120,7 @@
 													<v-btn
 														icon="mdi-delete"
 														@click="deleteFile(file.url)"
+														class="ml-2"
 													></v-btn>
 												</v-list-item-action>
 											</v-list-item>
@@ -128,7 +139,7 @@
 					<v-btn @click="showProducts">Show products</v-btn>
 				</v-col>
 			</template>
-		</v-container>
+		</div>
 		<v-container fluid>
 			<v-row>
 				<v-col>
@@ -138,7 +149,7 @@
 						:items="warehouses"
 						item-title="Nazwa"
 						item-value="IDMagazynu"
-						hide-details="auto"
+						hide-details
 						width="368"
 						max-width="400"
 					></v-select>
@@ -146,7 +157,10 @@
 			</v-row>
 		</v-container>
 
-		<v-container fluid>
+		<v-container
+			fluid
+			v-if="active"
+		>
 			<v-row>
 				<v-col cols="12">
 					<v-progress-linear
