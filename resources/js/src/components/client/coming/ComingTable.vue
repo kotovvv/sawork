@@ -17,6 +17,24 @@
 			fixed-header
 			return-object
 		>
+			<template v-slot:item.NrDokumentu="{ item }">
+				<span
+					v-if="item.doc"
+					class="doc"
+					>{{ item.doc }}</span
+				>
+				<span
+					v-if="item.photo"
+					class="photo"
+					>{{ item.photo }}<b v-if="item.brk">!</b></span
+				>
+				<span
+					v-if="item.ready"
+					class="percent"
+					>{{ item.ready }}%</span
+				>
+				{{ item.NrDokumentu }}
+			</template>
 			<template
 				v-slot:top="{}"
 				v-if="docsDM.length"
@@ -102,3 +120,27 @@ export default {
 	},
 };
 </script>
+
+<style scoped>
+.doc {
+	background-color: orange;
+	color: rgb(0, 0, 0);
+	padding: 0 2px;
+	border-radius: 0;
+	font-size: 0.7rem;
+}
+.photo {
+	background-color: #bbdefb;
+	color: rgb(0, 0, 0);
+	padding: 0 2px;
+	border-radius: 8px;
+	font-size: 0.7rem;
+}
+.percent {
+	background-color: #ffcc80;
+	color: rgb(0, 0, 0);
+	padding: 0 2px;
+	border-radius: 8px;
+	font-size: 0.7rem;
+}
+</style>

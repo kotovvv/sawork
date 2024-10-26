@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\File;
+use Illuminate\Support\Facades\DB;
 
 class FileController extends Controller
 {
@@ -25,6 +26,22 @@ class FileController extends Controller
 
         // Delete the file
         Storage::disk('public')->delete($file);
+        // Extract the path from the file URL
+        $path = preg_replace('/^.*\/storage\//', '', dirname($file) . '/');
+
+        // Count the number of files in the folder
+        $fileCount = count(Storage::disk('public')->files($path));
+
+        // Update the InfoComming table based on the directory
+        if (strpos($path, 'doc') !== false) {
+            DB::table('InfoComming')
+                ->where('IDRuchuMagazynowego', explode('/', $path)[0])
+                ->update(['doc' => $fileCount]);
+        } elseif (strpos($path, 'photo') !== false) {
+            DB::table('InfoComming')
+                ->where('IDRuchuMagazynowego', explode('/', $path)[0])
+                ->update(['photo' => $fileCount]);
+        }
 
         return response()->json(['message' => 'File deleted successfully'], 200);
     }
@@ -43,7 +60,7 @@ class FileController extends Controller
 
     public function getFile($filename)
     {
-        dd($filename);
+
         // Check if the file exists in the storage
         if (!Storage::disk('public')->exists($filename)) {
             return response()->json(['error' => 'File not found.'], 404);
@@ -145,6 +162,23 @@ class FileController extends Controller
             }
         }
 
+        // Count the number of files in the folder
+        $fileCount = count(Storage::disk('public')->files($path));
+
+        // Update the InfoComming table based on the directory
+        if ($dir === 'doc') {
+            DB::table('InfoComming')
+                ->updateOrInsert(
+                    ['IDRuchuMagazynowego' => $IDRuchuMagazynowego],
+                    ['doc' => $fileCount]
+                );
+        } elseif ($dir === 'photo') {
+            DB::table('InfoComming')
+                ->updateOrInsert(
+                    ['IDRuchuMagazynowego' => $IDRuchuMagazynowego],
+                    ['photo' => $fileCount]
+                );
+        }
 
         return response()->json(['message' => 'Files uploaded successfully', 'files' => $uploadedFiles], 200);
     }

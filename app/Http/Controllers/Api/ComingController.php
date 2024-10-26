@@ -21,16 +21,18 @@ class ComingController extends Controller
                 'rm1.WartoscDokumentu',
                 'DocumentRelations.ID1',
                 'rm2.Data as RelatedData',
-                'rm2.NrDokumentu as RelatedNrDokumentu'
-                // DB::raw('COALESCE(DocumentRelations.ID1, 0) as ID1'),
-                // DB::raw('COALESCE(rm2.Data, "") as RelatedData'),
-                // DB::raw('COALESCE(rm2.NrDokumentu, "") as RelatedNrDokumentu')
+                'rm2.NrDokumentu as RelatedNrDokumentu',
+                'InfoComming.doc',
+                'InfoComming.photo',
+                'InfoComming.brk',
+                'InfoComming.ready'
             )
             ->leftJoin('dbo.DocumentRelations', function ($join) {
                 $join->on('DocumentRelations.ID2', '=', 'rm1.IDRuchuMagazynowego')
                     ->on('DocumentRelations.IDType2', '=', DB::raw('200'));
             })
             ->leftJoin('dbo.RuchMagazynowy as rm2', 'rm2.IDRuchuMagazynowego', '=', 'DocumentRelations.ID1')
+            ->leftJoin('dbo.InfoComming', 'InfoComming.IDRuchuMagazynowego', '=', 'rm1.IDRuchuMagazynowego')
             ->where('rm1.IDRodzajuRuchuMagazynowego', 200)
             ->where('rm1.IDMagazynu', $IDMagazynu)
             ->orderBy('rm1.Data', 'DESC')
@@ -99,5 +101,30 @@ class ComingController extends Controller
         ];
         DB::table('dbo.DocumentRelations')->insert($rel);
         return response($createPZ['NrDokumentu'] . ' Został już utworzony', 200);
+    }
+
+    public function setBrack(Request $request)
+    {
+        $data = $request->all();
+        $IDRuchuMagazynowego = $data['IDRuchuMagazynowego'];
+        $brk = $data['brk'];
+        DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->update(['brk' => $brk]);
+        return response('Zaktualizowano', 200);
+    }
+
+    public function get_PZproducts(Request $request)
+    {
+        $data = $request->all();
+        $IDRuchuMagazynowego = $data['IDRuchuMagazynowego'];
+        return DB::table('dbo.ElementRuchuMagazynowego as erm')
+            ->select(
+                'erm.IDElementuRuchuMagazynowego',
+                'erm.IDRuchuMagazynowego',
+                'erm.IDTowaru',
+                'erm.Ilosc',
+                't.Nazwa',
+                't.KodKreskowy as KodKreskowy',
+                DB::raw('t._TowarTempString1 as sku'),
+            )->leftJoin('dbo.Towar as t', 't.IDTowaru', '=', 'erm.IDTowaru')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->get();
     }
 }
