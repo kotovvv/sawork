@@ -39,11 +39,11 @@ class LocationController extends Controller
             FROM TowarLocationTipTab tlt
             JOIN Towar t ON tlt.IDTowaru = t.IDTowaru
             CROSS APPLY (
-                SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, '$dataMin', '$dataMax', $idMag) AS SumIlosci
+            SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, ?, ?, ?) AS SumIlosci
             ) AS s
         ";
 
-        DB::unprepared($updateSql);
+        DB::unprepared($updateSql, [$dataMin, $dataMax, $idMag]);
 
         // Создание временной таблицы и выполнение SELECT-запроса
         $results = DB::table('TowarLocationTipTab')

@@ -501,6 +501,8 @@ export default {
 		},
 		handleItemSelected(item) {
 			this.selectedItem = item;
+			this.tab = 'doc';
+			this.products = [];
 			this.getFiles('doc');
 			this.getFiles('photo');
 		},

@@ -70,6 +70,17 @@ class ComingController extends Controller
         DB::table('dbo.RuchMagazynowy')->insert($createPZ);
         $pzID = DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $createPZ['NrDokumentu'])->first()->IDRuchuMagazynowego;
 
+        $LocationCode = 'prihod' . date('dmy');
+        $location = [
+            'LocationCode' => $LocationCode,
+            'IDMagazynu' => $IDMagazynu,
+            'IsArchive' => 1,
+            'Priority' => 100000,
+            'TypLocations' => 3
+        ];
+        DB::table('dbo.WarehouseLocations')->insert($location);
+        $IDWarehouseLocation = DB::table('dbo.WarehouseLocations')->where('LocationCode', $LocationCode)->where('IDMagazynu',$IDMagazynu)->first()->IDWarehouseLocation;
+
         // products
         $products = DB::table('dbo.ElementRuchuMagazynowego')->select('Ilosc', 'Uwagi', 'CenaJednostkowa', 'IDTowaru', 'Uzytkownik')->where('IDRuchuMagazynowego', $data['IDRuchuMagazynowego'])->get();
         $productsArray = [];
@@ -81,6 +92,7 @@ class ComingController extends Controller
                 'CenaJednostkowa' => $product->CenaJednostkowa,
                 'IDTowaru' => $product->IDTowaru,
                 'Uzytkownik' => $product->Uzytkownik
+                'IDWarehouseLocation' => $IDWarehouseLocation
             ];
         }
 
