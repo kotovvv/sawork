@@ -79,7 +79,7 @@ class ComingController extends Controller
             'TypLocations' => 3
         ];
         DB::table('dbo.WarehouseLocations')->insert($location);
-        $IDWarehouseLocation = DB::table('dbo.WarehouseLocations')->where('LocationCode', $LocationCode)->where('IDMagazynu',$IDMagazynu)->first()->IDWarehouseLocation;
+        $IDWarehouseLocation = DB::table('dbo.WarehouseLocations')->where('LocationCode', $LocationCode)->where('IDMagazynu', $IDMagazynu)->first()->IDWarehouseLocation;
 
         // products
         $products = DB::table('dbo.ElementRuchuMagazynowego')->select('Ilosc', 'Uwagi', 'CenaJednostkowa', 'IDTowaru', 'Uzytkownik')->where('IDRuchuMagazynowego', $data['IDRuchuMagazynowego'])->get();
@@ -91,7 +91,7 @@ class ComingController extends Controller
                 'Uwagi' => $product->Uwagi,
                 'CenaJednostkowa' => $product->CenaJednostkowa,
                 'IDTowaru' => $product->IDTowaru,
-                'Uzytkownik' => $product->Uzytkownik
+                'Uzytkownik' => $product->Uzytkownik,
                 'IDWarehouseLocation' => $IDWarehouseLocation
             ];
         }
