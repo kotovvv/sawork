@@ -50,6 +50,7 @@ class ComingController extends Controller
         $createPZ = [];
         $createPZ['IDMagazynu'] = $IDMagazynu;
         $createPZ['Data'] = date('Y/m/d H:i:s');
+        $createPZ['Data'] = date('d.m.Y H:i:s');
         $createPZ['IDRodzajuRuchuMagazynowego'] = 1;
         $createPZ['IDUzytkownika'] = 1;
         $createPZ['Operator'] = 1;
@@ -112,7 +113,8 @@ class ComingController extends Controller
             'IDType2' => 200
         ];
         DB::table('dbo.DocumentRelations')->insert($rel);
-        return response($createPZ['NrDokumentu'] . ' Został już utworzony', 200);
+        $res = ['message' => 'Utworzono ' . $createPZ['NrDokumentu'], 'ID1' => $pzID, 'NrDokumentu'=>$createPZ['NrDokumentu']];
+        return response($res, 200);
     }
 
     public function setBrack(Request $request)
@@ -133,10 +135,24 @@ class ComingController extends Controller
                 'erm.IDElementuRuchuMagazynowego',
                 'erm.IDRuchuMagazynowego',
                 'erm.IDTowaru',
-                'erm.Ilosc',
+                DB::raw('CAST(erm.Ilosc as INT) as Ilosc'),
+
+                'erm.IDWarehouseLocation',
+                'wl.LocationCode',
                 't.Nazwa',
                 't.KodKreskowy as KodKreskowy',
                 DB::raw('t._TowarTempString1 as sku'),
-            )->leftJoin('dbo.Towar as t', 't.IDTowaru', '=', 'erm.IDTowaru')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->get();
+            )->leftJoin('dbo.Towar as t', 't.IDTowaru', '=', 'erm.IDTowaru')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
+            ->leftJoin('dbo.WarehouseLocations as wl', 'wl.IDWarehouseLocation', '=', 'erm.IDWarehouseLocation')
+            ->get();
+    }
+
+    public function setReady(Request $request)
+    {
+        $data = $request->all();
+        $IDRuchuMagazynowego = $data['IDRuchuMagazynowego'];
+        $ready = $data['ready'];
+        DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->update(['ready' => $ready]);
+        return response('Zaktualizowano', 200);
     }
 }

@@ -1,5 +1,22 @@
 <template>
 	<div id="top">
+		<v-snackbar
+			v-model="snackbar"
+			timeout="6000"
+			location="top"
+		>
+			{{ message }}
+
+			<template v-slot:actions>
+				<v-btn
+					color="pink"
+					variant="text"
+					@click="snackbar = false"
+				>
+					Close
+				</v-btn>
+			</template>
+		</v-snackbar>
 		<div
 			fluid
 			v-if="selectedItem"
@@ -10,7 +27,10 @@
 			<v-row>
 				<v-col>
 					<h3
-						>{{ selectedItem.NrDokumentu }} <small>{{ selectedItem.Data.substring(0, 10) }}</small></h3
+						>{{ selectedItem.NrDokumentu }} <small>{{ selectedItem.Data.substring(0, 10) }}</small>
+						<span v-if="selectedItem.RelatedNrDokumentu">
+							-> {{ selectedItem.RelatedNrDokumentu }}</span
+						></h3
 					>
 				</v-col>
 				<v-spacer></v-spacer>
@@ -227,7 +247,10 @@
 						<v-tabs-window-item value="products">
 							<v-row>
 								<v-col>
-									<v-data-table :items="products"></v-data-table>
+									<v-data-table
+										:items="products"
+										:headers="headers_products"
+									></v-data-table>
 								</v-col>
 							</v-row>
 						</v-tabs-window-item>
@@ -321,6 +344,15 @@ export default {
 		warehouses: [],
 		selectedItem: null,
 		products: [],
+		snackbar: false,
+		message: '',
+		headers_products: [
+			{ title: 'Nazwa', key: 'Nazwa' },
+			{ title: 'KodKreskowy', key: 'KodKreskowy' },
+			{ title: 'SKU', key: 'sku' },
+			{ title: 'Ilosc', key: 'Ilosc' },
+			{ title: 'LocationCode', key: 'LocationCode' },
+		],
 	}),
 	setup() {
 		const showModal = ref(false);
@@ -494,6 +526,10 @@ export default {
 				.post('/api/createPZ', data)
 				.then((res) => {
 					if (res.status == 200) {
+						vm.selectedItem.ID1 = res.data.ID1;
+						vm.selectedItem.RelatedNrDokumentu = res.data.NrDokumentu;
+						vm.snackbar = true;
+						vm.message = res.data.message;
 						console.log(res.data);
 					}
 				})
