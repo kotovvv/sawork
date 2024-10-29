@@ -118,9 +118,9 @@ class FileController extends Controller
         $path =  $IDRuchuMagazynowego . '/' . $dir;
         $uploadedFiles = [];
         if ($snapshots) {
-            foreach ($snapshots as $snapshot) {
+            foreach ($snapshots as $key => $snapshot) {
                 // Store each file
-                $filename = 'doc-' . time() . '.jpg'; // Generate a unique <filename></filename>
+                $filename = 'doc-' . date("Y_m_d_H_i_s") . '_' . $key . '.jpg'; // Generate a unique <filename></filename>
 
                 $imageData = str_replace('data:image/jpeg;base64,', '', $snapshot);
 

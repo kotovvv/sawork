@@ -50,7 +50,7 @@ class ComingController extends Controller
         $createPZ = [];
         $createPZ['IDMagazynu'] = $IDMagazynu;
         $createPZ['Data'] = date('Y/m/d H:i:s');
-        $createPZ['Data'] = date('d.m.Y H:i:s');
+
         $createPZ['IDRodzajuRuchuMagazynowego'] = 1;
         $createPZ['IDUzytkownika'] = 1;
         $createPZ['Operator'] = 1;
@@ -84,9 +84,9 @@ class ComingController extends Controller
 
         // products
         $products = DB::table('dbo.ElementRuchuMagazynowego')->select('Ilosc', 'Uwagi', 'CenaJednostkowa', 'IDTowaru', 'Uzytkownik')->where('IDRuchuMagazynowego', $data['IDRuchuMagazynowego'])->get();
-        $productsArray = [];
+        //$productsArray = [];
         foreach ($products as $product) {
-            $productsArray[] = [
+            $productsArray = [
                 'IDRuchuMagazynowego' => $pzID,
                 'Ilosc' => $product->Ilosc,
                 'Uwagi' => $product->Uwagi,
@@ -95,14 +95,17 @@ class ComingController extends Controller
                 'Uzytkownik' => $product->Uzytkownik,
                 'IDWarehouseLocation' => $IDWarehouseLocation
             ];
+            DB::table('dbo.ElementRuchuMagazynowego')->insert($productsArray);
+
         }
 
         // Ensure the parent record exists before inserting child records
-        if (DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $pzID)->exists()) {
-            DB::table('dbo.ElementRuchuMagazynowego')->insert($productsArray);
-        } else {
-            return response('Parent record does not exist', 400);
-        }
+        // if ($pzID) {
+        //     DB::table('dbo.ElementRuchuMagazynowego')->insert($productsArray);
+
+        // } else {
+        //     return response('Parent record does not exist', 400);
+        // }
 
 
         // relation
@@ -113,7 +116,7 @@ class ComingController extends Controller
             'IDType2' => 200
         ];
         DB::table('dbo.DocumentRelations')->insert($rel);
-        $res = ['message' => 'Utworzono ' . $createPZ['NrDokumentu'], 'ID1' => $pzID, 'NrDokumentu'=>$createPZ['NrDokumentu']];
+        $res = ['message' => 'Utworzono ' . $createPZ['NrDokumentu'], 'ID1' => $pzID, 'NrDokumentu' => $createPZ['NrDokumentu']];
         return response($res, 200);
     }
 
