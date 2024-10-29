@@ -15,8 +15,8 @@ class LocationController extends Controller
         $data = $request->all();
         $stor = $data['stor'];
         $days = $data['days'];
-        $dataMin = Carbon::now()->subDays($days)->format('Ymd');
-        $dataMax = Carbon::now()->format('Ymd');
+        $dataMin = Carbon::now()->subDays($days)->format('Y/m/d H:i:s');
+        $dataMax = Carbon::now()->format('Y/m/d H:i:s');
         $idMag = $stor;
         $sql = '';
 
