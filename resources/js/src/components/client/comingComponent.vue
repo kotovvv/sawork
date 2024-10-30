@@ -352,6 +352,7 @@ export default {
 			{ title: 'SKU', key: 'sku' },
 			{ title: 'Ilosc', key: 'Ilosc' },
 			{ title: 'LocationCode', key: 'LocationCode' },
+			{ title: 'inLocation', key: 'inLocation' },
 		],
 	}),
 	setup() {
@@ -391,6 +392,7 @@ export default {
 			const vm = this;
 			let data = {};
 			data.IDRuchuMagazynowego = vm.selectedItem.ID1;
+			data.IDDM = vm.selectedItem.IDRuchuMagazynowego;
 			axios
 				.post('/api/get_PZproducts', data)
 				.then((res) => {

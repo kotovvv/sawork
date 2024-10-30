@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
 
 class ComingController extends Controller
 {
@@ -96,7 +97,6 @@ class ComingController extends Controller
                 'IDWarehouseLocation' => $IDWarehouseLocation
             ];
             DB::table('dbo.ElementRuchuMagazynowego')->insert($productsArray);
-
         }
 
         // Ensure the parent record exists before inserting child records
@@ -133,7 +133,8 @@ class ComingController extends Controller
     {
         $data = $request->all();
         $IDRuchuMagazynowego = $data['IDRuchuMagazynowego'];
-        return DB::table('dbo.ElementRuchuMagazynowego as erm')
+        $IDDM = $data['IDDM'];
+        $products =  DB::table('dbo.ElementRuchuMagazynowego as erm')
             ->select(
                 'erm.IDElementuRuchuMagazynowego',
                 'erm.IDRuchuMagazynowego',
@@ -148,14 +149,44 @@ class ComingController extends Controller
             )->leftJoin('dbo.Towar as t', 't.IDTowaru', '=', 'erm.IDTowaru')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
             ->leftJoin('dbo.WarehouseLocations as wl', 'wl.IDWarehouseLocation', '=', 'erm.IDWarehouseLocation')
             ->get();
+
+        $sumAllProducts = 0;
+        foreach ($products as $product) {
+            $sumAllProducts += $product->Ilosc;
+        }
+
+        $IDWarehouseLocation = $products[0]->IDWarehouseLocation;
+        $inLocation = $this->setReady($IDWarehouseLocation, $sumAllProducts, $IDDM);
+        foreach ($products as $key => $product) {
+            if (isset($inLocation[$product->KodKreskowy])) {
+                $products[$key]->inLocation = $inLocation[$product->KodKreskowy];
+            } else {
+                $products[$key]->inLocation = 0;
+            }
+        }
+        return $products;
     }
 
-    public function setReady(Request $request)
+    public function setReady($IDWarehouseLocation, $sumAllProducts, $IDRuchuMagazynowego)
     {
-        $data = $request->all();
-        $IDRuchuMagazynowego = $data['IDRuchuMagazynowego'];
-        $ready = $data['ready'];
-        DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->update(['ready' => $ready]);
-        return response('Zaktualizowano', 200);
+        $date = Carbon::now()->format('d/m/Y H:i:s');
+        $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
+        $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
+        $result = DB::select($query, [$IDWarehouseLocation, $date, $param]);
+        $resultString = $result[0]->Stock ?? null;
+        $array = [];
+        $sum = 0;
+        if ($resultString) {
+            $pairs = explode(', ', $resultString);
+            foreach ($pairs as $pair) {
+                list($key, $value) = explode(': ', $pair);
+                $array[$key] = (int) $value;
+                $sum += (int) $value;
+            }
+        }
+
+        $percentageMoved = ($sumAllProducts - $sum) * 100 / $sumAllProducts;
+        DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->updateOrInsert(['ready' => $percentageMoved, 'IDRuchuMagazynowego' => $IDRuchuMagazynowego]);
+        return $array;
     }
 }
