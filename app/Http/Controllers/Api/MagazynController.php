@@ -20,9 +20,17 @@ class MagazynController extends Controller
     {
         $data = $request->all();
         $IDMagazyn = $data['IDMagazynu'];
-        $eMailAddress = $data['eMailAddress'];
+        if (isset($data['eMailAddress'])) {
+            $eMailAddress = $data['eMailAddress'];
+        } else {
+            $eMailAddress = '';
+        }
+        if (isset($data['cod'])) {
+            $cod = $data['cod'];
+        } else {
+            $cod = '';
+        }
         $IDKontrahenta = $data['IDKontrahenta'];
-        $cod = $data['cod'];
         $IDLokalizaciiZwrot = $data['IDLokalizaciiZwrot'];
         if (isset($data['id'])) {
             $res = DB::table('dbo.EMailMagazyn')
