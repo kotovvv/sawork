@@ -156,7 +156,7 @@ class ComingController extends Controller
         }
 
         $IDWarehouseLocation = $products[0]->IDWarehouseLocation;
-        $inLocation = $this->getProductsInLocation($IDWarehouseLocation, $sumAllProducts, $IDDM);
+        $inLocation = $this->getProductsInLocation($IDWarehouseLocation);
         $sum = 0;
         foreach ($products as $key => $product) {
             if (isset($inLocation[$product->KodKreskowy])) {
@@ -171,7 +171,7 @@ class ComingController extends Controller
         return $products;
     }
 
-    private function getProductsInLocation($IDWarehouseLocation, $sumAllProducts, $IDRuchuMagazynowego)
+    private function getProductsInLocation($IDWarehouseLocation)
     {
         $date = Carbon::now()->format('Y/m/d H:i:s');
         $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
