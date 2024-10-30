@@ -169,7 +169,7 @@ class ComingController extends Controller
 
     public function setReady($IDWarehouseLocation, $sumAllProducts, $IDRuchuMagazynowego)
     {
-        $date = Carbon::now()->format('d/m/Y H:i:s');
+        $date = Carbon::now()->format('Y/m/d H:i:s');
         $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
         $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
         $result = DB::select($query, [$IDWarehouseLocation, $date, $param]);
@@ -186,7 +186,12 @@ class ComingController extends Controller
         }
 
         $percentageMoved = ($sumAllProducts - $sum) * 100 / $sumAllProducts;
-        DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->updateOrInsert(['ready' => $percentageMoved, 'IDRuchuMagazynowego' => $IDRuchuMagazynowego]);
+        if (DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->exists()) {
+            DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->update(['ready' => $percentageMoved, 'IDRuchuMagazynowego' => $IDRuchuMagazynowego]);
+        } else {
+            DB::table('dbo.InfoComming')->insert(['ready' => $percentageMoved, 'IDRuchuMagazynowego' => $IDRuchuMagazynowego]);
+        }
+
         return $array;
     }
 }
