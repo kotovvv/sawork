@@ -250,6 +250,11 @@
 									<v-data-table
 										:items="products"
 										:headers="headers_products"
+										:row-props="
+											(row) => ({
+												class: row.item.inLocation > 0 ? 'red-lighten-5' : 'green-lighten-5',
+											})
+										"
 									></v-data-table>
 								</v-col>
 							</v-row>
@@ -352,7 +357,10 @@ export default {
 			{ title: 'SKU', key: 'sku' },
 			{ title: 'Ilosc', key: 'Ilosc' },
 			{ title: 'LocationCode', key: 'LocationCode' },
-			{ title: 'inLocation', key: 'inLocation' },
+			{
+				title: 'W trakcie',
+				key: 'inLocation',
+			},
 		],
 	}),
 	setup() {
@@ -563,3 +571,12 @@ export default {
 	},
 };
 </script>
+
+<style>
+.red-lighten-5 {
+	background-color: #feebee;
+}
+.green-lighten-5 {
+	background-color: #e8f5e9;
+}
+</style>

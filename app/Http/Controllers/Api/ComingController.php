@@ -156,18 +156,22 @@ class ComingController extends Controller
         }
 
         $IDWarehouseLocation = $products[0]->IDWarehouseLocation;
-        $inLocation = $this->setReady($IDWarehouseLocation, $sumAllProducts, $IDDM);
+        $inLocation = $this->getProductsInLocation($IDWarehouseLocation, $sumAllProducts, $IDDM);
+        $sum = 0;
         foreach ($products as $key => $product) {
             if (isset($inLocation[$product->KodKreskowy])) {
                 $products[$key]->inLocation = $inLocation[$product->KodKreskowy];
+                $sum += $inLocation[$product->KodKreskowy];
             } else {
                 $products[$key]->inLocation = 0;
             }
         }
+        $ready = ($sumAllProducts - $sum) * 100 / $sumAllProducts;
+        $this->setReady($IDDM, $ready);
         return $products;
     }
 
-    public function setReady($IDWarehouseLocation, $sumAllProducts, $IDRuchuMagazynowego)
+    private function getProductsInLocation($IDWarehouseLocation, $sumAllProducts, $IDRuchuMagazynowego)
     {
         $date = Carbon::now()->format('Y/m/d H:i:s');
         $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
@@ -175,23 +179,23 @@ class ComingController extends Controller
         $result = DB::select($query, [$IDWarehouseLocation, $date, $param]);
         $resultString = $result[0]->Stock ?? null;
         $array = [];
-        $sum = 0;
+
         if ($resultString) {
             $pairs = explode(', ', $resultString);
             foreach ($pairs as $pair) {
                 list($key, $value) = explode(': ', $pair);
                 $array[$key] = (int) $value;
-                $sum += (int) $value;
             }
         }
-
-        $percentageMoved = ($sumAllProducts - $sum) * 100 / $sumAllProducts;
-        if (DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->exists()) {
-            DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->update(['ready' => $percentageMoved, 'IDRuchuMagazynowego' => $IDRuchuMagazynowego]);
-        } else {
-            DB::table('dbo.InfoComming')->insert(['ready' => $percentageMoved, 'IDRuchuMagazynowego' => $IDRuchuMagazynowego]);
-        }
-
         return $array;
+    }
+
+    private function setReady($IDRuchuMagazynowego, $ready)
+    {
+        if (DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->exists()) {
+            DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->update(['ready' => $ready, 'IDRuchuMagazynowego' => $IDRuchuMagazynowego]);
+        } else {
+            DB::table('dbo.InfoComming')->insert(['ready' => $ready, 'IDRuchuMagazynowego' => $IDRuchuMagazynowego]);
+        }
     }
 }
