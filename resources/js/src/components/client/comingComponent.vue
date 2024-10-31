@@ -67,7 +67,12 @@
 										:headers="headers_products"
 										:row-props="
 											(row) => ({
-												class: row.item.inLocation > 0 ? 'red-lighten-5' : 'green-lighten-5',
+												class:
+													row.item.inLocation > 0
+														? 'red-lighten-5'
+														: row.item.noBaselink == '1'
+														? 'yellow-lighten-5'
+														: 'green-lighten-5',
 											})
 										"
 									></v-data-table>
@@ -430,6 +435,17 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.products = res.data;
+						if (
+							vm.products.filter((p) => {
+								return p.noBaselink == '1';
+							}).length > 0
+						) {
+							if (vm.headers_products.filter((h) => h.key === 'noBaselink').length === 0) {
+								vm.headers_products.unshift({ title: 'Not in baselinker', key: 'noBaselink' });
+							}
+						} else {
+							vm.headers_products = vm.headers_products.filter((h) => h.key !== 'noBaselink');
+						}
 					}
 				})
 				.catch((error) => console.log(error));
@@ -605,5 +621,8 @@ export default {
 }
 .green-lighten-5 {
 	background-color: #e8f5e9;
+}
+.yellow-lighten-5 {
+	background-color: #fff9c4;
 }
 </style>

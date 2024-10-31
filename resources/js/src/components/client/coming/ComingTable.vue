@@ -111,6 +111,7 @@ export default {
 					if (res.status == 200) {
 						vm.docsDM = res.data;
 						vm.docsDM.forEach((el) => {
+							el.Data = el.Data.substr(0, 16);
 							el.brk = el.brk == '1' ? true : false;
 							el.WartoscDokumentu = parseFloat(el.WartoscDokumentu).toFixed(2);
 							if (el.ID1) {
