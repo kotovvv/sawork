@@ -21,7 +21,7 @@
 				<v-icon
 					size="small"
 					icon="mdi-eye-check-outline"
-					v-if="item.noBaselink"
+					v-if="item.noBaselink > 0"
 				></v-icon>
 				<span
 					v-if="item.doc"
