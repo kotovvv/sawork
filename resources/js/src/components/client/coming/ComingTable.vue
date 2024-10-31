@@ -26,8 +26,14 @@
 				<span
 					v-if="item.photo"
 					class="photo"
-					>{{ item.photo }}<b v-if="item.brk">!</b></span
-				>
+					>{{ item.photo }}
+				</span>
+				<v-icon
+					color="yellow"
+					size="small"
+					icon="mdi-alert"
+					v-if="item.brk"
+				></v-icon>
 				<span
 					v-if="item.ready"
 					class="percent"
@@ -72,7 +78,7 @@ export default {
 			{ title: 'Nr Dokumentu', key: 'NrDokumentu', sortable: false },
 			{ title: 'Wartość Dokumentu', key: 'WartoscDokumentu', sortable: false, align: 'end' },
 			{ title: 'Status', key: 'status', nowrap: true },
-			{ title: 'Uwaga', nowrap: true },
+			{ title: 'Uwaga', key: 'Uwagi', nowrap: true, sorted: false },
 		],
 		searchInTable: '',
 		loading: false,
@@ -105,6 +111,7 @@ export default {
 					if (res.status == 200) {
 						vm.docsDM = res.data;
 						vm.docsDM.forEach((el) => {
+							el.brk = el.brk == '1' ? true : false;
 							el.WartoscDokumentu = parseFloat(el.WartoscDokumentu).toFixed(2);
 							if (el.ID1) {
 								el.status = 'Towary przyjęte na magazyn (' + el.RelatedNrDokumentu + ')';

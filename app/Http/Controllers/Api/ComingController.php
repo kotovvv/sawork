@@ -23,6 +23,7 @@ class ComingController extends Controller
                 'DocumentRelations.ID1',
                 'rm2.Data as RelatedData',
                 'rm2.NrDokumentu as RelatedNrDokumentu',
+                'rm2.Uwagi',
                 'InfoComming.doc',
                 'InfoComming.photo',
                 'InfoComming.brk',
@@ -57,7 +58,7 @@ class ComingController extends Controller
         $createPZ['Operator'] = 1;
         $createPZ['IDCompany'] = 1;
         $createPZ['IDKontrahenta'] = $IDKontrahenta;
-        $createPZ['Uwagi'] = $data['Uwagi'];
+        // $createPZ['Uwagi'] = $data['Uwagi'];
 
 
 
@@ -129,6 +130,32 @@ class ComingController extends Controller
         return response('Zaktualizowano', 200);
     }
 
+    public function getSetPZ(Request $request)
+    {
+        $data = $request->all();
+        $IDRuchuMagazynowego = $data['IDRuchuMagazynowego'];
+
+        if (isset($data['Uwagi'])) {
+            DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->update(['Uwagi' => $data['Uwagi']]);
+        }
+        $docPZ = DB::table('dbo.RuchMagazynowy')->select('IDRuchuMagazynowego', 'Data', 'Uwagi', 'IDMagazynu', 'NrDokumentu', 'WartoscDokumentu')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->first();
+        return response()->json($docPZ, 200);
+    }
+
+    public function setPhoto(Request $request)
+    {
+        $data = $request->all();
+        $IDRuchuMagazynowego = $data['IDRuchuMagazynowego'];
+        $photo = $data['photo'];
+        $photo = str_replace('data:image/jpeg;base64,', '', $photo);
+        $photo = str_replace(' ', '+', $photo);
+        $photo = base64_decode($photo);
+        $path = 'public/photos/' . $IDRuchuMagazynowego . '.jpg';
+        Storage::put($path, $photo);
+        DB::table('dbo.InfoComming')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->update(['photo' => $path]);
+        return response('Zaktualizowano', 200);
+    }
+
     public function get_PZproducts(Request $request)
     {
         $data = $request->all();
@@ -174,6 +201,7 @@ class ComingController extends Controller
     private function getProductsInLocation($IDWarehouseLocation)
     {
         $date = Carbon::now()->format('Y/m/d H:i:s');
+
         $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
         $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
         $result = DB::select($query, [$IDWarehouseLocation, $date, $param]);

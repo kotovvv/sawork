@@ -5,6 +5,7 @@ namespace App\Console;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use App\Http\Controllers\Api\SendPDF;
+use Illuminate\Support\Facades\Artisan;
 
 class Kernel extends ConsoleKernel
 {
@@ -21,6 +22,11 @@ class Kernel extends ConsoleKernel
             $sendPDFController = new SendPDF();
             $sendPDFController->index();
         })->dailyAt('23:50'); // Adjust this as per your requirement (e.g., hourly(), weekly(), etc.)
+        $schedule->call(
+            function () {
+                Artisan::call('app:check-no-baselink');
+            }
+        )->hourly();
     }
 
     /**

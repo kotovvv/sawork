@@ -42,11 +42,6 @@
 
 			<v-row v-if="selectedItem.ID1 == null">
 				<v-btn @click="createPZ">create PZ</v-btn>
-
-				<v-textarea
-					label="Uwaga"
-					v-model="Uwaga"
-				></v-textarea>
 			</v-row>
 			<template v-else>
 				<v-card>
@@ -55,15 +50,30 @@
 						bg-color="primary"
 						@update:modelValue="tabChanged"
 					>
+						<v-tab value="products"> Products </v-tab>
 						<v-tab value="doc"> Documents </v-tab>
 						<v-tab value="photo"> Photo </v-tab>
-						<v-tab value="products"> Products </v-tab>
 					</v-tabs>
 					<v-tabs-window
 						v-model="tab"
 						style="height: 80vh; overflow-y: auto"
 						class="mt-3"
 					>
+						<v-tabs-window-item value="products">
+							<v-row>
+								<v-col>
+									<v-data-table
+										:items="products"
+										:headers="headers_products"
+										:row-props="
+											(row) => ({
+												class: row.item.inLocation > 0 ? 'red-lighten-5' : 'green-lighten-5',
+											})
+										"
+									></v-data-table>
+								</v-col>
+							</v-row>
+						</v-tabs-window-item>
 						<v-tabs-window-item value="doc">
 							<v-row>
 								<v-col
@@ -77,15 +87,11 @@
 										label="Files input"
 										multiple
 										hide-details
+										append-inner-icon="mdi-content-save"
+										@click:appendInner="uploadFiles('doc')"
 									></v-file-input
 								></v-col>
-								<v-col cols="6">
-									<v-btn
-										size="x-large"
-										@click="uploadFiles('doc')"
-										>Save</v-btn
-									></v-col
-								>
+
 								<v-col cols="4">
 									<v-btn
 										@click="openModal"
@@ -93,6 +99,19 @@
 									></v-btn>
 								</v-col>
 							</v-row>
+							<v-row
+								><v-col
+									cols="4"
+									xs="12"
+								>
+									<v-textarea
+										label="Uwaga"
+										v-model="selectedItem.Uwagi"
+										append-inner-icon="mdi-content-save"
+										@click:appendInner="getSetPZ({ Uwagi: selectedItem.Uwagi })"
+										rows="1"
+									></v-textarea> </v-col
+							></v-row>
 							<div v-if="results.length">
 								<h2>Results:</h2>
 								<div
@@ -157,8 +176,8 @@
 										v-model="selectedItem.brk"
 										color="primary"
 										label="Brack"
-										@change="setBrack()"
-									></v-switch>
+										@change="setBrack"
+									/>
 								</v-col>
 								<v-col
 									cols="12"
@@ -171,15 +190,11 @@
 										label="Files input"
 										multiple
 										hide-details
+										append-inner-icon="mdi-content-save"
+										@click:appendInner="uploadFiles('photo')"
 									></v-file-input
 								></v-col>
-								<v-col cols="6">
-									<v-btn
-										size="x-large"
-										@click="uploadFiles('photo')"
-										>Save</v-btn
-									></v-col
-								>
+
 								<v-col cols="4">
 									<v-btn
 										@click="openModal"
@@ -241,21 +256,6 @@
 											</v-list-item>
 										</v-list-item-group>
 									</v-list>
-								</v-col>
-							</v-row>
-						</v-tabs-window-item>
-						<v-tabs-window-item value="products">
-							<v-row>
-								<v-col>
-									<v-data-table
-										:items="products"
-										:headers="headers_products"
-										:row-props="
-											(row) => ({
-												class: row.item.inLocation > 0 ? 'red-lighten-5' : 'green-lighten-5',
-											})
-										"
-									></v-data-table>
 								</v-col>
 							</v-row>
 						</v-tabs-window-item>
@@ -340,9 +340,9 @@ export default {
 	},
 	data: () => ({
 		tab: null,
-		Uwaga: '',
 		loading: false,
 		files: null,
+		docPZ: {},
 		docFiles: [],
 		photoFiles: [],
 		IDWarehouse: null,
@@ -393,12 +393,33 @@ export default {
 	},
 	mounted() {
 		this.getWarehouse();
-		this.getFiles('doc');
 	},
 	methods: {
+		getSetPZ(param = {}) {
+			const vm = this;
+			let data = {};
+			if (vm.selectedItem == null) return;
+			vm.loading = true;
+			data.IDRuchuMagazynowego = vm.selectedItem.ID1;
+			if (param) {
+				data = { ...data, ...param };
+			}
+			axios
+				.post('/api/getSetPZ', data)
+				.then((res) => {
+					if (res.status == 200) {
+						vm.docPZ = res.data;
+						vm.snackbar = true;
+						vm.message = 'Uwagi zostały zapisane';
+					}
+					vm.loading = false;
+				})
+				.catch((error) => console.log(error));
+		},
 		get_PZproducts() {
 			const vm = this;
 			let data = {};
+			if (vm.selectedItem == null) return;
 			data.IDRuchuMagazynowego = vm.selectedItem.ID1;
 			data.IDDM = vm.selectedItem.IDRuchuMagazynowego;
 			axios
@@ -413,6 +434,7 @@ export default {
 		tabChanged() {
 			const vm = this;
 
+			if (vm.docFiles.length === 0 && vm.tab === 'doc') this.getFiles(this.tab);
 			if (vm.photoFiles.length === 0 && vm.tab === 'photo') this.getFiles(this.tab);
 			if (vm.products.length === 0 && vm.tab === 'products') {
 				this.get_PZproducts();
@@ -531,7 +553,7 @@ export default {
 			let data = {};
 			data.IDMagazynu = vm.IDWarehouse;
 			data.IDRuchuMagazynowego = vm.selectedItem.IDRuchuMagazynowego;
-			data.Uwagi = vm.Uwaga;
+
 			axios
 				.post('/api/createPZ', data)
 				.then((res) => {
@@ -547,10 +569,12 @@ export default {
 		},
 		handleItemSelected(item) {
 			this.selectedItem = item;
-			this.tab = 'doc';
+			this.selectedItem.brk = this.selectedItem.brk == '1' ? true : false;
+			this.tab = 'products';
 			this.products = [];
-			this.getFiles('doc');
-			this.getFiles('photo');
+			this.get_PZproducts();
+			// this.getFiles('doc');
+			// this.getFiles('photo');
 		},
 		getWarehouse() {
 			const vm = this;
