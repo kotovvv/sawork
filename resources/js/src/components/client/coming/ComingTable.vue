@@ -18,6 +18,11 @@
 			return-object
 		>
 			<template v-slot:item.NrDokumentu="{ item }">
+				<v-icon
+					size="small"
+					icon="mdi-eye-check-outline"
+					v-if="item.noBaselink"
+				></v-icon>
 				<span
 					v-if="item.doc"
 					class="doc"

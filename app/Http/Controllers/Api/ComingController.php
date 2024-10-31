@@ -10,10 +10,12 @@ use Carbon\Carbon;
 
 class ComingController extends Controller
 {
+
     public function getDM(Request $request)
     {
         $data = $request->all();
         $IDMagazynu = $data['IDMagazynu'];
+
         return DB::table('dbo.RuchMagazynowy as rm1')
             ->select(
                 'rm1.IDRuchuMagazynowego',
@@ -27,7 +29,8 @@ class ComingController extends Controller
                 'InfoComming.doc',
                 'InfoComming.photo',
                 'InfoComming.brk',
-                'InfoComming.ready'
+                'InfoComming.ready',
+                DB::raw('MAX(CAST(t._TowarTempBool1 AS INT)) as noBaselink'),
             )
             ->leftJoin('dbo.DocumentRelations', function ($join) {
                 $join->on('DocumentRelations.ID2', '=', 'rm1.IDRuchuMagazynowego')
@@ -35,8 +38,24 @@ class ComingController extends Controller
             })
             ->leftJoin('dbo.RuchMagazynowy as rm2', 'rm2.IDRuchuMagazynowego', '=', 'DocumentRelations.ID1')
             ->leftJoin('dbo.InfoComming', 'InfoComming.IDRuchuMagazynowego', '=', 'rm1.IDRuchuMagazynowego')
+            ->leftJoin('dbo.ElementRuchuMagazynowego as erm', 'erm.IDRuchuMagazynowego', '=', 'DocumentRelations.ID1')
+            ->leftJoin('dbo.Towar as t', 't.IDTowaru', '=', 'erm.IDTowaru')
             ->where('rm1.IDRodzajuRuchuMagazynowego', 200)
             ->where('rm1.IDMagazynu', $IDMagazynu)
+            ->groupBy(
+                'rm1.IDRuchuMagazynowego',
+                'rm1.Data',
+                'rm1.NrDokumentu',
+                'rm1.WartoscDokumentu',
+                'DocumentRelations.ID1',
+                'rm2.Data',
+                'rm2.NrDokumentu',
+                'rm2.Uwagi',
+                'InfoComming.doc',
+                'InfoComming.photo',
+                'InfoComming.brk',
+                'InfoComming.ready'
+            )
             ->orderBy('rm1.Data', 'DESC')
             ->get();
     }
