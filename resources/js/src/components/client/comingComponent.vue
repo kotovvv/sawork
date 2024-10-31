@@ -171,7 +171,10 @@
 						</v-tabs-window-item>
 						<v-tabs-window-item value="photo">
 							<v-row>
-								<v-col cols="2">
+								<v-col
+									cols="2"
+									sm="6"
+								>
 									<v-switch
 										v-model="selectedItem.brk"
 										color="primary"
