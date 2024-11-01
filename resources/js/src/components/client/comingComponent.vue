@@ -40,7 +40,7 @@
 				></v-btn>
 			</v-row>
 
-			<v-row v-if="selectedItem.ID1 == null">
+			<v-row v-if="selectedItem.ID1 == null && $attrs.user.IDRoli != 4">
 				<v-btn @click="createPZ">create PZ</v-btn>
 			</v-row>
 			<template v-else>
@@ -80,7 +80,7 @@
 							</v-row>
 						</v-tabs-window-item>
 						<v-tabs-window-item value="doc">
-							<v-row>
+							<v-row v-if="$attrs.user.IDRoli != 4">
 								<v-col
 									cols="12"
 									md="3"
@@ -104,7 +104,7 @@
 									></v-btn>
 								</v-col>
 							</v-row>
-							<v-row
+							<v-row v-if="$attrs.user.IDRoli != 4"
 								><v-col
 									cols="4"
 									xs="12"
@@ -163,6 +163,7 @@
 														<v-icon>mdi-download</v-icon>
 													</v-btn>
 													<v-btn
+														v-if="$attrs.user.IDRoli != 4"
 														icon="mdi-delete"
 														@click="deleteFile(file.url)"
 														class="ml-2"
@@ -175,7 +176,7 @@
 							</v-row>
 						</v-tabs-window-item>
 						<v-tabs-window-item value="photo">
-							<v-row>
+							<v-row v-if="$attrs.user.IDRoli != 4">
 								<v-col
 									cols="2"
 									sm="6"
@@ -256,6 +257,7 @@
 														<v-icon>mdi-download</v-icon>
 													</v-btn>
 													<v-btn
+														v-if="$attrs.user.IDRoli != 4"
 														icon="mdi-delete"
 														@click="deleteFile(file.url)"
 														class="ml-2"
