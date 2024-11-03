@@ -532,6 +532,11 @@ class MagazynController extends Controller
     public function getQuantity(Request $request)
     {
         $data = $request->all();
+
+        if (isset($request->user)) {
+            $this->logUsers($request->user, 'Zamawianie towarów', $request->ip());
+        }
+
         $datecur = new Carbon();
 
         $dateDoMin = new Carbon($data['dataDoMin']);

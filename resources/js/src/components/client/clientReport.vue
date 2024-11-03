@@ -12,7 +12,7 @@
 				v-if="$attrs.user.IDRoli == 1"
 				>Tarif</v-tab
 			>
-			<v-tab value="oborot">Oborot</v-tab>
+
 			<v-tab value="zamovlen">Zamawianie towarów</v-tab>
 			<v-tab
 				value="xlsx"

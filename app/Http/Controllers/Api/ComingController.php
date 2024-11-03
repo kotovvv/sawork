@@ -16,6 +16,10 @@ class ComingController extends Controller
         $data = $request->all();
         $IDMagazynu = $data['IDMagazynu'];
 
+        if (isset($request->user)) {
+            $this->logUsers($request->user, 'getDM', $request->ip());
+        }
+
         return DB::table('dbo.RuchMagazynowy as rm1')
             ->select(
                 'rm1.IDRuchuMagazynowego',
