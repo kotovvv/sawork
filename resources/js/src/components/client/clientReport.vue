@@ -37,6 +37,7 @@
 				</v-tabs-window-item>
 				<v-tabs-window-item value="zamovlen">
 					<ReportQuantity :user="$attrs.user" />
+				</v-tabs-window-item>
 				<v-tabs-window-item value="xlsx">
 					<GetXLSX />
 				</v-tabs-window-item>
