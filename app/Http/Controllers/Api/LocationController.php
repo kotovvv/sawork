@@ -15,8 +15,8 @@ class LocationController extends Controller
         $data = $request->all();
         $stor = $data['stor'];
         $days = $data['days'];
-        $dataMin = Carbon::now()->subDays($days)->format('Ymd');
-        $dataMax = Carbon::now()->format('Ymd');
+        $dataMin = Carbon::now()->subDays($days)->format('Y/m/d H:i:s');
+        $dataMax = Carbon::now()->format('Y/m/d H:i:s');
         $idMag = $stor;
         $sql = '';
 
@@ -39,11 +39,11 @@ class LocationController extends Controller
             FROM TowarLocationTipTab tlt
             JOIN Towar t ON tlt.IDTowaru = t.IDTowaru
             CROSS APPLY (
-                SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, '$dataMin', '$dataMax', $idMag) AS SumIlosci
+            SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, ?, ?, ?) AS SumIlosci
             ) AS s
         ";
 
-        DB::unprepared($updateSql);
+        DB::unprepared($updateSql, [$dataMin, $dataMax, $idMag]);
 
         // Создание временной таблицы и выполнение SELECT-запроса
         $results = DB::table('TowarLocationTipTab')

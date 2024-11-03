@@ -82,6 +82,12 @@
 										label="IDLokalizaciiZwrot"
 									></v-text-field>
 								</v-col>
+								<v-col cols="12">
+									<v-text-field
+										v-model="editedItem.IDKontrahenta"
+										label="IDKontrahenta"
+									></v-text-field>
+								</v-col>
 							</v-row>
 						</v-card-text>
 
@@ -123,6 +129,7 @@ export default {
 				{ title: 'IDLokalizaciiZwrot', value: 'IDLokalizaciiZwrot' },
 				{ title: 'Magazyn', value: 'Nazwa' },
 				{ title: 'Details', value: 'eMailAddress' },
+				{ title: 'IDKontrahenta', value: 'IDKontrahenta' },
 				{ title: 'Dokument Cod', value: 'cod', name: 'cod', width: '180' },
 				{ title: 'Action', value: 'actions', sortable: false },
 			],
@@ -156,7 +163,6 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.warehouses = res.data;
-						// vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
 					}
 				})
 				.catch((error) => console.log(error));
@@ -174,6 +180,7 @@ export default {
 			data.eMailAddress = item.eMailAddress;
 			data.cod = item.cod;
 			data.IDLokalizaciiZwrot = item.IDLokalizaciiZwrot;
+			data.IDKontrahenta = item.IDKontrahenta;
 
 			// save the record
 			axios

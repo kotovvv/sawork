@@ -66,7 +66,6 @@
 		>
 			<v-row>
 				<v-col cols="12">
-					<!-- :headers="headers" -->
 					<v-data-table
 						:items="dataforxsls[0][1]"
 						:headers="headers"
@@ -154,7 +153,9 @@ export default {
 				.then((res) => {
 					if (res.status == 200) {
 						vm.warehouses = res.data;
-						vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+						if (vm.warehouses.length > 0) {
+							vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+						}
 					}
 				})
 				.catch((error) => console.log(error));

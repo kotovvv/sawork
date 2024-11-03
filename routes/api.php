@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\SendPDF;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\AuthUserController;
 use App\Http\Controllers\Api\LogController;
+use App\Http\Controllers\Api\ComingController;
+use App\Http\Controllers\Api\FileController;
 
 /*
 |--------------------------------------------------------------------------
@@ -50,4 +52,14 @@ Route::middleware(['jwt.verify'])->group(function () {
 
     Route::get('/logs/useReport', [LogController::class, 'getUseReportLog']);
     Route::get('/logs/users', [LogController::class, 'getUsersLog']);
+
+    Route::post('getDM', [ComingController::class, 'getDM']);
+    Route::post('createPZ', [ComingController::class, 'createPZ']);
+    Route::post('setBrack', [ComingController::class, 'setBrack']);
+    Route::post('get_PZproducts', [ComingController::class, 'get_PZproducts']);
+    Route::post('getSetPZ', [ComingController::class, 'getSetPZ']);
+    Route::post('uploadFiles', [FileController::class, 'uploadFiles']);
+    Route::get('getFiles/{IDRuchuMagazynowego}/{folder_name}', [FileController::class, 'getFiles']);
+    Route::get('dowloadFile/{filename}', [FileController::class, 'dowloadFile']);
+    Route::post('deleteFile', [FileController::class, 'deleteFile']);
 });

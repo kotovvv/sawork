@@ -12,7 +12,7 @@ class MagazynController extends Controller
 {
     public function loadMagEmail()
     {
-        return DB::select('SELECT [ID],[IDMagazynu] ,[Nazwa] ,[Symbol] ,em.eMailAddress ,em.cod,em.IDLokalizaciiZwrot FROM [dbo].[Magazyn] RIGHT JOIN dbo.EMailMagazyn em ON em.IDMagazyn = IDMagazynu');
+        return DB::select('SELECT [ID],[IDMagazynu] ,[Nazwa] ,[Symbol] ,em.eMailAddress ,em.cod,em.IDLokalizaciiZwrot,em.IDKontrahenta FROM [dbo].[Magazyn] RIGHT JOIN dbo.EMailMagazyn em ON em.IDMagazyn = IDMagazynu');
     }
 
 
@@ -20,8 +20,17 @@ class MagazynController extends Controller
     {
         $data = $request->all();
         $IDMagazyn = $data['IDMagazynu'];
-        $eMailAddress = $data['eMailAddress'];
-        $cod = $data['cod'];
+        if (isset($data['eMailAddress'])) {
+            $eMailAddress = $data['eMailAddress'];
+        } else {
+            $eMailAddress = '';
+        }
+        if (isset($data['cod'])) {
+            $cod = $data['cod'];
+        } else {
+            $cod = '';
+        }
+        $IDKontrahenta = $data['IDKontrahenta'];
         $IDLokalizaciiZwrot = $data['IDLokalizaciiZwrot'];
         if (isset($data['id'])) {
             $res = DB::table('dbo.EMailMagazyn')
@@ -29,6 +38,7 @@ class MagazynController extends Controller
                 ->update([
                     'IDMagazyn' => $IDMagazyn,
                     'eMailAddress' => $eMailAddress,
+                    'IDKontrahenta' => $IDKontrahenta,
                     'cod' => $cod,
                     'IDLokalizaciiZwrot' => $IDLokalizaciiZwrot
                 ]);
@@ -38,7 +48,7 @@ class MagazynController extends Controller
                 return response('Not updated', '404');
             }
         } else {
-            $res =  DB::statement('INSERT INTO dbo.EMailMagazyn (IDMagazyn,eMailAddress,cod,IDLokalizaciiZwrot) VALUES (' . $IDMagazyn . ',\'' . $eMailAddress . '\',\'' . $cod . '\',\'' . $IDLokalizaciiZwrot . '\')');
+            $res =  DB::statement('INSERT INTO dbo.EMailMagazyn (IDMagazyn,eMailAddress,cod,IDLokalizaciiZwrot,IDKontrahenta) VALUES (' . $IDMagazyn . ',\'' . $eMailAddress . '\',\'' . $cod . '\',\'' . $IDLokalizaciiZwrot . '\',\'' . $IDKontrahenta . '\')');
             if ($res) {
                 return DB::getPdo()->lastInsertId();
             } else {

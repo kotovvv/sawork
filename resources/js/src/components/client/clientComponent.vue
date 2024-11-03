@@ -68,11 +68,11 @@
 
 <script>
 import { defineAsyncComponent } from 'vue';
-import cabinet from './cabinetComponent.vue';
+// import cabinet from './cabinetComponent.vue';
 
 export default {
 	name: 'clientComponent',
-	components: [cabinet],
+	// components: [cabinet],
 	props: ['user'],
 	data: () => ({
 		drawer: true,
@@ -82,12 +82,14 @@ export default {
 		items: [
 			// { text: 'Cabinet', name: 'cabinet', icon: 'mdi-account-box' },
 			{ text: 'Reporty', name: 'report', icon: 'mdi-file-chart' },
+			{ text: 'Dostawa do magazynu', name: 'coming', icon: 'mdi-van-utility' },
 		],
 	}),
 	computed: {
 		setComponent() {
 			// if (this.theMenu == 'cabinet') return cabinet;
 			if (this.theMenu == 'report') return defineAsyncComponent(() => import('./clientReport.vue'));
+			if (this.theMenu == 'coming') return defineAsyncComponent(() => import('./comingComponent.vue'));
 		},
 	},
 };

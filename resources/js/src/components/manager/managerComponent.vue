@@ -67,6 +67,7 @@
 </template>
 
 <script>
+import { defineAsyncComponent } from 'vue';
 import refunds2 from './refunds2Component.vue';
 import sendPDF from './sendPDF.vue';
 
@@ -83,6 +84,8 @@ export default {
 		items: [
 			{ text: 'Zwroty', name: 'refunds2', icon: 'mdi-database-plus' },
 			{ text: 'sendPDF', name: 'sendPDF', icon: 'mdi-file-send' },
+			{ text: 'Dostawa do magazynu', name: 'coming', icon: 'mdi-van-utility' },
+			{ text: 'Lokalizacja', name: 'locationComponent', icon: 'mdi-forklift' },
 		],
 	}),
 	computed: {
@@ -90,6 +93,9 @@ export default {
 			// if (this.theMenu == 'refunds') return refunds;
 			if (this.theMenu == 'refunds2') return refunds2;
 			if (this.theMenu == 'sendPDF') return sendPDF;
+			if (this.theMenu == 'coming') return defineAsyncComponent(() => import('../client/comingComponent.vue'));
+			if (this.theMenu == 'locationComponent')
+				return defineAsyncComponent(() => import('../admin/locationComponent.vue'));
 		},
 	},
 };
