@@ -144,7 +144,7 @@
 							<v-row v-if="docFiles.length">
 								<v-col>
 									<v-list>
-										<v-list-item-group>
+										<v-list-group>
 											<v-list-item
 												v-for="file in docFiles"
 												:key="file.name"
@@ -170,7 +170,7 @@
 													></v-btn>
 												</v-list-item-action>
 											</v-list-item>
-										</v-list-item-group>
+										</v-list-group>
 									</v-list>
 								</v-col>
 							</v-row>
@@ -238,7 +238,7 @@
 							<v-row v-if="photoFiles.length">
 								<v-col>
 									<v-list>
-										<v-list-item-group>
+										<v-list-group>
 											<v-list-item
 												v-for="file in photoFiles"
 												:key="file.name"
@@ -264,7 +264,7 @@
 													></v-btn>
 												</v-list-item-action>
 											</v-list-item>
-										</v-list-item-group>
+										</v-list-group>
 									</v-list>
 								</v-col>
 							</v-row>
@@ -349,6 +349,7 @@ export default {
 		// QrCodeScanner,
 	},
 	data: () => ({
+		active: false,
 		tab: null,
 		loading: false,
 		files: null,

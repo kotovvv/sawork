@@ -70,12 +70,10 @@
 import { defineAsyncComponent } from 'vue';
 import dictionaryComponent from './dictionaryComponent.vue';
 import locationComponent from './locationComponent.vue';
-import getXLSX from './getXLSX.vue';
-import test from './test.vue';
 
 export default {
 	name: 'adminComponent',
-	components: [dictionaryComponent, locationComponent, test],
+	components: [dictionaryComponent, locationComponent],
 	props: ['user'],
 	data: () => ({
 		drawer: null,
@@ -83,24 +81,20 @@ export default {
 		theMenu: 'dictionaryComponent',
 
 		items: [
-			{ text: 'Podręczniki', name: 'dictionaryComponent', icon: 'mdi-list-box-outline' },
+			{ text: 'Ustawienia', name: 'dictionaryComponent', icon: 'mdi-list-box-outline' },
 			{ text: 'Lokalizacja', name: 'locationComponent', icon: 'mdi-forklift' },
-			{ text: 'Report XLSX', name: 'getXLSX', icon: 'mdi-file-excel' },
 			{ text: 'Raporty', name: 'report', icon: 'mdi-file-chart' },
-			// { text: 'Test', name: 'test', icon: 'mdi-barcode-scan' },
 			{ text: 'logView', name: 'logViewer', icon: 'mdi-file-account' },
-			{ text: 'Coming', name: 'coming', icon: 'mdi-van-utility' },
+			{ text: 'Dostawa do magazynu', name: 'coming', icon: 'mdi-van-utility' },
 		],
 	}),
 	computed: {
 		setComponent() {
 			if (this.theMenu == 'dictionaryComponent') return dictionaryComponent;
 			if (this.theMenu == 'locationComponent') return locationComponent;
-			if (this.theMenu == 'getXLSX') return getXLSX;
 			if (this.theMenu == 'report') return defineAsyncComponent(() => import('../client/clientReport.vue'));
 			if (this.theMenu == 'logViewer') return defineAsyncComponent(() => import('./LogViewer.vue'));
 			if (this.theMenu == 'coming') return defineAsyncComponent(() => import('../client/comingComponent.vue'));
-			//if (this.theMenu == 'test') return test;
 		},
 	},
 };

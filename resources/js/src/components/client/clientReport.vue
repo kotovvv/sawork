@@ -6,12 +6,17 @@
 		>
 			<v-tab value="day">Stan</v-tab>
 			<v-tab value="notactive">nieaktywny</v-tab>
+			<v-tab value="oborot">Oborot</v-tab>
 			<v-tab
 				value="tarif"
 				v-if="$attrs.user.IDRoli == 1"
 				>Tarif</v-tab
 			>
-			<v-tab value="oborot">Oborot</v-tab>
+			<v-tab
+				value="xlsx"
+				v-if="$attrs.user.IDRoli == 1"
+				>Koszt przechowywania</v-tab
+			>
 		</v-tabs>
 
 		<v-card-text>
@@ -28,6 +33,9 @@
 				<v-tabs-window-item value="oborot">
 					<ReportOborot :user="$attrs.user" />
 				</v-tabs-window-item>
+				<v-tabs-window-item value="xlsx">
+					<GetXLSX />
+				</v-tabs-window-item>
 			</v-tabs-window>
 		</v-card-text>
 	</v-card>
@@ -37,9 +45,10 @@ import ReportDay from './reportDay.vue';
 import ReportNotActiveProducts from './reportNotActiveProducts.vue';
 import ReportTarif from './reportTraif.vue';
 import ReportOborot from './reportOborot.vue';
+import GetXLSX from '../admin/getXLSX.vue';
 export default {
 	name: 'clientReport',
-	components: { ReportDay, ReportNotActiveProducts, ReportTarif, ReportOborot },
+	components: { ReportDay, ReportNotActiveProducts, ReportTarif, ReportOborot, GetXLSX },
 	data: () => ({
 		tab: null,
 	}),

@@ -82,7 +82,7 @@ export default {
 		items: [
 			// { text: 'Cabinet', name: 'cabinet', icon: 'mdi-account-box' },
 			{ text: 'Reporty', name: 'report', icon: 'mdi-file-chart' },
-			{ text: 'Coming', name: 'coming', icon: 'mdi-van-utility' },
+			{ text: 'Dostawa do magazynu', name: 'coming', icon: 'mdi-van-utility' },
 		],
 	}),
 	computed: {
