@@ -76,7 +76,7 @@ class MagazynController extends Controller
         return false;
     }
 
-    private function logUsers($user, $what, $ip = 0)
+    public function logUsers($user, $what, $ip = 0)
     {
         $myLogInfo = date('Y-m-d H:i:s') . ', ' . $ip . ', ' . $user->NazwaUzytkownika . ', ' . $what;
         file_put_contents(

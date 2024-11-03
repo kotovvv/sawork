@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
+use App\Http\Controllers\Api\MagazynController;
 
 class ComingController extends Controller
 {
@@ -17,7 +18,8 @@ class ComingController extends Controller
         $IDMagazynu = $data['IDMagazynu'];
 
         if (isset($request->user)) {
-            $this->logUsers($request->user, 'getDM', $request->ip());
+            $magazynController = new MagazynController();
+            $magazynController->logUsers($request->user, 'getDM', $request->ip());
         }
 
         return DB::table('dbo.RuchMagazynowy as rm1')
