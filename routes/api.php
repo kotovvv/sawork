@@ -45,6 +45,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('getOrder', [ReturnController::class, 'getOrder']);
     Route::get('getProduct/{id}', [LocationController::class, 'getProduct']);
     Route::post('doWz', [ReturnController::class, 'doWz']);
+    Route::post('getDocsWZk', [ReturnController::class, 'getDocsWZk']);
     Route::get('sendPDF', [SendPDF::class, 'index']);
     Route::post('TowarLocationTipTab', [LocationController::class, 'TowarLocationTipTab']);
     Route::get('getWarehouseLocations/{id}', [LocationController::class, 'getWarehouseLocations']);

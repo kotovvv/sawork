@@ -251,4 +251,19 @@ class ReturnController extends Controller
     {
         //
     }
+
+    public function getDocsWZk(Request $request)
+    {
+        $data = $request->all();
+        $IDWarehouse = trim($data['IDWarehouse']);
+        $res = [];
+        $res = DB::table('RuchMagazynowy')
+            ->select('IDRuchuMagazynowego', 'NrDokumentu', 'Data', 'IDKontrahenta', 'IDCompany', 'IDUzytkownika', 'Operator', 'IDMagazynu', 'IDRodzajuRuchuMagazynowego', 'Uwagi', '_RuchMagazynowyTempDecimal1', '_RuchMagazynowyTempString2', '_RuchMagazynowyTempString1', '_RuchMagazynowyTempString4', '_RuchMagazynowyTempString5', '_RuchMagazynowyTempBool1')
+            ->where('NrDokumentu', 'like', 'WZk%')
+            // ->where('NrDokumentu', 'like', '%/24')
+            ->where('IDMagazynu', $IDWarehouse)
+            ->orderBy('Data', 'desc')
+            ->get();
+        return response($res);
+    }
 }
