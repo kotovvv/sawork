@@ -32,7 +32,7 @@
             @update:modelValue="tabChanged"
           >
             <v-tab value="products"> Products </v-tab>
-            <v-tab value="doc"> Documents </v-tab>
+
             <v-tab value="photo"> Photo </v-tab>
           </v-tabs>
           <v-tabs-window
@@ -60,91 +60,9 @@
                 </v-col>
               </v-row>
             </v-tabs-window-item>
-            <v-tabs-window-item value="doc">
-              <v-row v-if="$attrs.user.IDRoli != 4">
-                <v-col cols="12" md="3" lg="2">
-                  <v-file-input
-                    clearable
-                    v-model="files"
-                    label="Files input"
-                    multiple
-                    hide-details
-                    append-inner-icon="mdi-content-save"
-                    @click:appendInner="uploadFiles('doc')"
-                  ></v-file-input
-                ></v-col>
 
-                <v-col cols="4">
-                  <v-btn @click="openModal" icon="mdi-camera"></v-btn>
-                </v-col>
-              </v-row>
-              <v-row v-if="$attrs.user.IDRoli != 4"
-                ><v-col cols="4" xs="12">
-                  <v-textarea
-                    label="Uwaga"
-                    v-model="selectedItem.Uwagi"
-                    append-inner-icon="mdi-content-save"
-                    @click:appendInner="getSetPZ({ Uwagi: selectedItem.Uwagi })"
-                    rows="1"
-                  ></v-textarea> </v-col
-              ></v-row>
-              <div v-if="results.length">
-                <h2>Results:</h2>
-                <div v-for="(result, index) in results" :key="index">
-                  <div v-if="result.type === 'photo'">
-                    <img
-                      :src="result.data"
-                      alt="Captured Photo"
-                      style="width: 100%; max-width: 200px"
-                    />
-                    <v-btn icon="mdi-delete" @click="delPic(index)"></v-btn>
-                  </div>
-                  <!-- <div v-else-if="result.type === 'qrCode'">
-                                        <p>{{ result.data }}</p>
-                                    </div> -->
-                </div>
-                <v-btn @click="uploadSnapshots('doc')">Save Snapshots</v-btn>
-                <div v-if="message">{{ message }}</div>
-              </div>
-              <v-row v-if="docFiles.length">
-                <v-col>
-                  <v-list>
-                    <v-list-item v-for="file in docFiles" :key="file.name">
-                      <v-list-item-action class="overflow-auto">
-                        <v-btn @click="downloadFile(file.url, file.name)">
-                          <img
-                            :src="file.url"
-                            :alt="file.name"
-                            style="height: 38px; width: auto"
-                            v-if="file.is_image == true"
-                          />
-                          <v-icon v-else>mdi-file</v-icon>
-
-                          {{ file.name }}
-                          <v-icon>mdi-download</v-icon>
-                        </v-btn>
-                        <v-btn
-                          v-if="$attrs.user.IDRoli != 4"
-                          icon="mdi-delete"
-                          @click="deleteFile(file.url)"
-                          class="ml-2"
-                        ></v-btn>
-                      </v-list-item-action>
-                    </v-list-item>
-                  </v-list>
-                </v-col>
-              </v-row>
-            </v-tabs-window-item>
             <v-tabs-window-item value="photo">
               <v-row v-if="$attrs.user.IDRoli != 4">
-                <v-col cols="2" sm="6">
-                  <v-switch
-                    v-model="selectedItem.brk"
-                    color="primary"
-                    label="Brack"
-                    @change="setBrack"
-                  />
-                </v-col>
                 <v-col cols="12" md="3" lg="2">
                   <v-file-input
                     clearable
@@ -272,6 +190,12 @@
         <v-card-text>
           <v-text-field label="Wiadomość" v-model="edit.message"></v-text-field>
           <v-text-field label="Ilość" v-model="edit.qty"></v-text-field>
+          <v-select
+            :items="locations"
+            label="Locations"
+            item-text="text"
+            item-value="value"
+          ></v-select>
         </v-card-text>
         <template v-slot:actions>
           <v-btn
@@ -462,6 +386,8 @@ export default {
       text: "",
       docsWZk: [],
       selectedItem: null,
+      tabChanged: "products",
+      locations: [],
     };
   },
 
@@ -480,6 +406,7 @@ export default {
             vm.docsWZk.map((e) => {
               e.Data = e.Data.substring(0, 16);
             });
+            vm.setLocations();
           }
         })
         .catch((error) => console.log(error));
@@ -560,8 +487,24 @@ export default {
         })
         .catch((error) => console.log(error));
     },
+    setLocations() {
+      const vm = this;
+      const a_locations = vm.warehouses.filter((e) => {
+        return e.IDMagazynu == vm.IDWarehouse;
+      });
+
+      vm.locations = [
+        {
+          text: "LokalizaciiZwrot",
+          value: a_locations.IDLokalizaciiZwrot,
+        },
+        { text: "Zniszczony", value: a_locations.Zniszczony },
+        { text: "Wznowienie", value: a_locations.Wznowienie },
+      ];
+    },
     getWarehouse() {
       const vm = this;
+      vm.locations = [];
       axios
         .get("/api/getWarehouse")
         .then((res) => {
@@ -569,6 +512,7 @@ export default {
             vm.warehouses = res.data;
             if (vm.warehouses.length > 0) {
               vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+
               vm.getDocsWZk();
             }
           }
