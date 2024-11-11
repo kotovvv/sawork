@@ -269,4 +269,17 @@ class ReturnController extends Controller
             ->get();
         return response($res);
     }
+    public function getWZkProducts(Request $request)
+    {
+        $data = $request->all();
+        $IDRuchuMagazynowego = trim($data['IDRuchuMagazynowego']);
+        $res = [];
+        $res = DB::table('ElementRuchuMagazynowego as erm')
+            ->select('IDElementuRuchuMagazynowego', 'IDRuchuMagazynowego', 't.IDTowaru', 'Ilosc', 'erm.IDWarehouseLocation', DB::raw('t._TowarTempString1 as sku'), 't.KodKreskowy as KodKreskowy', 'wl.LocationCode', 't.Nazwa',)
+            ->leftJoin('Towar as t', 'erm.IDTowaru', '=', 't.IDTowaru')
+            ->leftJoin('dbo.WarehouseLocations as wl', 'wl.IDWarehouseLocation', '=', 'erm.IDWarehouseLocation')
+            ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
+            ->get();
+        return response($res);
+    }
 }
