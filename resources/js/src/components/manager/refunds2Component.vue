@@ -1,5 +1,217 @@
 <template>
   <v-container>
+    <div
+      fluid
+      v-if="selectedItem"
+      :id="selectedItem.IDRuchuMagazynowego"
+      style="min-height: 100vh"
+      :key="selectedItem"
+    >
+      <v-row>
+        <v-col>
+          <h3>
+            {{ selectedItem.NrDokumentu }}
+            <small>{{ selectedItem.Data.substring(0, 10) }}</small>
+            <span v-if="selectedItem.RelatedNrDokumentu">
+              -> {{ selectedItem.RelatedNrDokumentu }}</span
+            >
+          </h3>
+        </v-col>
+        <v-spacer></v-spacer>
+        <v-btn icon="mdi-close" @click="selectedItem = null"></v-btn>
+      </v-row>
+
+      <v-row v-if="selectedItem.ID1 == null && $attrs.user.IDRoli != 4">
+        <v-btn @click="createPZ">create PZ</v-btn>
+      </v-row>
+      <template v-else>
+        <v-card>
+          <v-tabs
+            v-model="tab"
+            bg-color="primary"
+            @update:modelValue="tabChanged"
+          >
+            <v-tab value="products"> Products </v-tab>
+            <v-tab value="doc"> Documents </v-tab>
+            <v-tab value="photo"> Photo </v-tab>
+          </v-tabs>
+          <v-tabs-window
+            v-model="tab"
+            style="height: 80vh; overflow-y: auto"
+            class="mt-3"
+          >
+            <v-tabs-window-item value="products">
+              <v-row>
+                <v-col>
+                  <v-data-table
+                    :items="products"
+                    :headers="headers_products"
+                    :row-props="
+                      (row) => ({
+                        class:
+                          row.item.inLocation > 0
+                            ? 'red-lighten-5'
+                            : row.item.noBaselink == '1'
+                            ? 'yellow-lighten-5'
+                            : 'green-lighten-5',
+                      })
+                    "
+                  ></v-data-table>
+                </v-col>
+              </v-row>
+            </v-tabs-window-item>
+            <v-tabs-window-item value="doc">
+              <v-row v-if="$attrs.user.IDRoli != 4">
+                <v-col cols="12" md="3" lg="2">
+                  <v-file-input
+                    clearable
+                    v-model="files"
+                    label="Files input"
+                    multiple
+                    hide-details
+                    append-inner-icon="mdi-content-save"
+                    @click:appendInner="uploadFiles('doc')"
+                  ></v-file-input
+                ></v-col>
+
+                <v-col cols="4">
+                  <v-btn @click="openModal" icon="mdi-camera"></v-btn>
+                </v-col>
+              </v-row>
+              <v-row v-if="$attrs.user.IDRoli != 4"
+                ><v-col cols="4" xs="12">
+                  <v-textarea
+                    label="Uwaga"
+                    v-model="selectedItem.Uwagi"
+                    append-inner-icon="mdi-content-save"
+                    @click:appendInner="getSetPZ({ Uwagi: selectedItem.Uwagi })"
+                    rows="1"
+                  ></v-textarea> </v-col
+              ></v-row>
+              <div v-if="results.length">
+                <h2>Results:</h2>
+                <div v-for="(result, index) in results" :key="index">
+                  <div v-if="result.type === 'photo'">
+                    <img
+                      :src="result.data"
+                      alt="Captured Photo"
+                      style="width: 100%; max-width: 200px"
+                    />
+                    <v-btn icon="mdi-delete" @click="delPic(index)"></v-btn>
+                  </div>
+                  <!-- <div v-else-if="result.type === 'qrCode'">
+                                        <p>{{ result.data }}</p>
+                                    </div> -->
+                </div>
+                <v-btn @click="uploadSnapshots('doc')">Save Snapshots</v-btn>
+                <div v-if="message">{{ message }}</div>
+              </div>
+              <v-row v-if="docFiles.length">
+                <v-col>
+                  <v-list>
+                    <v-list-item v-for="file in docFiles" :key="file.name">
+                      <v-list-item-action class="overflow-auto">
+                        <v-btn @click="downloadFile(file.url, file.name)">
+                          <img
+                            :src="file.url"
+                            :alt="file.name"
+                            style="height: 38px; width: auto"
+                            v-if="file.is_image == true"
+                          />
+                          <v-icon v-else>mdi-file</v-icon>
+
+                          {{ file.name }}
+                          <v-icon>mdi-download</v-icon>
+                        </v-btn>
+                        <v-btn
+                          v-if="$attrs.user.IDRoli != 4"
+                          icon="mdi-delete"
+                          @click="deleteFile(file.url)"
+                          class="ml-2"
+                        ></v-btn>
+                      </v-list-item-action>
+                    </v-list-item>
+                  </v-list>
+                </v-col>
+              </v-row>
+            </v-tabs-window-item>
+            <v-tabs-window-item value="photo">
+              <v-row v-if="$attrs.user.IDRoli != 4">
+                <v-col cols="2" sm="6">
+                  <v-switch
+                    v-model="selectedItem.brk"
+                    color="primary"
+                    label="Brack"
+                    @change="setBrack"
+                  />
+                </v-col>
+                <v-col cols="12" md="3" lg="2">
+                  <v-file-input
+                    clearable
+                    v-model="files"
+                    label="Files input"
+                    multiple
+                    hide-details
+                    append-inner-icon="mdi-content-save"
+                    @click:appendInner="uploadFiles('photo')"
+                  ></v-file-input
+                ></v-col>
+
+                <v-col cols="4">
+                  <v-btn @click="openModal" icon="mdi-camera"></v-btn>
+                </v-col>
+              </v-row>
+              <div v-if="results.length">
+                <h2>Results:</h2>
+                <div v-for="(result, index) in results" :key="index">
+                  <div v-if="result.type === 'photo'">
+                    <img
+                      :src="result.data"
+                      alt="Captured Photo"
+                      style="width: 100%; max-width: 200px"
+                    />
+                    <v-btn icon="mdi-delete" @click="delPic(index)"></v-btn>
+                  </div>
+                  <!-- <div v-else-if="result.type === 'qrCode'">
+                                        <p>{{ result.data }}</p>
+                                    </div> -->
+                </div>
+                <v-btn @click="uploadSnapshots('photo')">Save Snapshots</v-btn>
+                <div v-if="message">{{ message }}</div>
+              </div>
+              <v-row v-if="photoFiles.length">
+                <v-col>
+                  <v-list>
+                    <v-list-item v-for="file in photoFiles" :key="file.name">
+                      <v-list-item-action class="overflow-auto">
+                        <v-btn @click="downloadFile(file.url, file.name)">
+                          <img
+                            :src="file.url"
+                            :alt="file.name"
+                            style="height: 38px; width: auto"
+                            v-if="file.is_image == true"
+                          />
+                          <v-icon v-else>mdi-file</v-icon>
+
+                          {{ file.name }}
+                          <v-icon>mdi-download</v-icon>
+                        </v-btn>
+                        <v-btn
+                          v-if="$attrs.user.IDRoli != 4"
+                          icon="mdi-delete"
+                          @click="deleteFile(file.url)"
+                          class="ml-2"
+                        ></v-btn>
+                      </v-list-item-action>
+                    </v-list-item>
+                  </v-list>
+                </v-col>
+              </v-row>
+            </v-tabs-window-item>
+          </v-tabs-window>
+        </v-card>
+      </template>
+    </div>
     <v-row>
       <v-col md="6" sm="12">
         <v-select
@@ -249,6 +461,7 @@ export default {
       imputCod: "",
       text: "",
       docsWZk: [],
+      selectedItem: null,
     };
   },
 
