@@ -59,6 +59,7 @@ class ReturnController extends Controller
             , [Ilosc] Quantity
             , [Wydano] Wydano
            ,[CenaJednostkowa]
+           ,[IDWarehouseLocation]
            ,tov.[Nazwa]
            ,tov.[KodKreskowy]
            ,tov.[_TowarTempString1]
@@ -92,7 +93,8 @@ class ReturnController extends Controller
         $magazin_id = (int) $data['magazin']['IDMagazynu'];
 
         // $IDWarehouseLocation = [10 => 148, 11 => 731, 17 => 954, 16 => 953][$magazin_id];
-        $IDWarehouseLocation = DB::table('dbo.EMailMagazyn')->where('IDMagazyn', $magazin_id)->where('IDLokalizaciiZwrot', '>', 0)->value('IDLokalizaciiZwrot');
+        //$IDWarehouseLocation = DB::table('dbo.EMailMagazyn')->where('IDMagazyn', $magazin_id)->where('IDLokalizaciiZwrot', '>', 0)->value('IDLokalizaciiZwrot');
+
         //get tovs
         $tovs = collect(DB::select('SELECT "Ilosc" qty,   "CenaJednostkowa" price,   "IDTowaru" cod,     "IDOrderLine" nl FROM "dbo"."ElementRuchuMagazynowego" WHERE IDRuchuMagazynowego = ' . (int) $doc_wz['ID'] . ' ORDER BY "CenaJednostkowa"'))->toArray();
 
@@ -188,7 +190,7 @@ class ReturnController extends Controller
                                 'IDRuchuMagazynowego' => $wz->IDRuchuMagazynowego,
                                 'Uzytkownik' => 1,
                                 'IDUserCreated' => 1,
-                                'IDWarehouseLocation' => $IDWarehouseLocation
+                                'IDWarehouseLocation' => $product['IDWarehouseLocation']
                             ];
                             $tovs[$key]->qty = 0;
                         }

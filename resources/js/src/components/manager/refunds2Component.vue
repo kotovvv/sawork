@@ -187,10 +187,10 @@
           <v-text-field label="Wiadomość" v-model="edit.message"></v-text-field>
           <v-text-field label="Ilość" v-model="edit.qty"></v-text-field>
           <v-select
+            v-model="edit.IDWarehouseLocation"
             :items="locations"
             label="Locations"
-            item-text="text"
-            item-value="value"
+            :item-value="key"
           ></v-select>
         </v-card-text>
         <template v-slot:actions>
@@ -380,6 +380,7 @@ export default {
         qty: 0,
         message: "",
         max: 1,
+        IDWarehouseLocation: 0,
       },
       order_mes: "",
       imputCod: "",
@@ -585,10 +586,13 @@ export default {
       let data = {};
       let ps = vm.products.filter((e) => e.qty > 0);
       ps = ps.map((t) => {
-        return ["IDTowaru", "CenaJednostkowa", "message", "qty"].reduce(
-          (a, e) => ((a[e] = t[e]), a),
-          {}
-        );
+        return [
+          "IDTowaru",
+          "CenaJednostkowa",
+          "message",
+          "qty",
+          "IDWarehouseLocation",
+        ].reduce((a, e) => ((a[e] = t[e]), a), {});
       });
       data.magazin = vm.warehouses.filter(
         (m) => m.IDMagazynu == vm.IDWarehouse
@@ -618,11 +622,11 @@ export default {
 
       vm.locations = [
         {
-          text: "LokalizaciiZwrot",
-          value: a_locations.IDLokalizaciiZwrot,
+          title: "LokalizaciiZwrot",
+          value: a_locations[0].IDLokalizaciiZwrot,
         },
-        { text: "Zniszczony", value: a_locations.Zniszczony },
-        { text: "Wznowienie", value: a_locations.Wznowienie },
+        { title: "Zniszczony", value: a_locations[0].Zniszczony },
+        { title: "Wznowienie", value: a_locations[0].Wznowienie },
       ];
     },
     getWarehouse() {
@@ -635,6 +639,7 @@ export default {
             vm.warehouses = res.data;
             if (vm.warehouses.length > 0) {
               vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+              vm.setLocations();
             }
           }
         })
