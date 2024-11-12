@@ -343,12 +343,17 @@
         </v-card>
       </v-container>
     </v-dialog>
+    <Modal v-if="showModal" @close="closeModal">
+      <PhotoCapture @result="handleResult" @close="closeModal" />
+    </Modal>
   </v-container>
 </template>
 
 <script>
 import { ref } from "vue";
 import axios from "axios";
+import Modal from "../UI/Modal.vue";
+import PhotoCapture from "../UI/PhotoCapture.vue";
 import ConfirmDlg from "../UI/ConfirmDlg.vue";
 import WzkTable from "./UI/WzkTable.vue";
 export default {
@@ -356,6 +361,8 @@ export default {
   components: {
     ConfirmDlg,
     WzkTable,
+    Modal,
+    PhotoCapture,
   },
   data() {
     return {
@@ -488,7 +495,10 @@ export default {
 
       axios
         .get(
-          "/api/getFiles/" + vm.selectedItem.IDRuchuMagazynowego + "/" + zworot
+          "/api/getFiles/" +
+            vm.selectedItem.IDRuchuMagazynowego +
+            "/" +
+            folder_name
         )
         .then((res) => {
           if (res.status == 200) {
@@ -500,7 +510,7 @@ export default {
     tabChanged() {
       const vm = this;
       if (vm.photoFiles.length === 0 && vm.tab === "photo")
-        this.getFiles(this.tab);
+        this.getFiles("zworot");
       if (vm.wzk_products.length === 0 && vm.tab === "products") {
         this.get_WZkProducts();
       }
@@ -510,8 +520,6 @@ export default {
       this.tab = "products";
       this.products = [];
       this.get_WZkProducts();
-      // this.getFiles('doc');
-      // this.getFiles('photo');
     },
     get_WZkProducts() {
       const vm = this;
