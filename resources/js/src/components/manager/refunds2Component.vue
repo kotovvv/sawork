@@ -446,6 +446,22 @@ export default {
     };
   },
   methods: {
+    downloadFile(url, name) {
+      axios
+        .get(url, {
+          responseType: "blob",
+        })
+        .then((res) => {
+          const blobUrl = window.URL.createObjectURL(new Blob([res.data]));
+          const link = document.createElement("a");
+          link.href = blobUrl;
+          link.setAttribute("download", name);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        })
+        .catch((error) => console.log(error));
+    },
     uploadSnapshots(dir) {
       this.uploadFiles(dir, this.results);
     },
@@ -489,10 +505,8 @@ export default {
     },
     getFiles(folder_name) {
       const vm = this;
-      if (!vm.selectedItem || vm.selectedItem.ID1 == null) return;
-
       vm.photoFiles = [];
-
+      if (!vm.selectedItem) return;
       axios
         .get(
           "/api/getFiles/" +
@@ -509,8 +523,10 @@ export default {
     },
     tabChanged() {
       const vm = this;
-      if (vm.photoFiles.length === 0 && vm.tab === "photo")
+
+      if (vm.photoFiles.length === 0 && vm.tab === "photo") {
         this.getFiles("zworot");
+      }
       if (vm.wzk_products.length === 0 && vm.tab === "products") {
         this.get_WZkProducts();
       }
@@ -525,7 +541,8 @@ export default {
       const vm = this;
 
       if (vm.selectedItem == null) return;
-
+      vm.wzk_products = [];
+      vm.photoFiles = [];
       vm.loading = true;
       axios
         .post("/api/getWZkProducts", {
