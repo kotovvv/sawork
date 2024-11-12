@@ -410,6 +410,7 @@ export default {
         },
       ],
       photoFiles: [],
+      files: null,
     };
   },
 
@@ -477,8 +478,7 @@ export default {
             const a_files = res.data.files;
             if (a_files.length > 0) {
               a_files.forEach((file) => {
-                if (folder === "photo") vm.photoFiles.unshift(file);
-                else vm.docFiles.unshift(file);
+                vm.photoFiles.unshift(file);
               });
             }
             vm.files = null;
