@@ -75,6 +75,7 @@ export default {
     },
     getDocsWZk() {
       const vm = this;
+      if (vm.IDWarehouse == null) return;
       vm.loading = true;
       axios
         .post("/api/getDocsWZk", { IDWarehouse: vm.IDWarehouse })

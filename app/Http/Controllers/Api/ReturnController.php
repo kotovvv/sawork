@@ -286,4 +286,27 @@ class ReturnController extends Controller
             ->get();
         return response($res);
     }
+    public function saveUwagiDoc(Request $request)
+    {
+        $data = $request->all();
+        $IDRuchuMagazynowego = trim($data['IDRuchuMagazynowego']);
+        $Uwagi = trim($data['Uwagi']);
+        $res = [];
+        $res = DB::table('RuchMagazynowy')
+            ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
+            ->update(['Uwagi' => $Uwagi]);
+        return response($res);
+    }
+    public function saveUwagiProduct(Request $request)
+    {
+        $data = $request->all();
+        $IDElementuRuchuMagazynowego = trim($data['IDElementuRuchuMagazynowego']);
+
+        $Uwagi = trim($data['Uwagi']);
+        $res = [];
+        $res = DB::table('ElementRuchuMagazynowego')
+            ->where('IDElementuRuchuMagazynowego', $IDElementuRuchuMagazynowego)
+            ->update(['Uwagi' => $Uwagi]);
+        return response($res);
+    }
 }

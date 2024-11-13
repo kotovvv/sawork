@@ -13,6 +13,29 @@
             {{ selectedItem.NrDokumentu }}
             <small>{{ selectedItem.Data.substring(0, 10) }}</small>
           </h3>
+          <div v-if="selectedItem.Uwagi">
+            Uwagi: {{ selectedItem.Uwagi }}
+            <v-btn
+              size="small"
+              icon="mdi-pencil"
+              @click="dialogEditUwagiDoc = !dialogEditUwagiDoc"
+            ></v-btn>
+          </div>
+          <v-dialog v-model="dialogEditUwagiDoc" width="500">
+            <v-card>
+              <v-card-title>Dokument</v-card-title>
+              <v-card-text>
+                <v-textarea
+                  v-model="selectedItem.Uwagi"
+                  label="Uwagi"
+                ></v-textarea>
+              </v-card-text>
+              <v-card-actions>
+                <v-btn text @click="dialogEditUwagiDoc = false">Cancel</v-btn>
+                <v-btn text @click="saveUwagiDoc">Save</v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
         </v-col>
         <v-spacer></v-spacer>
         <v-btn icon="mdi-close" @click="selectedItem = null"></v-btn>
@@ -45,7 +68,15 @@
                     >
                       <template v-slot:top="{}">
                         <v-row class="align-center">
-                          <productHistory :product_id="selectedProduct[0]" />
+                          <productHistory
+                            :product_id="selectedProduct.IDTowaru"
+                          />
+                          <v-btn
+                            size="x-small"
+                            :disabled="!selectedProduct.IDTowaru > 0"
+                            @click="editProductUwagi"
+                            icon="mdi-pencil"
+                          ></v-btn>
                         </v-row>
                       </template>
                     </v-data-table>
@@ -381,6 +412,21 @@
     <Modal v-if="showModal" @close="closeModal">
       <PhotoCapture @result="handleResult" @close="closeModal" />
     </Modal>
+    <v-dialog v-model="dialogEditUwagiProduct" width="500">
+      <v-card>
+        <v-card-title>Product</v-card-title>
+        <v-card-text>
+          <v-textarea
+            v-model="selectedProduct.Uwagi"
+            label="Uwagi"
+          ></v-textarea>
+        </v-card-text>
+        <v-card-actions>
+          <v-btn text @click="dialogEditUwagiProduct = false">Cancel</v-btn>
+          <v-btn text @click="saveUwagiProduct">Save</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -449,7 +495,9 @@ export default {
       ],
       photoFiles: [],
       files: null,
-      selectedProduct: [],
+      selectedProduct: {},
+      dialogEditUwagiDoc: false,
+      dialogEditUwagiProduct: false,
     };
   },
 
@@ -485,6 +533,52 @@ export default {
     };
   },
   methods: {
+    saveUwagiProduct() {
+      const vm = this;
+      axios
+        .post("/api/saveUwagiProduct", {
+          IDElementuRuchuMagazynowego:
+            vm.selectedProduct.IDElementuRuchuMagazynowego,
+          Uwagi: vm.selectedProduct.Uwagi,
+        })
+        .then((res) => {
+          if (res.status == 200) {
+            vm.dialogEditUwagiProduct = false;
+          }
+        })
+        .catch((error) => console.log(error));
+    },
+    editProductUwagi() {
+      this.dialogEditUwagiProduct = true;
+    },
+    saveUwagiDoc() {
+      const vm = this;
+      axios
+        .post("/api/saveUwagiDoc", {
+          IDRuchuMagazynowego: vm.selectedItem.IDRuchuMagazynowego,
+          Uwagi: vm.selectedItem.Uwagi,
+        })
+        .then((res) => {
+          if (res.status == 200) {
+            vm.dialogEditUwagiDoc = false;
+          }
+        })
+        .catch((error) => console.log(error));
+    },
+    deleteFile(file_url) {
+      const vm = this;
+
+      axios
+        .post("/api/deleteFile", {
+          file_url: file_url,
+        })
+        .then((res) => {
+          if (res.status == 200) {
+            vm.photoFiles = vm.photoFiles.filter((f) => f.url !== file_url);
+          }
+        })
+        .catch((error) => console.log(error));
+    },
     splitProduct(product) {
       const vm = this;
       const newProduct = { ...product };
@@ -506,13 +600,13 @@ export default {
     colorRowItem(item) {
       if (
         item.item.IDTowaru != undefined &&
-        item.item.IDTowaru == this.selectedProduct[0]
+        item.item.IDTowaru == this.selectedProduct.IDTowaru
       ) {
         return { class: "bg-red-darken-4" };
       }
     },
     handleClick(event, row) {
-      this.selectedProduct = [row.item.IDTowaru];
+      this.selectedProduct = row.item;
     },
     downloadFile(url, name) {
       axios
@@ -611,7 +705,7 @@ export default {
       if (vm.selectedItem == null) return;
       vm.wzk_products = [];
       vm.photoFiles = [];
-      vm.selectedProduct = [];
+      vm.selectedProduct = {};
       vm.loading = true;
       axios
         .post("/api/getWZkProducts", {
@@ -717,7 +811,7 @@ export default {
 
       vm.locations = [
         {
-          title: "LokalizaciiZwrot",
+          title: "Zwrot",
           value: a_locations[0].IDLokalizaciiZwrot,
         },
         { title: "Zniszczony", value: a_locations[0].Zniszczony },
