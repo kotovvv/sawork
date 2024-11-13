@@ -39,7 +39,16 @@
                     <v-data-table
                       :items="wzk_products"
                       :headers="headers_products"
-                    ></v-data-table>
+                      @click:row="handleClick"
+                      :row-props="colorRowItem"
+                      select-strategy="single"
+                    >
+                      <template v-slot:top="{}">
+                        <v-row class="align-center">
+                          <productHistory :product_id="selectedProduct[0]" />
+                        </v-row>
+                      </template>
+                    </v-data-table>
                   </v-col>
                 </v-row>
               </v-tabs-window-item>
@@ -376,6 +385,7 @@ import Modal from "../UI/Modal.vue";
 import PhotoCapture from "../UI/PhotoCapture.vue";
 import ConfirmDlg from "../UI/ConfirmDlg.vue";
 import WzkTable from "./UI/WzkTable.vue";
+import productHistory from "../client/productHistory.vue";
 export default {
   name: "Refund",
   components: {
@@ -383,6 +393,7 @@ export default {
     WzkTable,
     Modal,
     PhotoCapture,
+    productHistory,
   },
   data() {
     return {
@@ -432,6 +443,7 @@ export default {
       ],
       photoFiles: [],
       files: null,
+      selectedProduct: [],
     };
   },
 
@@ -467,6 +479,17 @@ export default {
     };
   },
   methods: {
+    colorRowItem(item) {
+      if (
+        item.item.IDTowaru != undefined &&
+        item.item.IDTowaru == this.selectedProduct[0]
+      ) {
+        return { class: "bg-red-darken-4" };
+      }
+    },
+    handleClick(event, row) {
+      this.selectedProduct = [row.item.IDTowaru];
+    },
     downloadFile(url, name) {
       axios
         .get(url, {
@@ -564,6 +587,7 @@ export default {
       if (vm.selectedItem == null) return;
       vm.wzk_products = [];
       vm.photoFiles = [];
+      vm.selectedProduct = [];
       vm.loading = true;
       axios
         .post("/api/getWZkProducts", {
