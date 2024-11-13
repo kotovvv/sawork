@@ -337,6 +337,12 @@
                       class="border qty text-h5 text-center"
                     >
                       {{ p.qty }} z {{ parseInt(p.Quantity) }}
+                      <v-btn
+                        size="x-small"
+                        @click="splitProduct(p)"
+                        v-if="p.qty > 0 && p.qty < p.Quantity"
+                        icon="mdi-call-split"
+                      ></v-btn>
                     </div>
                     <v-btn @click="changeCounter(p, 1)">+</v-btn>
                   </div>
@@ -479,6 +485,24 @@ export default {
     };
   },
   methods: {
+    splitProduct(product) {
+      const vm = this;
+      const newProduct = { ...product };
+
+      const foundProductIndex = vm.products.findIndex(
+        (p) => p.IDTowaru === product.IDTowaru && p.Quantity == product.Quantity
+      );
+      const foundProduct =
+        foundProductIndex !== -1 ? vm.products[foundProductIndex] : null;
+      if (foundProduct) {
+        vm.products[foundProductIndex].Quantity -= product.qty;
+        vm.products[foundProductIndex].qty = 0;
+      }
+      newProduct.qty = newProduct.qty;
+      newProduct.Quantity = newProduct.qty;
+
+      vm.products.push(newProduct);
+    },
     colorRowItem(item) {
       if (
         item.item.IDTowaru != undefined &&
