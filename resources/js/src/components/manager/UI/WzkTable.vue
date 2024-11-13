@@ -50,6 +50,7 @@ export default {
     wzk_headers: [
       { title: "NrDokumentu", key: "NrDokumentu", nowrap: true },
       { title: "Data", key: "Data" },
+      { title: "Kontrahent", key: "Kontrahent", nowrap: true },
       { title: "Uwagi", key: "Uwagi", nowrap: true },
     ],
     searchInTable: "",

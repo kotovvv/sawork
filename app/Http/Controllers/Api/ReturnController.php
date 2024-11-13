@@ -16,7 +16,7 @@ class ReturnController extends Controller
             $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
 
             return DB::table('Magazyn')
-                ->select('IDMagazynu', 'Nazwa', 'Symbol', 'IDLokalizaciiZwrot', 'Zniszczony', 'Wznowienie')
+                ->select('IDMagazynu', 'Nazwa', 'Symbol', 'IDLokalizaciiZwrot', 'Zniszczony', 'Naprawa')
                 ->leftJoin('EMailMagazyn', 'Magazyn.IDMagazynu', '=', 'EMailMagazyn.IDMagazyn')
                 ->whereIn('IDMagazynu', $a_mag)
                 ->get();
@@ -37,6 +37,7 @@ class ReturnController extends Controller
         , cast ([Created] as date) Created
         , con.[Nazwa] cName
         , CAST([_OrdersTempDecimal2] AS INT) as pk
+        , [Remarks] as Uwagi
         FROM [dbo].[Orders] ord
         LEFT JOIN [dbo].[Kontrahent] con ON con.[IDKontrahenta] = ord.[IDAccount]
          WHERE [IDWarehouse] = ' . (int) $data['warehouse'] . ' AND \'' . $orderdata . '\' IN (Number, _OrdersTempString1,_OrdersTempString2, _OrdersTempString3, _OrdersTempString4, CONVERT(NVARCHAR(255), _OrdersTempDecimal1),  CONVERT(NVARCHAR(255), CONVERT(INT, _OrdersTempDecimal2)))'))->first();
@@ -117,7 +118,7 @@ class ReturnController extends Controller
         $creat_wz['Operator'] = 1;
         $creat_wz['IDCompany'] = 1;
         $creat_wz['IDKontrahenta'] = (int) $order->IDAccount;
-        $creat_wz['Uwagi'] = $order->Remarks;
+        $creat_wz['Uwagi'] = $data['order_Uwagi'];
         $creat_wz['_RuchMagazynowyTempDecimal1'] = $order->_OrdersTempDecimal2;
         $creat_wz['_RuchMagazynowyTempString2'] = $order->_OrdersTempString1;
         $creat_wz['_RuchMagazynowyTempString1'] = $order->_OrdersTempString2;
@@ -186,7 +187,7 @@ class ReturnController extends Controller
                                 'IDTowaru' => $product['IDTowaru'],
                                 'Ilosc' => (int) $qty,
                                 'CenaJednostkowa' => $ep->price,
-                                'Uwagi' => $product['message'],
+                                'Uwagi' => $product['Uwagi'],
                                 'IDRuchuMagazynowego' => $wz->IDRuchuMagazynowego,
                                 'Uzytkownik' => 1,
                                 'IDUserCreated' => 1,
@@ -262,8 +263,9 @@ class ReturnController extends Controller
         $data = $request->all();
         $IDWarehouse = trim($data['IDWarehouse']);
         $res = [];
-        $res = DB::table('RuchMagazynowy')
-            ->select('IDRuchuMagazynowego', 'NrDokumentu', 'Data', 'IDKontrahenta', 'IDCompany', 'IDUzytkownika', 'Operator', 'IDMagazynu', 'IDRodzajuRuchuMagazynowego', 'Uwagi', '_RuchMagazynowyTempDecimal1', '_RuchMagazynowyTempString2', '_RuchMagazynowyTempString1', '_RuchMagazynowyTempString4', '_RuchMagazynowyTempString5', '_RuchMagazynowyTempBool1')
+        $res = DB::table('RuchMagazynowy as rm')
+            ->select('rm.IDRuchuMagazynowego', 'NrDokumentu', 'Data', 'rm.IDKontrahenta', 'IDCompany', 'IDUzytkownika', 'Operator', 'IDMagazynu', 'IDRodzajuRuchuMagazynowego', 'rm.Uwagi', '_RuchMagazynowyTempDecimal1', '_RuchMagazynowyTempString2', '_RuchMagazynowyTempString1', '_RuchMagazynowyTempString4', '_RuchMagazynowyTempString5', '_RuchMagazynowyTempBool1', 'kon.Nazwa as Kontrahent')
+            ->leftJoin('Kontrahent as kon', 'rm.IDKontrahenta', '=', 'kon.IDKontrahenta')
             ->where('NrDokumentu', 'like', 'WZk%')
             // ->where('NrDokumentu', 'like', '%/24')
             ->where('IDMagazynu', $IDWarehouse)
@@ -277,7 +279,7 @@ class ReturnController extends Controller
         $IDRuchuMagazynowego = trim($data['IDRuchuMagazynowego']);
         $res = [];
         $res = DB::table('ElementRuchuMagazynowego as erm')
-            ->select('IDElementuRuchuMagazynowego', 'IDRuchuMagazynowego', 't.IDTowaru', 'Ilosc', 'erm.IDWarehouseLocation', DB::raw('t._TowarTempString1 as sku'), 't.KodKreskowy as KodKreskowy', 'wl.LocationCode', 't.Nazwa',)
+            ->select('IDElementuRuchuMagazynowego', 'erm.Uwagi', 'IDRuchuMagazynowego', 't.IDTowaru', 'Ilosc', 'erm.IDWarehouseLocation', DB::raw('t._TowarTempString1 as sku'), 't.KodKreskowy as KodKreskowy', 'wl.LocationCode', 't.Nazwa',)
             ->leftJoin('Towar as t', 'erm.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin('dbo.WarehouseLocations as wl', 'wl.IDWarehouseLocation', '=', 'erm.IDWarehouseLocation')
             ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)

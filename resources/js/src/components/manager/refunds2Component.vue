@@ -184,7 +184,15 @@
     <v-dialog v-model="dialogMessageQty" width="auto">
       <v-card width="600" prepend-icon="mdi-pencil">
         <v-card-text>
-          <v-text-field label="Wiadomość" v-model="edit.message"></v-text-field>
+          <v-textarea
+            v-model="order.Uwagi"
+            label="Dokument Uwagi"
+            row-height="15"
+            rows="1"
+            variant="outlined"
+            auto-grow
+          ></v-textarea>
+          <v-text-field label="Uwagi" v-model="edit.Uwagi"></v-text-field>
           <v-text-field label="Ilość" v-model="edit.qty"></v-text-field>
           <v-select
             v-model="edit.IDWarehouseLocation"
@@ -258,6 +266,9 @@
                 "
               ></v-btn
             ></v-row>
+            <v-row
+              ><v-col> Uwagi: {{ order.Uwagi }} </v-col></v-row
+            >
           </v-card-title>
 
           <v-card-text class="vscroll">
@@ -276,7 +287,7 @@
                   'order-3': p.qty == 0,
                 }"
               >
-                <v-col>
+                <v-col cols="7">
                   <div class="d-flex">
                     <img
                       v-if="p.img"
@@ -291,16 +302,25 @@
                       </h5>
                     </span>
                     <v-btn
+                      size="small"
                       @click="
                         edit = p;
                         dialogMessageQty = true;
                       "
-                      ><v-icon>mdi-pencil</v-icon></v-btn
-                    >
+                      icon="mdi-pencil"
+                    ></v-btn>
                   </div>
+                  <div v-if="p.Uwagi">Uwagi: {{ p.Uwagi }}</div>
                 </v-col>
-
-                <v-col>
+                <v-col cols="2" xs="12">
+                  <v-select
+                    v-model="p.IDWarehouseLocation"
+                    :items="locations"
+                    label="Locations"
+                    :item-value="key"
+                  ></v-select>
+                </v-col>
+                <v-col cols="3" xs="12">
                   <div class="d-flex justify-end">
                     <v-btn @click="changeCounter(p, -1)">-</v-btn>
                     <div
@@ -385,9 +405,9 @@ export default {
         id: 0,
         Nazwa: "",
         qty: 0,
-        message: "",
+        Uwagi: "",
         max: 1,
-        IDWarehouseLocation: 0,
+        IDWarehouseLocation: null,
       },
       order_mes: "",
       imputCod: "",
@@ -405,8 +425,9 @@ export default {
         { title: "Ilosc", key: "Ilosc" },
         { title: "LocationCode", key: "LocationCode" },
         {
-          title: "W trakcie",
-          key: "inLocation",
+          title: "Uwagi",
+          key: "Uwagi",
+          nowrap: true,
         },
       ],
       photoFiles: [],
@@ -614,7 +635,7 @@ export default {
         return [
           "IDTowaru",
           "CenaJednostkowa",
-          "message",
+          "Uwagi",
           "qty",
           "IDWarehouseLocation",
         ].reduce((a, e) => ((a[e] = t[e]), a), {});
@@ -625,6 +646,7 @@ export default {
       data.wz = vm.wz;
       data.products = ps;
       data.order_id = vm.order.IDOrder;
+      data.order_Uwagi = vm.order.Uwagi;
       data.full = vm.full;
       axios
         .post("/api/doWz", data)
@@ -651,7 +673,7 @@ export default {
           value: a_locations[0].IDLokalizaciiZwrot,
         },
         { title: "Zniszczony", value: a_locations[0].Zniszczony },
-        { title: "Wznowienie", value: a_locations[0].Wznowienie },
+        { title: "Naprawa", value: a_locations[0].Naprawa },
       ];
     },
     getWarehouse() {
@@ -692,7 +714,8 @@ export default {
               if (vm.products.length) {
                 vm.products.map((e) => {
                   e.qty = 0;
-                  e.message = "";
+                  e.Uwagi = "";
+                  e.IDWarehouseLocation = vm.locations[0].value;
                 });
                 vm.dialogProduct = true;
 
@@ -742,10 +765,10 @@ export default {
       const vm = this;
       vm.edit.qty = vm.edit.qty < vm.edit.max ? vm.edit.qty : vm.edit.max;
       vm.edit.qty = vm.edit.qty == 0 ? "" : vm.edit.qty;
-      vm.edit.message = vm.edit.qty == 0 ? "" : vm.edit.message;
+      vm.edit.Uwagi = vm.edit.qty == 0 ? "" : vm.edit.Uwagi;
       this.products = this.products.map((x) =>
         x.IDTowaru === vm.edit.id
-          ? { ...x, qty: vm.edit.qty, message: vm.edit.message }
+          ? { ...x, qty: vm.edit.qty, Uwagi: vm.edit.Uwagi }
           : x
       );
       // this.products.sort((a.qty, b.qty) => a.qty - b.qty);
