@@ -146,6 +146,7 @@ class ReturnController extends Controller
         if (DB::select("select * from dbo.RuchMagazynowy where NrDokumentu = '" . $creat_wz['NrDokumentu'] . "'")) {
             return response($creat_wz['NrDokumentu'] . ' Został już utworzony', 200);
         }
+
         $wz = DB::table('dbo.RuchMagazynowy')->insert($creat_wz);
         if ($wz) {
             $wz = DB::select("select * from dbo.RuchMagazynowy where NrDokumentu = '" . $creat_wz['NrDokumentu'] . "'")[0];
@@ -165,7 +166,7 @@ class ReturnController extends Controller
 
             $tov = [];
             //for each product return
-            foreach ($data['products'] as $key => $product) {
+            foreach ($data['products'] as $k => $product) {
                 $ocol = $product['qty']; //how many need return
 
                 while ($ocol) {
@@ -193,7 +194,7 @@ class ReturnController extends Controller
                                 'IDUserCreated' => 1,
                                 'IDWarehouseLocation' => $product['IDWarehouseLocation']
                             ];
-                            $tovs[$key]->qty = 0;
+                            $tovs[$key]->qty = $ep->qty - $ocol;
                         }
                     }
                 }
