@@ -94,7 +94,7 @@
                       multiple
                       hide-details
                       append-inner-icon="mdi-content-save"
-                      @click:appendInner="uploadFiles('zworot')"
+                      @click:appendInner:stop="uploadFiles('zworot')"
                     ></v-file-input
                   ></v-col>
 
@@ -366,6 +366,10 @@
                     <div
                       :id="p.IDTowaru"
                       class="border qty text-h5 text-center"
+                      :class="{
+                        'bg-red-darken-4': p.qty > p.Quantity,
+                        'bg-green-lighten-4': p.qty == p.Quantity,
+                      }"
                     >
                       {{ p.qty }} z {{ parseInt(p.Quantity) }}
                       <v-btn
@@ -623,6 +627,9 @@ export default {
           document.body.removeChild(link);
         })
         .catch((error) => console.log(error));
+    },
+    delPic(index) {
+      this.results.splice(index, 1);
     },
     uploadSnapshots(dir) {
       this.uploadFiles(dir, this.results);
