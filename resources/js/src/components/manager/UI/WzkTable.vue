@@ -32,6 +32,19 @@
             ></v-text-field>
           </v-col>
           <v-btn @click="getDocsWZk" icon="mdi-refresh"></v-btn>
+          <v-col cols="5" sm="12">
+            <div class="d-flex ga-5 flex-wrap">
+              <span v-if="locations.Zwrot"
+                >Ilość w zwrot: {{ locations.Zwrot }}</span
+              >
+              <span v-if="locations.Naprawa"
+                >Naprawa: {{ locations.Naprawa }}</span
+              >
+              <span v-if="locations.Zniszczony"
+                >Zniszczony: {{ locations.Zniszczony }}</span
+              >
+            </div>
+          </v-col>
         </v-row>
       </template>
     </v-data-table>
@@ -55,6 +68,11 @@ export default {
     ],
     searchInTable: "",
     loading: false,
+    locations: {
+      Zworot: 0,
+      Naprawa: 0,
+      Zniszczony: 0,
+    },
   }),
   mounted() {
     this.getDocsWZk();
@@ -81,10 +99,13 @@ export default {
         .post("/api/getDocsWZk", { IDWarehouse: vm.IDWarehouse })
         .then((res) => {
           if (res.status == 200) {
-            vm.docsWZk = res.data;
+            vm.docsWZk = res.data.DocsWZk;
             vm.docsWZk.map((e) => {
               e.Data = e.Data.substring(0, 16);
             });
+            vm.locations.Zwrot = res.data.Zwrot;
+            vm.locations.Naprawa = res.data.Naprawa;
+            vm.locations.Zniszczony = res.data.Zniszczony;
           }
           vm.loading = false;
         })

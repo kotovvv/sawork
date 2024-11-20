@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-
+use Carbon\Carbon;
 
 class ReturnController extends Controller
 {
@@ -263,8 +263,9 @@ class ReturnController extends Controller
     {
         $data = $request->all();
         $IDWarehouse = trim($data['IDWarehouse']);
+
         $res = [];
-        $res = DB::table('RuchMagazynowy as rm')
+        $res['DocsWZk'] = DB::table('RuchMagazynowy as rm')
             ->select('rm.IDRuchuMagazynowego', 'NrDokumentu', 'Data', 'rm.IDKontrahenta', 'IDCompany', 'IDUzytkownika', 'Operator', 'IDMagazynu', 'IDRodzajuRuchuMagazynowego', 'rm.Uwagi', '_RuchMagazynowyTempDecimal1', '_RuchMagazynowyTempString2', '_RuchMagazynowyTempString1', '_RuchMagazynowyTempString4', '_RuchMagazynowyTempString5', '_RuchMagazynowyTempBool1', 'kon.Nazwa as Kontrahent')
             ->leftJoin('Kontrahent as kon', 'rm.IDKontrahenta', '=', 'kon.IDKontrahenta')
             ->where('NrDokumentu', 'like', 'WZk%')
@@ -272,8 +273,34 @@ class ReturnController extends Controller
             ->where('IDMagazynu', $IDWarehouse)
             ->orderBy('Data', 'desc')
             ->get();
+
+        $WarehouseLocations = DB::table('dbo.EMailMagazyn')->select('IDLokalizaciiZwrot', 'Zniszczony', 'Naprawa')->where('IDMagazyn', $IDWarehouse)->where('IDLokalizaciiZwrot', '>', 0)->get();
+        $res['Zwrot'] = $this->howmanyProductsInLocation($WarehouseLocations[0]->IDLokalizaciiZwrot);
+        $res['Zniszczony'] = $this->howmanyProductsInLocation($WarehouseLocations[0]->Zniszczony);
+        $res['Naprawa'] = $this->howmanyProductsInLocation($WarehouseLocations[0]->Naprawa);
         return response($res);
     }
+
+    private function howmanyProductsInLocation($IDWarehouseLocation)
+    {
+        $date = Carbon::now()->format('Y/m/d H:i:s');
+
+        $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
+        $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
+        $result = DB::select($query, [$IDWarehouseLocation, $date, $param]);
+        $resultString = $result[0]->Stock ?? null;
+        $array = [];
+
+        if ($resultString) {
+            $pairs = explode(', ', $resultString);
+            foreach ($pairs as $pair) {
+                list($key, $value) = explode(': ', $pair);
+                $array[$key] = (int) $value;
+            }
+        }
+        return count($array);
+    }
+
     public function getWZkProducts(Request $request)
     {
         $data = $request->all();
