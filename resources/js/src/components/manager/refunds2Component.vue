@@ -14,7 +14,7 @@
             <small>{{ selectedItem.Data.substring(0, 10) }}</small>
           </h3>
           <div v-if="selectedItem.Uwagi">
-            Uwagi: {{ selectedItem.Uwagi }}
+            Uwagi fulstor: {{ selectedItem.Uwagi }}
             <v-btn
               size="small"
               icon="mdi-pencil"
@@ -36,6 +36,41 @@
               </v-card-actions>
             </v-card>
           </v-dialog>
+          <div class="d-flex ga-4 flex-wrap">
+            <span>Uwagi Sprzedawcy: {{ selectedItem.uwagiSprzedawcy }}</span>
+            <span
+              >Pieniądze zwrócone Wartość
+              {{ selectedItem.isWartosc ? "Так" : "Nie" }}</span
+            ><v-btn
+              size="small"
+              icon="mdi-pencil"
+              @click="dialogEditUwagiSprz = !dialogEditUwagiSprz"
+            ></v-btn>
+            <v-dialog v-model="dialogEditUwagiSprz" width="500">
+              <v-card>
+                <v-card-title>Dokument</v-card-title>
+                <v-card-text>
+                  <v-textarea
+                    v-model="selectedItem.uwagiSprzedawcy"
+                    label="Uwagi sprzedawcy"
+                  ></v-textarea>
+                </v-card-text>
+                <v-switch
+                  v-model="selectedItem.isWartosc"
+                  :label="`Pieniądze zwrócone Wartość: ${selectedItem.isWartosc}`"
+                  false-value="Nie"
+                  true-value="Так"
+                  hide-details
+                ></v-switch>
+                <v-card-actions>
+                  <v-btn text @click="dialogEditUwagiSprz = false"
+                    >Cancel</v-btn
+                  >
+                  <v-btn text @click="saveUwagiSprz">Save</v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-dialog>
+          </div>
         </v-col>
         <v-spacer></v-spacer>
         <v-btn icon="mdi-close" @click="selectedItem = null"></v-btn>
@@ -501,6 +536,7 @@ export default {
       files: null,
       selectedProduct: {},
       dialogEditUwagiDoc: false,
+      dialogEditUwagiSprz: false,
       dialogEditUwagiProduct: false,
     };
   },
@@ -554,6 +590,21 @@ export default {
     },
     editProductUwagi() {
       this.dialogEditUwagiProduct = true;
+    },
+    saveUwagiSprz() {
+      const vm = this;
+      axios
+        .post("/api/saveUwagiSprz", {
+          IDRuchuMagazynowego: vm.selectedItem.IDRuchuMagazynowego,
+          uwagiSprzedawcy: vm.selectedItem.uwagiSprzedawcy,
+          isWartosc: vm.selectedItem.isWartosc,
+        })
+        .then((res) => {
+          if (res.status == 200) {
+            vm.dialogEditUwagiSprz = false;
+          }
+        })
+        .catch((error) => console.log(error));
     },
     saveUwagiDoc() {
       const vm = this;

@@ -266,7 +266,7 @@ class ReturnController extends Controller
 
         $res = [];
         $res['DocsWZk'] = DB::table('RuchMagazynowy as rm')
-            ->select('rm.IDRuchuMagazynowego', 'NrDokumentu', 'Data', 'rm.IDKontrahenta', 'IDCompany', 'IDUzytkownika', 'Operator', 'IDMagazynu', 'IDRodzajuRuchuMagazynowego', 'rm.Uwagi', '_RuchMagazynowyTempDecimal1', '_RuchMagazynowyTempString2', '_RuchMagazynowyTempString1', '_RuchMagazynowyTempString4', '_RuchMagazynowyTempString5', '_RuchMagazynowyTempBool1', 'kon.Nazwa as Kontrahent')
+            ->select('rm.IDRuchuMagazynowego', 'NrDokumentu', 'Data', 'rm.IDKontrahenta', 'IDCompany', 'IDUzytkownika', 'Operator', 'IDMagazynu', 'IDRodzajuRuchuMagazynowego', 'rm.Uwagi', '_RuchMagazynowyTempDecimal1', '_RuchMagazynowyTempString2', '_RuchMagazynowyTempString1', '_RuchMagazynowyTempString4', '_RuchMagazynowyTempString5', '_RuchMagazynowyTempString6 as uwagiSprzedawcy', '_RuchMagazynowyTempBool1', '_RuchMagazynowyTempBool3 as isWartosc', 'kon.Nazwa as Kontrahent')
             ->leftJoin('Kontrahent as kon', 'rm.IDKontrahenta', '=', 'kon.IDKontrahenta')
             ->where('NrDokumentu', 'like', 'WZk%')
             // ->where('NrDokumentu', 'like', '%/24')
@@ -314,6 +314,20 @@ class ReturnController extends Controller
             ->get();
         return response($res);
     }
+
+    public function saveUwagiSprz(Request $request)
+    {
+        $data = $request->all();
+        $IDRuchuMagazynowego = trim($data['IDRuchuMagazynowego']);
+        $Uwagi = trim($data['uwagiSprzedawcy']);
+        $isWartosc = trim($data['isWartosc']);
+        $res = [];
+        $res = DB::table('RuchMagazynowy')
+            ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
+            ->update(['_RuchMagazynowyTempString6' => $Uwagi, '_RuchMagazynowyTempBool3' => $isWartosc]);
+        return response($res);
+    }
+
     public function saveUwagiDoc(Request $request)
     {
         $data = $request->all();
