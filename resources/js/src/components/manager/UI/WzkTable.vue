@@ -32,7 +32,7 @@
             ></v-text-field>
           </v-col>
           <v-btn @click="getDocsWZk" icon="mdi-refresh"></v-btn>
-          <v-col cols="5" sm="12">
+          <v-col class="v-col-sm-12 v-col-md-3">
             <div class="d-flex ga-5 flex-wrap">
               <span v-if="locations.Zwrot"
                 >Ilość w zwrot: {{ locations.Zwrot }}</span
