@@ -13,9 +13,10 @@
             {{ selectedItem.NrDokumentu }}
             <small>{{ selectedItem.Data.substring(0, 10) }}</small>
           </h3>
-          <div v-if="selectedItem.Uwagi && user.IDRoli != 4">
+          <div v-if="selectedItem.Uwagi">
             Uwagi fulstor: {{ selectedItem.Uwagi }}
             <v-btn
+              v-if="$attrs.user.IDRoli != 4"
               size="small"
               icon="mdi-pencil"
               @click="dialogEditUwagiDoc = !dialogEditUwagiDoc"
@@ -120,7 +121,7 @@
               </v-tabs-window-item>
 
               <v-tabs-window-item value="photo">
-                <v-row v-if="$attrs.user.IDRoli != 4">
+                <v-row>
                   <v-col cols="12" md="3" lg="2">
                     <v-file-input
                       clearable
@@ -202,7 +203,7 @@
           hide-details="auto"
         ></v-select>
       </v-col>
-      <v-col md="6" sm="12" v-if="user.IDRoli != 4">
+      <v-col md="6" sm="12" v-if="$attrs.user.IDRoli != 4">
         ><v-text-field
           label="Dokument"
           v-model="ordername"
