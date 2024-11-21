@@ -13,7 +13,7 @@
             {{ selectedItem.NrDokumentu }}
             <small>{{ selectedItem.Data.substring(0, 10) }}</small>
           </h3>
-          <div v-if="selectedItem.Uwagi">
+          <div v-if="selectedItem.Uwagi && user.IDRoli != 4">
             Uwagi fulstor: {{ selectedItem.Uwagi }}
             <v-btn
               size="small"
@@ -202,7 +202,7 @@
           hide-details="auto"
         ></v-select>
       </v-col>
-      <v-col md="6" sm="12"
+      <v-col md="6" sm="12" v-if="user.IDRoli != 4">
         ><v-text-field
           label="Dokument"
           v-model="ordername"
@@ -597,7 +597,7 @@ export default {
         .post("/api/saveUwagiSprz", {
           IDRuchuMagazynowego: vm.selectedItem.IDRuchuMagazynowego,
           uwagiSprzedawcy: vm.selectedItem.uwagiSprzedawcy,
-          isWartosc: vm.selectedItem.isWartosc,
+          isWartosc: vm.selectedItem.isWartosc == "Так" ? 1 : 0,
         })
         .then((res) => {
           if (res.status == 200) {
