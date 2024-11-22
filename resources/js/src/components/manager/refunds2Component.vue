@@ -123,18 +123,20 @@
 
               <v-tabs-window-item value="photo">
                 <v-row>
-                  <v-col cols="12" md="3" lg="2">
+                  <v-col cols="12" md="3" lg="2" class="border d-flex">
                     <v-file-input
                       clearable
                       v-model="files"
                       label="Files input"
                       multiple
                       hide-details
-                      append-inner-icon="mdi-content-save"
-                      @click:appendInner="uploadFiles('zworot')"
-                    ></v-file-input
-                  ></v-col>
+                    ></v-file-input>
 
+                    <v-btn
+                      @click="uploadFiles('zworot')"
+                      icon="mdi-content-save"
+                    ></v-btn>
+                  </v-col>
                   <v-col cols="4">
                     <v-btn @click="openModal" icon="mdi-camera"></v-btn>
                   </v-col>
@@ -689,6 +691,7 @@ export default {
     },
     uploadFiles(folder, snapshots) {
       const vm = this;
+      if (vm.files == null && snapshots.length == 0) return;
       let formData = new FormData();
       if (snapshots && snapshots.length) {
         for (let i = 0; i < snapshots.length; i++) {
