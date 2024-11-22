@@ -34,13 +34,13 @@
           <v-btn @click="getDocsWZk" icon="mdi-refresh"></v-btn>
           <v-col class="v-col-sm-12 v-col-md-3">
             <div class="d-flex ga-5 flex-wrap">
-              <span v-if="locations.Zwrot"
+              <span class="border-info border pa-2" v-if="locations.Zwrot"
                 >Ilość w zwrot: {{ locations.Zwrot }}</span
               >
-              <span v-if="locations.Naprawa"
+              <span class="border-info border pa-2" v-if="locations.Naprawa"
                 >Naprawa: {{ locations.Naprawa }}</span
               >
-              <span v-if="locations.Zniszczony"
+              <span class="border-info border pa-2" v-if="locations.Zniszczony"
                 >Zniszczony: {{ locations.Zniszczony }}</span
               >
             </div>
