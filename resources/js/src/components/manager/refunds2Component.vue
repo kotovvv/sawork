@@ -14,7 +14,7 @@
             <small>{{ selectedItem.Data.substring(0, 10) }}</small>
           </h3>
           <div v-if="selectedItem.Uwagi">
-            Uwagi fulstor: {{ selectedItem.Uwagi }}
+            Uwagi Fulstor: {{ selectedItem.Uwagi }}
             <v-btn
               v-if="$attrs.user.IDRoli != 4"
               size="small"
@@ -37,16 +37,16 @@
               </v-card-actions>
             </v-card>
           </v-dialog>
-          <div class="d-flex ga-4 flex-wrap">
-            <span>Uwagi Sprzedawcy: {{ selectedItem.uwagiSprzedawcy }}</span>
-            <span
-              >Pieniądze zwrócone Wartość
-              {{ selectedItem.isWartosc ? "Так" : "Nie" }}</span
-            ><v-btn
-              size="small"
-              icon="mdi-pencil"
-              @click="dialogEditUwagiSprz = !dialogEditUwagiSprz"
-            ></v-btn>
+          <div class="ga-4 border-dotted">
+            <p>Uwagi Sprzedawcy: {{ selectedItem.uwagiSprzedawcy }}</p>
+            <p>
+              Pieniądze zwrócone - {{ selectedItem.isWartosc ? "Так" : "Nie" }}
+              <v-btn
+                size="small"
+                icon="mdi-pencil"
+                @click="dialogEditUwagiSprz = !dialogEditUwagiSprz"
+              ></v-btn>
+            </p>
             <v-dialog v-model="dialogEditUwagiSprz" width="500">
               <v-card>
                 <v-card-title>Dokument</v-card-title>
@@ -86,6 +86,7 @@
             >
               <v-tab value="products"> Products </v-tab>
               <v-tab value="photo"> Photo </v-tab>
+              <v-tab value="email"> Email </v-tab>
             </v-tabs>
             <v-tabs-window
               v-model="tab"
@@ -130,7 +131,7 @@
                       multiple
                       hide-details
                       append-inner-icon="mdi-content-save"
-                      @click:appendInner:stop="uploadFiles('zworot')"
+                      @click:appendInner="uploadFiles('zworot')"
                     ></v-file-input
                   ></v-col>
 
@@ -204,7 +205,7 @@
         ></v-select>
       </v-col>
       <v-col md="6" sm="12" v-if="$attrs.user.IDRoli != 4">
-        ><v-text-field
+        <v-text-field
           label="Dokument"
           v-model="ordername"
           id="getorder"
