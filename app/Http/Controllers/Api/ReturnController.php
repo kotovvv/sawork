@@ -48,13 +48,6 @@ class ReturnController extends Controller
             )->first();
 
             if ($res['wz']) {
-                // check if wzk done
-                $wzk = collect(
-                    DB::select('SELECT [ID1] as ID FROM [dbo].[DocumentRelations] WHERE [ID2] = ' . $res['wz']->ID . ' AND [IDType2] = 2 AND [IDType1] = 4')
-                )->first();
-                if ($wzk) {
-                    return response('Zwrot został już przetworzony dla ' . $orderdata, 202);
-                }
                 $res['products'] =
                     DB::select('SELECT tov.[IDTowaru]
             , [Ilosc] Quantity
@@ -68,9 +61,30 @@ class ReturnController extends Controller
        FROM [dbo].[ElementRuchuMagazynowego] wz
        LEFT JOIN [dbo].[Towar] tov ON wz.[IDTowaru] = tov.[IDTowaru]
        WHERE tov.[Usluga] != 1 AND [IDRuchuMagazynowego] = ' . $res['wz']->ID);
+
+                // check if wzk done
+                $wzk = collect(DB::table('DocumentRelations')->where('ID2', $res['wz']->ID)->where('IDType2', 2)->where('IDType1', 4)->pluck('ID1'))->toArray();
+
+                if (count($wzk)) {
+
+                    // get returned product
+                    $returnedProducts = collect(DB::table('ElementRuchuMagazynowego')->whereIn('IDRuchuMagazynowego',  $wzk)->select('IDTowaru', 'Ilosc')->get())->toArray();
+                    foreach ($res['products'] as  $product) {
+                        $returnedProduct = array_filter($returnedProducts, function ($item) use ($product) {
+                            return $item->IDTowaru == $product->IDTowaru;
+                        });
+                        if ($returnedProduct) {
+                            $returnedProduct = array_shift($returnedProduct);
+                            $product->Quantity -= $returnedProduct->Ilosc;
+                        }
+                    }
+
+                    // return response('Zwrot został już przetworzony dla ' . $orderdata, 202);
+                }
+
                 $products = [];
                 foreach ($res['products'] as $key => $product) {
-
+                    if ($product->Quantity == 0) continue;
                     $code = $product->IDTowaru;
                     if (!isset($products[$code])) {
                         if ($product->img) {

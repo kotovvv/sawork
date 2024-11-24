@@ -12,7 +12,7 @@ class MagazynController extends Controller
 {
     public function loadMagEmail()
     {
-        return DB::select('SELECT [ID],[IDMagazynu] ,[Nazwa] ,[Symbol] ,em.eMailAddress ,em.cod,em.IDLokalizaciiZwrot,em.IDKontrahenta, em.Zniszczony, em.Wznowienie FROM [dbo].[Magazyn] RIGHT JOIN dbo.EMailMagazyn em ON em.IDMagazyn = IDMagazynu');
+        return DB::select('SELECT [ID],[IDMagazynu] ,[Nazwa] ,[Symbol] ,em.eMailAddress ,em.cod,em.IDLokalizaciiZwrot,em.IDKontrahenta, em.Zniszczony, em.Naprawa FROM [dbo].[Magazyn] RIGHT JOIN dbo.EMailMagazyn em ON em.IDMagazyn = IDMagazynu');
     }
 
 
@@ -33,7 +33,7 @@ class MagazynController extends Controller
         $IDKontrahenta = $data['IDKontrahenta'];
         $IDLokalizaciiZwrot = $data['IDLokalizaciiZwrot'];
         $Zniszczony = $data['Zniszczony'];
-        $Wznowienie = $data['Wznowienie'];
+        $Naprawa = $data['Naprawa'];
         if (isset($data['id'])) {
             $res = DB::table('dbo.EMailMagazyn')
                 ->where('ID', (int) $data['id'])
@@ -41,7 +41,7 @@ class MagazynController extends Controller
                     'IDMagazyn' => $IDMagazyn,
                     'eMailAddress' => $eMailAddress,
                     'IDKontrahenta' => $IDKontrahenta,
-                    'Wznowienie' => $Wznowienie,
+                    'Naprawa' => $Naprawa,
                     'Zniszczony' => $Zniszczony,
                     'cod' => $cod,
                     'IDLokalizaciiZwrot' => $IDLokalizaciiZwrot
