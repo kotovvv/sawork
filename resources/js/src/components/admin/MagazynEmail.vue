@@ -83,8 +83,8 @@
                 </v-col>
                 <v-col cols="4">
                   <v-text-field
-                    v-model="editedItem.Wznowienie"
-                    label="Wznowienie"
+                    v-model="editedItem.Naprawa"
+                    label="Naprawa"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12">
@@ -133,7 +133,7 @@ export default {
         { title: "IDMagazyn", value: "IDMagazynu" },
         { title: "IDLokalizaciiZwrot", value: "IDLokalizaciiZwrot" },
         { title: "Zniszczony", value: "Zniszczony" },
-        { title: "Wznowienie", value: "Wznowienie" },
+        { title: "Naprawa", value: "Naprawa" },
         { title: "Magazyn", value: "Nazwa" },
         { title: "Details", value: "eMailAddress" },
         { title: "IDKontrahenta", value: "IDKontrahenta" },
@@ -188,7 +188,7 @@ export default {
       data.cod = item.cod;
       data.IDLokalizaciiZwrot = item.IDLokalizaciiZwrot;
       data.Zniszczony = item.Zniszczony;
-      data.Wznowienie = item.Wznowienie;
+      data.Naprawa = item.Naprawa;
       data.IDKontrahenta = item.IDKontrahenta;
 
       // save the record

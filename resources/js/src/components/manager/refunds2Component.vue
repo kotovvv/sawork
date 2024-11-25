@@ -187,9 +187,13 @@
                   </v-col>
                 </v-row>
               </v-tabs-window-item>
+              <v-tabs-window-item value="email">
+                <v-btn @click.once="sendEmail">sendEmail</v-btn>
+              </v-tabs-window-item>
             </v-tabs-window>
-          </v-card> </v-col
-      ></v-row>
+          </v-card>
+        </v-col></v-row
+      >
     </div>
     <v-row>
       <v-col md="6" sm="12">
@@ -577,6 +581,18 @@ export default {
     };
   },
   methods: {
+    sendEmail() {
+      const vm = this;
+      axios
+        .post("api/sendEmail", {
+          item: vm.selectedItem,
+        })
+        .then((res) => {
+          if (res.status == 200) {
+          }
+        })
+        .catch((error) => console.log(error));
+    },
     saveUwagiProduct() {
       const vm = this;
       axios

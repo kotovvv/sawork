@@ -25,7 +25,7 @@ class SendPDF extends Controller
         $docsWZk = DB::select("SELECT rm.IDRuchuMagazynowego, rm.Data, rm.Uwagi, rm.IDMagazynu, rm.NrDokumentu, rm.IDKontrahenta, rm.IDUzytkownika, rm.WartoscDokumentu, k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon
 FROM dbo.RuchMagazynowy rm
 LEFT JOIN dbo.Kontrahent k ON (k.IDKontrahenta = rm.IDKontrahenta)
-WHERE NrDokumentu LIKE 'WZk%' AND cast(Data AS date) = cast(GETDATE() AS date) AND rm.IDRuchuMagazynowego NOT IN (SELECT IDRuchuMagazynowego FROM dbo.EMailLog WHERE CAST(Data AS date) = cast(GETDATE() AS date))
+WHERE NrDokumentu LIKE 'WZk%' AND cast(Data AS date) = cast(GETDATE() AS date) AND rm.IDRuchuMagazynowego NOT IN (SELECT IDRuchuMagazynowego FROM dbo.EMailLog WHERE CAST(Data AS date) = cast(GETDATE() AS date) AND Status IS NULL)
 ORDER BY IDRuchuMagazynowego DESC, DATA ASC");
         // $docsWZk = DB::select("SELECT  rm.IDRuchuMagazynowego, rm.Data, rm.Uwagi , rm.IDMagazynu, rm.NrDokumentu, rm.IDKontrahenta, rm.IDUzytkownika, rm.WartoscDokumentu, k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.RuchMagazynowy rm left JOIN dbo.Kontrahent k ON (k.IDKontrahenta = rm.IDKontrahenta) WHERE cast(Data AS date) >= DATEADD(day, DATEDIFF(day, 0, GETDATE()), 0) AND NrDokumentu LIKE '%WZk%' ORDER BY IDRuchuMagazynowego DESC , Data ASC");
 

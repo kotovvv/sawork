@@ -50,6 +50,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('saveUwagiDoc', [ReturnController::class, 'saveUwagiDoc']);
     Route::post('saveUwagiSprz', [ReturnController::class, 'saveUwagiSprz']);
     Route::post('saveUwagiProduct', [ReturnController::class, 'saveUwagiProduct']);
+    Route::post('sendEmail', [ReturnController::class, 'sendEmail']);
     Route::get('sendPDF', [SendPDF::class, 'index']);
     Route::post('TowarLocationTipTab', [LocationController::class, 'TowarLocationTipTab']);
     Route::get('getWarehouseLocations/{id}', [LocationController::class, 'getWarehouseLocations']);
