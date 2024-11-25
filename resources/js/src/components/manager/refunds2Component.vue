@@ -197,7 +197,7 @@
                 </v-row>
               </v-tabs-window-item>
               <v-tabs-window-item value="email">
-                <v-btn @click="sendEmail">sendEmail</v-btn>
+                <v-btn @click="sendEmail" class="ma-3">Wyślij e-mail</v-btn>
                 <p v-if="SendedEmail.length">Email został wysłany:</p>
                 <v-data-table
                   :items="SendedEmail"
