@@ -1,5 +1,14 @@
 <template>
   <v-container>
+    <v-snackbar v-model="snackbar" timeout="6000" location="top">
+      {{ message }}
+
+      <template v-slot:actions>
+        <v-btn color="pink" variant="text" @click="snackbar = false">
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
     <div
       fluid
       v-if="selectedItem"
@@ -188,12 +197,19 @@
                 </v-row>
               </v-tabs-window-item>
               <v-tabs-window-item value="email">
-                <v-btn @click.once="sendEmail">sendEmail</v-btn>
+                <v-btn @click="sendEmail">sendEmail</v-btn>
+                <p v-if="SendedEmail.length">Email został wysłany:</p>
+                <v-data-table
+                  :items="SendedEmail"
+                  width="200"
+                  hide-default-footer
+                  items-per-page="-1"
+                  v-if="SendedEmail.length"
+                ></v-data-table>
               </v-tabs-window-item>
             </v-tabs-window>
-          </v-card>
-        </v-col></v-row
-      >
+          </v-card> </v-col
+      ></v-row>
     </div>
     <v-row>
       <v-col md="6" sm="12">
@@ -526,7 +542,7 @@ export default {
       selectedItem: null,
 
       locations: [],
-      selectedItem: null,
+
       tab: "products",
       headers_products: [
         { title: "Nazwa", key: "Nazwa" },
@@ -546,6 +562,9 @@ export default {
       dialogEditUwagiDoc: false,
       dialogEditUwagiSprz: false,
       dialogEditUwagiProduct: false,
+      SendedEmail: [],
+      snackbar: false,
+      message: "",
     };
   },
 
@@ -581,15 +600,37 @@ export default {
     };
   },
   methods: {
-    sendEmail() {
+    whenSendedEmail() {
       const vm = this;
+      vm.SendedEmail = [];
       axios
-        .post("api/sendEmail", {
-          item: vm.selectedItem,
+        .post("api/whenSendedEmail", {
+          IDRuchuMagazynowego: vm.selectedItem.IDRuchuMagazynowego,
         })
         .then((res) => {
           if (res.status == 200) {
+            vm.SendedEmail = res.data;
+            // console.log(res.data);
           }
+        })
+        .catch((error) => console.log(error));
+    },
+    sendEmail() {
+      const vm = this;
+      vm.loading = true;
+      axios
+        .post("api/sendEmail", {
+          NrDokumentu: vm.selectedItem.NrDokumentu,
+          IDRuchuMagazynowego: vm.selectedItem.IDRuchuMagazynowego,
+        })
+        .then((res) => {
+          if (res.status == 200) {
+            vm.whenSendedEmail();
+            vm.message = "Email został wysłany";
+            vm.snackbar = true;
+            // console.log(res.data);
+          }
+          vm.loading = false;
         })
         .catch((error) => console.log(error));
     },
@@ -771,11 +812,16 @@ export default {
       if (vm.wzk_products.length === 0 && vm.tab === "products") {
         this.get_WZkProducts();
       }
+      if (vm.SendedEmail.length === 0 && vm.tab === "email") {
+        this.whenSendedEmail();
+      }
     },
     handleItemSelected(item) {
       this.selectedItem = item;
       this.tab = "products";
       this.products = [];
+      this.SendedEmail = [];
+      this.photoFiles = [];
       this.get_WZkProducts();
     },
     get_WZkProducts() {
@@ -822,6 +868,7 @@ export default {
       this.products = [];
       this.ordername = "";
       this.imputCod = "";
+      this.SendedEmail = [];
     },
     async ConfirmFullOrder() {
       if (

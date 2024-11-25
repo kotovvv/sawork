@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Mail;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 
 class ReturnController extends Controller
@@ -368,18 +371,23 @@ class ReturnController extends Controller
 
     public function sendEmail(Request $request)
     {
-        $data = $request->all();
-        $item = $data['item'];
-        $item['IDMagazynu'];
+        $validatedData = $request->validate([
+            'NrDokumentu' => 'required|string|max:255',
+            'IDRuchuMagazynowego' => 'required|integer',
+        ]);
+
+        $folder_name = 'zworot';
+
         $data = [
-            'title' => 'Zwrot od odbiorcy ' . date('Y-m-d'),
+            'title' => 'Photo zwrot od odbiorcy ' . date('Y-m-d'),
         ];
         $magazin = [];
         $my = DB::selectOne("SELECT  k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.Kontrahent k WHERE k.IDKontrahenta = 1");
+
         $docsWZk = DB::select("SELECT rm.IDRuchuMagazynowego, rm.Data, rm.Uwagi, rm.IDMagazynu, rm.NrDokumentu, rm.IDKontrahenta, rm.IDUzytkownika, rm.WartoscDokumentu, k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon
 FROM dbo.RuchMagazynowy rm
 LEFT JOIN dbo.Kontrahent k ON (k.IDKontrahenta = rm.IDKontrahenta)
-WHERE NrDokumentu = " . $item['NrDokumentu']);
+WHERE NrDokumentu = '" .  $validatedData['NrDokumentu'] . "'");
 
         foreach ($docsWZk as $key => $docWZk) {
             $forpdf = [];
@@ -403,28 +411,51 @@ WHERE NrDokumentu = " . $item['NrDokumentu']);
             $email_log = [
                 'IDMagazynu' => $docWZk->IDMagazynu,
                 'NrDokumentu' => $docWZk->NrDokumentu,
+                'Status' => 2,
                 'IDRuchuMagazynowego' => $docWZk->IDRuchuMagazynowego
             ];
 
             DB::table('dbo.EMailLog')->insert($email_log);
             //sleep(10);
         }
-
         foreach ($magazin as $key => $mag) {
             //send mail to user
             $emails = explode(',', $mag['email']->eMailAddress);
 
             if ($mag['email']) {
-                Mail::send('message', $data, function ($message) use ($mag, $data, $emails) {
+                Mail::send('message', $data, function ($message) use ($mag, $data, $emails, $validatedData, $folder_name) {
                     $message->from(env('MAIL_FROM_ADDRESS'));
                     $message->to($emails);
                     $message->subject($data['title']);
                     foreach ($mag['pdfs'] as $n => $pdf) {
                         $message->attachData($pdf->output(), $mag['ndoc'][$n] . '.pdf'); //attached pdf file
                     }
+                    $path =  $validatedData['IDRuchuMagazynowego'] . '/' . $folder_name . '/';
+
+                    // Get all files from the directory
+                    $files = Storage::disk('public')->allFiles($path);
+
+                    foreach ($files as $file) {
+                        $message->attachData(Storage::disk('public')->get($file), basename($file));
+                    }
                 });
             }
         }
-        return $item['IDRuchuMagazynowego'];
+        return response("Photo Zwrot wysłane: ", '200');
+    }
+
+    public function whenSendedEmail(Request $request)
+    {
+        $data = $request->all();
+        $IDRuchuMagazynowego = trim($data['IDRuchuMagazynowego']);
+        $res = [];
+        $res = DB::table('EMailLog')
+            ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
+            ->where('Status', 2)
+
+            ->select(DB::raw("FORMAT(Data, 'yyyy-MM-dd HH:mm') as Data"))
+            ->orderBy('Data', 'desc')
+            ->get();
+        return response($res);
     }
 }
