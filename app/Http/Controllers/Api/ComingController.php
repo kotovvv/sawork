@@ -210,7 +210,7 @@ class ComingController extends Controller
 
         $IDWarehouseLocation = $products[0]->IDWarehouseLocation;
         $inLocation = $this->getProductsInLocation($IDWarehouseLocation);
-        dd($inLocation);
+
         $sum = 0;
         foreach ($products as $key => $product) {
             if (isset($inLocation[$product->KodKreskowy])) {
