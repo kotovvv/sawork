@@ -549,7 +549,9 @@ export default {
         { title: "KodKreskowy", key: "KodKreskowy" },
         { title: "SKU", key: "sku" },
         { title: "Ilosc", key: "Ilosc" },
-        { title: "LocationCode", key: "LocationCode" },
+        this.$attrs.user.IDRoli != 4
+          ? { title: "LocationCode", key: "LocationCode" }
+          : { title: "Status", key: "status" },
         {
           title: "Uwagi",
           key: "Uwagi",
