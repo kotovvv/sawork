@@ -71,7 +71,7 @@ export default {
     searchInTable: "",
     loading: false,
     locations: {
-      Zworot: 0,
+      Zwrot: 0,
       Naprawa: 0,
       Zniszczony: 0,
     },

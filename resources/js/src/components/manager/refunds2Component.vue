@@ -142,7 +142,7 @@
                     ></v-file-input>
 
                     <v-btn
-                      @click="uploadFiles('zworot')"
+                      @click="uploadFiles('zwrot')"
                       icon="mdi-content-save"
                     ></v-btn>
                   </v-col>
@@ -162,7 +162,7 @@
                       <v-btn icon="mdi-delete" @click="delPic(index)"></v-btn>
                     </div>
                   </div>
-                  <v-btn @click="uploadSnapshots('zworot')"
+                  <v-btn @click="uploadSnapshots('zwrot')"
                     >Save Snapshots</v-btn
                   >
                   <div v-if="message">{{ message }}</div>
@@ -809,7 +809,7 @@ export default {
       const vm = this;
 
       if (vm.photoFiles.length === 0 && vm.tab === "photo") {
-        this.getFiles("zworot");
+        this.getFiles("zwrot");
       }
       if (vm.wzk_products.length === 0 && vm.tab === "products") {
         this.get_WZkProducts();

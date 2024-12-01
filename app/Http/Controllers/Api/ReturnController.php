@@ -324,7 +324,7 @@ class ReturnController extends Controller
         $IDRuchuMagazynowego = trim($data['IDRuchuMagazynowego']);
         $res = [];
         $res = DB::table('ElementRuchuMagazynowego as erm')
-            ->select('IDElementuRuchuMagazynowego', 'erm.Uwagi', 'IDRuchuMagazynowego', 't.IDTowaru', 'Ilosc', 'erm.IDWarehouseLocation', DB::raw("CASE WHEN wl.LocationCode = 'zwroty' THEN 'ok' ELSE wl.LocationCode END as status"), DB::raw('t._TowarTempString1 as sku'), 't.KodKreskowy as KodKreskowy', 'wl.LocationCode', 't.Nazwa')
+            ->select('IDElementuRuchuMagazynowego', 'erm.Uwagi', 'IDRuchuMagazynowego', 't.IDTowaru', 'Ilosc', 'erm.IDWarehouseLocation', DB::raw("CASE WHEN wl.LocationCode LIKE '_wrot%' THEN 'ok' ELSE wl.LocationCode END as status"), DB::raw('t._TowarTempString1 as sku'), 't.KodKreskowy as KodKreskowy', 'wl.LocationCode', 't.Nazwa')
             ->leftJoin('Towar as t', 'erm.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin('dbo.WarehouseLocations as wl', 'wl.IDWarehouseLocation', '=', 'erm.IDWarehouseLocation')
             ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
@@ -376,7 +376,7 @@ class ReturnController extends Controller
             'IDRuchuMagazynowego' => 'required|integer',
         ]);
 
-        $folder_name = 'zworot';
+        $folder_name = 'zwrot';
 
         $data = [
             'title' => 'Photo zwrot od odbiorcy ' . date('Y-m-d'),
