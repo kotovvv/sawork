@@ -907,7 +907,7 @@ export default {
         })
         .then((res) => {
           if (res.status == 200) {
-            vm.wzk_products = res.data;
+            vm.wzk_products = res.data.wzk_products;
             vm.client = res.data.client;
             vm.wzk_products.map((e) => {
               e.Ilosc = parseInt(e.Ilosc);
