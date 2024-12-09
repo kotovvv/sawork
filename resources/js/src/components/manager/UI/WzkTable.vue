@@ -67,6 +67,7 @@ export default {
       { title: "Uwagi fulstor", key: "Uwagi", nowrap: true },
       { title: "Uwagi Sprzedawcy", key: "uwagiSprzedawcy", nowrap: true },
       { title: "Pieniądze zwrócone", key: "isWartosc" },
+      { title: "Status", key: "status" },
     ],
     searchInTable: "",
     loading: false,

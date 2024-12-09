@@ -82,7 +82,38 @@
             </v-dialog>
           </div>
         </v-col>
+        <v-col class="border">
+          <p>
+            <b>Kontrahent: </b>
+            <span @click="copyToClipboard(client.Nazwa)">
+              {{ client.Nazwa }}
+              <v-icon>mdi-content-copy</v-icon>
+            </span>
+          </p>
+          <p>
+            <b>Zrodlo: </b
+            ><span @click="copyToClipboard(client.Zrodlo)">
+              {{ client.Zrodlo }}
+              <v-icon>mdi-content-copy</v-icon>
+            </span>
+          </p>
+          <p>
+            <b>External id: </b
+            ><span @click="copyToClipboard(client.External_id)">
+              {{ client.External_id }}
+              <v-icon>mdi-content-copy</v-icon>
+            </span>
+          </p>
+          <p>
+            <b>Login klienta: </b
+            ><span @click="copyToClipboard(client.Login_klienta)">
+              {{ client.Login_klienta }}
+              <v-icon>mdi-content-copy</v-icon>
+            </span>
+          </p>
+        </v-col>
         <v-spacer></v-spacer>
+
         <v-btn icon="mdi-close" @click="selectedItem = null"></v-btn>
       </v-row>
       <v-row
@@ -518,7 +549,7 @@ export default {
       dialogMessageQty: false,
       dialog_text: "",
       dialog_title: "",
-
+      client: {},
       full: 0,
       ordername: "",
       order: {},
@@ -602,6 +633,35 @@ export default {
     };
   },
   methods: {
+    copyToClipboard(text) {
+      if (navigator.clipboard) {
+        navigator.clipboard
+          .writeText(text)
+          .then(() => {
+            this.message = "Text copied to clipboard";
+            this.snackbar = true;
+          })
+          .catch((err) => {
+            console.error("Failed to copy text: ", err);
+          });
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+          document.execCommand("copy");
+          this.message = "Text copied to clipboard";
+          this.snackbar = true;
+        } catch (err) {
+          console.error("Failed to copy text: ", err);
+        }
+        document.body.removeChild(textarea);
+      }
+    },
     whenSendedEmail() {
       const vm = this;
       vm.SendedEmail = [];
@@ -841,6 +901,7 @@ export default {
         .then((res) => {
           if (res.status == 200) {
             vm.wzk_products = res.data;
+            vm.client = res.data.client;
             vm.wzk_products.map((e) => {
               e.Ilosc = parseInt(e.Ilosc);
               e.inLocation = parseInt(e.inLocation);

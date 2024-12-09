@@ -185,6 +185,7 @@ class ReturnController extends Controller
 
 
             $tov = [];
+            $locations = [];
             //for each product return
             foreach ($data['products'] as $k => $product) {
                 $ocol = $product['qty']; //how many need return
@@ -214,6 +215,7 @@ class ReturnController extends Controller
                                 'IDUserCreated' => 1,
                                 'IDWarehouseLocation' => $product['IDWarehouseLocation']
                             ];
+                            $locations[] = $product['IDWarehouseLocation'];
                             $tovs[$key]->qty = $ep->qty - $ocol;
                         }
                     }
@@ -221,6 +223,10 @@ class ReturnController extends Controller
             }
 
             DB::table('dbo.ElementRuchuMagazynowego')->insert($tov);
+            DB::table('dbo.infoComming')->insert([
+                'IDRuchuMagazynowego' => $wz->IDRuchuMagazynowego,
+                'locations' => str_replace(['zwrot', 'zwroty', 'Zwrot', 'Zwroty'], 'ok', implode(',', $locations))
+            ]);
 
             // dbo.DocumentRelations
             // ID1 = таблица dbo.RuchMagazynowy столбец IDRuchuMagazynowego
@@ -286,12 +292,55 @@ class ReturnController extends Controller
 
         $res = [];
         $res['DocsWZk'] = DB::table('RuchMagazynowy as rm')
-            ->select('rm.IDRuchuMagazynowego', 'NrDokumentu', 'Data', 'rm.IDKontrahenta', 'IDCompany', 'IDUzytkownika', 'Operator', 'IDMagazynu', 'IDRodzajuRuchuMagazynowego', 'rm.Uwagi', '_RuchMagazynowyTempDecimal1', '_RuchMagazynowyTempString2', '_RuchMagazynowyTempString1', '_RuchMagazynowyTempString4', '_RuchMagazynowyTempString5', '_RuchMagazynowyTempString6 as uwagiSprzedawcy', '_RuchMagazynowyTempBool1', '_RuchMagazynowyTempBool3 as isWartosc', 'kon.Nazwa as Kontrahent')
+            ->select(
+                'rm.IDRuchuMagazynowego',
+                'NrDokumentu',
+                'Data',
+                'rm.IDKontrahenta',
+                'IDCompany',
+                'IDUzytkownika',
+                'Operator',
+                'IDMagazynu',
+                'IDRodzajuRuchuMagazynowego',
+                'rm.Uwagi',
+                '_RuchMagazynowyTempDecimal1',
+                '_RuchMagazynowyTempString2',
+                '_RuchMagazynowyTempString1',
+                '_RuchMagazynowyTempString4',
+                '_RuchMagazynowyTempString5',
+                '_RuchMagazynowyTempString6 as uwagiSprzedawcy',
+                '_RuchMagazynowyTempBool1',
+                '_RuchMagazynowyTempBool3 as isWartosc',
+                'kon.Nazwa as Kontrahent',
+                DB::raw('MAX(ic.photo) as photo'),
+                DB::raw('MAX(CAST(ic.locations AS VARCHAR(MAX))) as status')
+            )
             ->leftJoin('Kontrahent as kon', 'rm.IDKontrahenta', '=', 'kon.IDKontrahenta')
+            ->leftJoin('InfoComming as ic', 'ic.IDRuchuMagazynowego', '=', 'rm.IDRuchuMagazynowego')
             ->where('NrDokumentu', 'like', 'WZk%')
-            // ->where('NrDokumentu', 'like', '%/24')
-            ->where('IDMagazynu', $IDWarehouse)
-            ->orderBy('Data', 'desc')
+            ->where('rm.IDMagazynu', $IDWarehouse)
+            ->groupBy(
+                'rm.IDRuchuMagazynowego',
+                'NrDokumentu',
+                'Data',
+                'rm.IDKontrahenta',
+                'IDCompany',
+                'IDUzytkownika',
+                'Operator',
+                'IDMagazynu',
+                'IDRodzajuRuchuMagazynowego',
+                'rm.Uwagi',
+                '_RuchMagazynowyTempDecimal1',
+                '_RuchMagazynowyTempString2',
+                '_RuchMagazynowyTempString1',
+                '_RuchMagazynowyTempString4',
+                '_RuchMagazynowyTempString5',
+                '_RuchMagazynowyTempString6',
+                '_RuchMagazynowyTempBool1',
+                '_RuchMagazynowyTempBool3',
+                'kon.Nazwa'
+            )
+            ->orderBy('Data', 'DESC')
             ->get();
 
         $WarehouseLocations = DB::table('dbo.EMailMagazyn')->select('IDLokalizaciiZwrot', 'Zniszczony', 'Naprawa')->where('IDMagazyn', $IDWarehouse)->where('IDLokalizaciiZwrot', '>', 0)->get();
@@ -325,13 +374,26 @@ class ReturnController extends Controller
     {
         $data = $request->all();
         $IDRuchuMagazynowego = trim($data['IDRuchuMagazynowego']);
+
         $res = [];
-        $res = DB::table('ElementRuchuMagazynowego as erm')
+        $res['wzk_products'] = DB::table('ElementRuchuMagazynowego as erm')
             ->select('IDElementuRuchuMagazynowego', 'erm.Uwagi', 'IDRuchuMagazynowego', 't.IDTowaru', 'Ilosc', 'erm.IDWarehouseLocation', DB::raw("CASE WHEN wl.LocationCode LIKE '_wrot%' THEN 'ok' ELSE wl.LocationCode END as status"), DB::raw('t._TowarTempString1 as sku'), 't.KodKreskowy as KodKreskowy', 'wl.LocationCode', 't.Nazwa')
             ->leftJoin('Towar as t', 'erm.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin('dbo.WarehouseLocations as wl', 'wl.IDWarehouseLocation', '=', 'erm.IDWarehouseLocation')
             ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
             ->get();
+
+        $res['client'] =  DB::table('Orders')->select(
+            'IDOrder',
+            'Number',
+            'con.Nazwa',
+            '_OrdersTempString7 as Zrodlo',
+            '_OrdersTempString8 as External_id',
+            '_OrdersTempString9 as Login_klienta'
+        )
+            ->leftJoin('Kontrahent as con', 'con.IDKontrahenta', '=', 'Orders.IDAccount')
+            ->where('IDOrder', DB::table('DocumentRelations')->select('ID2')->where('ID1', DB::table('DocumentRelations')->where('ID1', $IDRuchuMagazynowego)->where('IDType1', 4)->where('IDType2', 2)->value('ID2'))->where('IDType1', 2)->value('ID1'))->first();
+
         return response($res);
     }
 

@@ -172,7 +172,15 @@ class FileController extends Controller
                     ['IDRuchuMagazynowego' => $IDRuchuMagazynowego],
                     ['doc' => $fileCount]
                 );
-        } elseif ($dir === 'photo') {
+        }
+        if ($dir === 'photo') {
+            DB::table('InfoComming')
+                ->updateOrInsert(
+                    ['IDRuchuMagazynowego' => $IDRuchuMagazynowego],
+                    ['photo' => $fileCount]
+                );
+        }
+        if ($dir === 'zwrot') {
             DB::table('InfoComming')
                 ->updateOrInsert(
                     ['IDRuchuMagazynowego' => $IDRuchuMagazynowego],
