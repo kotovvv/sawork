@@ -111,6 +111,13 @@
               <v-icon>mdi-content-copy</v-icon>
             </span>
           </p>
+          <p>
+            <b>Telefon: </b
+            ><span @click="copyToClipboard(client.Telefon)">
+              {{ client.Telefon }}
+              <v-icon>mdi-content-copy</v-icon>
+            </span>
+          </p>
         </v-col>
         <v-spacer></v-spacer>
 

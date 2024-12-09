@@ -387,6 +387,7 @@ class ReturnController extends Controller
             'IDOrder',
             'Number',
             'con.Nazwa',
+            'con.Telefon',
             '_OrdersTempString7 as Zrodlo',
             '_OrdersTempString8 as External_id',
             '_OrdersTempString9 as Login_klienta'
