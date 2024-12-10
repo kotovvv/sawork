@@ -228,11 +228,11 @@ class ReturnController extends Controller
             }
 
             DB::table('dbo.ElementRuchuMagazynowego')->insert($tov);
-
+            $locations = array_unique($locations);
             DB::table('dbo.infoComming')->updateOrInsert([
                 'IDRuchuMagazynowego' => $wz->IDRuchuMagazynowego
             ], [
-                'locations' => str_replace(['zwrot', 'zwroty', 'Zwrot', 'Zwroty'], 'ok', implode(',', $locations))
+                'locations' => implode(',', $locations)
             ]);
 
             // dbo.DocumentRelations

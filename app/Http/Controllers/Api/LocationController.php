@@ -260,7 +260,7 @@ class LocationController extends Controller
                 $locations[] = $loc_name[$product->IDWarehouseLocation] ?? $product->IDWarehouseLocation;
             }
             if (is_array($locations) && count($locations)) {
-
+                $locations = array_unique($locations);
                 $this->updateOrInsertLocation($IDRuchuMagazynowego, implode(',', $locations));
             }
         }
