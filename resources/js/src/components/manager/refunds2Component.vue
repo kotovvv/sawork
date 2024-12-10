@@ -311,6 +311,7 @@
       <v-col>
         <WzkTable
           :IDWarehouse="IDWarehouse"
+          :user="$attrs.user"
           :key="IDWarehouse"
           @item-selected="handleItemSelected"
         />

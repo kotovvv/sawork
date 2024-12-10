@@ -223,8 +223,9 @@ class ReturnController extends Controller
             }
 
             DB::table('dbo.ElementRuchuMagazynowego')->insert($tov);
-            DB::table('dbo.infoComming')->insert([
-                'IDRuchuMagazynowego' => $wz->IDRuchuMagazynowego,
+            DB::table('dbo.infoComming')->updateOrInsert([
+                'IDRuchuMagazynowego' => $wz->IDRuchuMagazynowego
+            ], [
                 'locations' => str_replace(['zwrot', 'zwroty', 'Zwrot', 'Zwroty'], 'ok', implode(',', $locations))
             ]);
 

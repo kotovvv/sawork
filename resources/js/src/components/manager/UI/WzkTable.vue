@@ -32,7 +32,20 @@
             ></v-text-field>
           </v-col>
           <v-btn @click="getDocsWZk" icon="mdi-refresh"></v-btn>
-          <v-col class="v-col-sm-12 v-col-md-3">
+          <v-btn
+            @click="refreshLocations"
+            icon="mdi-redo-variant"
+            v-if="$props.user.IDRoli != 4"
+          >
+            <v-tooltip bottom>
+              <template v-slot:activator="{ on, attrs }">
+                <v-icon v-bind="attrs" v-on="on">mdi-redo-variant</v-icon>
+              </template>
+              <span>Refresh Locations</span>
+            </v-tooltip>
+          </v-btn>
+
+          <v-col class="v-col-sm-12 v-col-md-3" v-if="$props.user.IDRoli != 4">
             <div class="d-flex ga-5 flex-wrap">
               <span class="border-info border pa-2" v-if="locations.Zwrot"
                 >Ilość w zwrot: {{ locations.Zwrot }}</span
@@ -56,7 +69,7 @@ import axios from "axios";
 
 export default {
   name: "WZkTable",
-  props: ["IDWarehouse"],
+  props: ["IDWarehouse", "user"],
   data: () => ({
     docsWZk: [],
     selected: {},
@@ -81,6 +94,18 @@ export default {
     this.getDocsWZk();
   },
   methods: {
+    refreshLocations() {
+      const vm = this;
+      vm.loading = true;
+      axios
+        .post("/api/refreshLocations", { IDWarehouse: vm.IDWarehouse })
+        .then((res) => {
+          if (res.status == 200) {
+          }
+          vm.loading = false;
+        })
+        .catch((error) => console.log(error));
+    },
     handleClick(e, row) {
       this.selected = row.item;
       this.$emit("item-selected", this.selected); // Emit event with selected item

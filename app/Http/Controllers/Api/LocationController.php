@@ -204,4 +204,68 @@ class LocationController extends Controller
 
         return $resnonse;
     }
+
+    public function updateOrInsertLocation($IDRuchuMagazynowego, $locations)
+    {
+        // Define the condition to check for existing records
+        $condition = ['IDRuchuMagazynowego' => $IDRuchuMagazynowego];
+        // Define the data to update or insert
+        $data = [
+            'locations' => $locations,
+            // Add other fields as necessary
+        ];
+
+        // Use updateOrInsert to update if exists, or insert if not
+        DB::table('InfoComming')->updateOrInsert($condition, $data);
+    }
+
+    public function refreshLocations(Request $request)
+    {
+        $data = $request->all();
+        $res = [];
+        $IDWarehouse = (int) $data['IDWarehouse'];
+
+        // get all WZk for magazin
+        $res['allWZk'] = DB::table('RuchMagazynowy')
+            ->where('IDMagazynu', $IDWarehouse)
+            ->pluck('IDRuchuMagazynowego');
+
+        // get locations name
+        $loc_name =  (array) DB::table('EMailMagazyn')
+            ->where('IDMagazyn', $IDWarehouse)
+            ->select('IDLokalizaciiZwrot as ok', 'Zniszczony', 'Naprawa')
+            ->first();
+        $loc_name = array_flip($loc_name);
+
+        // get all WZk products locations
+        // $res['allLocations'] = DB::table('InfoComming')
+        //     ->select('IDRuchuMagazynowego', 'locations')
+        //     ->whereNotNull('locations')
+        //     ->whereIn('IDRuchuMagazynowego', $res['allWZk'])
+        //     ->get();
+
+        // delete all locations
+        // DB::table('InfoComming')
+        //             ->whereNotNull('locations')
+        //             ->whereIn('IDRuchuMagazynowego', $res['allWZk'])
+        //             ->delete();
+
+        // get locations of products each WZK
+        foreach ($res['allWZk'] as $key => $IDRuchuMagazynowego) {
+            $locations = [];
+            $products = DB::table('ElementRuchuMagazynowego')
+                ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
+                ->get();
+            foreach ($products as $key => $product) {
+                $locations[] = $loc_name[$product->IDWarehouseLocation] ?? $product->IDWarehouseLocation;
+            }
+            if (is_array($locations) && count($locations)) {
+
+                $this->updateOrInsertLocation($IDRuchuMagazynowego, implode(',', $locations));
+            }
+        }
+
+
+        return $res;
+    }
 }

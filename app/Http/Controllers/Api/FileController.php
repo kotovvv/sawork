@@ -37,7 +37,13 @@ class FileController extends Controller
             DB::table('InfoComming')
                 ->where('IDRuchuMagazynowego', explode('/', $path)[0])
                 ->update(['doc' => $fileCount]);
-        } elseif (strpos($path, 'photo') !== false) {
+        }
+        if (strpos($path, 'photo') !== false) {
+            DB::table('InfoComming')
+                ->where('IDRuchuMagazynowego', explode('/', $path)[0])
+                ->update(['photo' => $fileCount]);
+        }
+        if (strpos($path, 'zwrot') !== false) {
             DB::table('InfoComming')
                 ->where('IDRuchuMagazynowego', explode('/', $path)[0])
                 ->update(['photo' => $fileCount]);
