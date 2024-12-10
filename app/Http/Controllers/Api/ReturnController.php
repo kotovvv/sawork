@@ -296,6 +296,9 @@ class ReturnController extends Controller
     {
         $data = $request->all();
         $IDWarehouse = trim($data['IDWarehouse']);
+        $dateMin = $data['dateMin'] . ' 00:00:00';
+        $dateMax = $data['dateMax'] . ' 23:59:59';
+
 
         $res = [];
         $res['DocsWZk'] = DB::table('RuchMagazynowy as rm')
@@ -319,34 +322,37 @@ class ReturnController extends Controller
                 '_RuchMagazynowyTempBool1',
                 '_RuchMagazynowyTempBool3 as isWartosc',
                 'kon.Nazwa as Kontrahent',
-                DB::raw('MAX(ic.photo) as photo'),
-                DB::raw('MAX(CAST(ic.locations AS VARCHAR(MAX))) as status')
+                'ic.photo as photo',
+                'ic.locations as status'
+                // DB::raw('MAX(ic.photo) as photo'),
+                // DB::raw('MAX(CAST(ic.locations AS VARCHAR(MAX))) as status')
             )
             ->leftJoin('Kontrahent as kon', 'rm.IDKontrahenta', '=', 'kon.IDKontrahenta')
             ->leftJoin('InfoComming as ic', 'ic.IDRuchuMagazynowego', '=', 'rm.IDRuchuMagazynowego')
             ->where('NrDokumentu', 'like', 'WZk%')
             ->where('rm.IDMagazynu', $IDWarehouse)
-            ->groupBy(
-                'rm.IDRuchuMagazynowego',
-                'NrDokumentu',
-                'Data',
-                'rm.IDKontrahenta',
-                'IDCompany',
-                'IDUzytkownika',
-                'Operator',
-                'IDMagazynu',
-                'IDRodzajuRuchuMagazynowego',
-                'rm.Uwagi',
-                '_RuchMagazynowyTempDecimal1',
-                '_RuchMagazynowyTempString2',
-                '_RuchMagazynowyTempString1',
-                '_RuchMagazynowyTempString4',
-                '_RuchMagazynowyTempString5',
-                '_RuchMagazynowyTempString6',
-                '_RuchMagazynowyTempBool1',
-                '_RuchMagazynowyTempBool3',
-                'kon.Nazwa'
-            )
+            ->whereBetween('Data', [$dateMin, $dateMax])
+            // ->groupBy(
+            //     'rm.IDRuchuMagazynowego',
+            //     'NrDokumentu',
+            //     'Data',
+            //     'rm.IDKontrahenta',
+            //     'IDCompany',
+            //     'IDUzytkownika',
+            //     'Operator',
+            //     'IDMagazynu',
+            //     'IDRodzajuRuchuMagazynowego',
+            //     'rm.Uwagi',
+            //     '_RuchMagazynowyTempDecimal1',
+            //     '_RuchMagazynowyTempString2',
+            //     '_RuchMagazynowyTempString1',
+            //     '_RuchMagazynowyTempString4',
+            //     '_RuchMagazynowyTempString5',
+            //     '_RuchMagazynowyTempString6',
+            //     '_RuchMagazynowyTempBool1',
+            //     '_RuchMagazynowyTempBool3',
+            //     'kon.Nazwa'
+            // )
             ->orderBy('Data', 'DESC')
             ->get();
 

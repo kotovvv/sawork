@@ -264,6 +264,7 @@
           hide-details="auto"
         ></v-select>
       </v-col>
+
       <v-col md="6" sm="12" v-if="$attrs.user.IDRoli != 4">
         <v-text-field
           label="Dokument"
@@ -551,6 +552,9 @@ export default {
   },
   data() {
     return {
+      startMonth: new Date(new Date().setMonth(new Date().getMonth() - 6))
+        .toISOString()
+        .substr(0, 10),
       loading: false,
       dialog: false,
       dialogProduct: false,

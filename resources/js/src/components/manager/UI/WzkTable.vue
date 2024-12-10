@@ -5,7 +5,9 @@
       indeterminate
       color="purple"
     ></v-progress-linear>
+    <datepicker v-model="dateMin" format="yyyy-MM-dd" monday-first></datepicker>
 
+    <datepicker v-model="dateMax" format="yyyy-MM-dd" monday-first></datepicker>
     <v-data-table
       :items="docsWZk"
       :headers="wzk_headers"
@@ -65,12 +67,18 @@
 </template>
 
 <script>
+import Datepicker from "vuejs3-datepicker";
+import moment from "moment";
+
 import axios from "axios";
 
 export default {
   name: "WZkTable",
+  components: { Datepicker },
   props: ["IDWarehouse", "user"],
   data: () => ({
+    dateMin: moment().subtract(2, "months").format("YYYY-MM-DD"),
+    dateMax: moment().format("YYYY-MM-DD"),
     docsWZk: [],
     selected: {},
     wzk_headers: [
@@ -98,7 +106,11 @@ export default {
       const vm = this;
       vm.loading = true;
       axios
-        .post("/api/refreshLocations", { IDWarehouse: vm.IDWarehouse })
+        .post("/api/refreshLocations", {
+          IDWarehouse: vm.IDWarehouse,
+          dateMin: vm.dateMin,
+          dateMax: vm.dateMax,
+        })
         .then((res) => {
           if (res.status == 200) {
           }
@@ -124,7 +136,11 @@ export default {
       if (vm.IDWarehouse == null) return;
       vm.loading = true;
       axios
-        .post("/api/getDocsWZk", { IDWarehouse: vm.IDWarehouse })
+        .post("/api/getDocsWZk", {
+          IDWarehouse: vm.IDWarehouse,
+          dateMin: vm.dateMin,
+          dateMax: vm.dateMax,
+        })
         .then((res) => {
           if (res.status == 200) {
             vm.docsWZk = res.data.DocsWZk;

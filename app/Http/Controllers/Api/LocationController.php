@@ -223,11 +223,14 @@ class LocationController extends Controller
     {
         $data = $request->all();
         $res = [];
-        $IDWarehouse = (int) $data['IDWarehouse'];
+        $IDWarehouse = $data['IDWarehouse'];
+        $dateMin = $data['dateMin'] . ' 00:00:00';
+        $dateMax = $data['dateMax'] . ' 23:59:59';
 
         // get all WZk for magazin
         $res['allWZk'] = DB::table('RuchMagazynowy')
             ->where('IDMagazynu', $IDWarehouse)
+            ->whereBetween('Data', [$dateMin, $dateMax])
             ->pluck('IDRuchuMagazynowego');
 
         // get locations name
