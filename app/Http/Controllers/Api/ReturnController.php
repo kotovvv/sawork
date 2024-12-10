@@ -182,7 +182,12 @@ class ReturnController extends Controller
             // Uzytkownik = пользователь БД
             // IDUserCreated = пользователь БД
 
-
+            // get locations name
+            $loc_name =  (array) DB::table('EMailMagazyn')
+                ->where('IDMagazyn', $IDWarehouse)
+                ->select('IDLokalizaciiZwrot as ok', 'Zniszczony', 'Naprawa')
+                ->first();
+            $loc_name = array_flip($loc_name);
 
             $tov = [];
             $locations = [];
@@ -215,7 +220,7 @@ class ReturnController extends Controller
                                 'IDUserCreated' => 1,
                                 'IDWarehouseLocation' => $product['IDWarehouseLocation']
                             ];
-                            $locations[] = $product['IDWarehouseLocation'];
+                            $locations[] = $loc_name[$product['IDWarehouseLocation']] ?? $product['IDWarehouseLocation'];
                             $tovs[$key]->qty = $ep->qty - $ocol;
                         }
                     }
@@ -223,6 +228,7 @@ class ReturnController extends Controller
             }
 
             DB::table('dbo.ElementRuchuMagazynowego')->insert($tov);
+
             DB::table('dbo.infoComming')->updateOrInsert([
                 'IDRuchuMagazynowego' => $wz->IDRuchuMagazynowego
             ], [
