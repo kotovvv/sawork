@@ -197,6 +197,28 @@ class MagazynController extends Controller
         return response('No default warehouse', 404);
     }
 
+    private function getProductsInLocation($IDWarehouseLocation, $date = null)
+    {
+        if (!$date) {
+            $date = Carbon::now()->format('Y/m/d H:i:s');
+        }
+
+        $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
+        $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
+        $result = DB::select($query, [$IDWarehouseLocation, $date, $param]);
+        $resultString = $result[0]->Stock ?? null;
+        $array = [];
+
+        if ($resultString) {
+            $pairs = explode(', ', $resultString);
+            foreach ($pairs as $pair) {
+                list($key, $value) = explode(': ', $pair);
+                $array[$key] = (int) $value;
+            }
+        }
+        return $array;
+    }
+
     public function getDataForXLSDay(Request $request, $day, $idwarehouse)
     {
         $this->logUsers($request->user, 'Day', $request->ip());
@@ -204,9 +226,41 @@ class MagazynController extends Controller
             $res = [];
             //$date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('d/m/Y H:i:s');
             // $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('Y-m-d H:i:s');
-            $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
+            $date = Carbon::parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
 
-            $res[Carbon::now()->parse($day)->format('d-m-Y')] = $this->getWarehouseData($date, $idwarehouse);
+            $productsInLocation = [];
+            // get locations name
+            $loc_names =  (array) DB::table('EMailMagazyn')
+                ->where('IDMagazyn', $idwarehouse)
+                ->select('Zniszczony', 'Naprawa')
+                ->first();
+            /*
+            для каждой строки $products нужно добавить колонки $loc_name
+где товар из $products имеет поле "KodKreskowy"
+значения в колонки $loc_name брать из массива $productsInLocation[$loc_name] который состоит из массива [KodKreskowy=>1]
+
+            */
+            foreach ($loc_names as $loc_name => $loc_id) {
+                $productsInLocation[$loc_name] = $this->getProductsInLocation($loc_id, $date);
+            }
+
+            $products = $this->getWarehouseData($date, $idwarehouse);
+            foreach ($products as $product) {
+                $kodKreskowy = $product->KodKreskowy;
+
+                foreach ($productsInLocation as $loc_name => $locationData) {
+                    // Check if the product's KodKreskowy exists in the location data
+                    if (isset($locationData[$kodKreskowy])) {
+                        // Add the loc_name column to the product
+                        $product->$loc_name = $locationData[$kodKreskowy];
+                    } else {
+                        // If KodKreskowy does not exist in the location data, set the column to null or 0
+                        $product->$loc_name = null; // or 0, depending on your requirements
+                    }
+                }
+            }
+
+            $res[Carbon::parse($day)->format('d-m-Y')] = $products;
             return $res;
         }
         return response('No warehause', 404);
