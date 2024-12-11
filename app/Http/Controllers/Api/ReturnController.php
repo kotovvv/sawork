@@ -184,7 +184,7 @@ class ReturnController extends Controller
 
             // get locations name
             $loc_name =  (array) DB::table('EMailMagazyn')
-                ->where('IDMagazyn', $IDWarehouse)
+                ->where('IDMagazyn', $magazin_id)
                 ->select('IDLokalizaciiZwrot as ok', 'Zniszczony', 'Naprawa')
                 ->first();
             $loc_name = array_flip($loc_name);
