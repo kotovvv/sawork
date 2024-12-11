@@ -253,6 +253,7 @@ class MagazynController extends Controller
                     if (isset($locationData[$kodKreskowy])) {
                         // Add the loc_name column to the product
                         $product->$loc_name = $locationData[$kodKreskowy];
+                        $product->pozostać -= $locationData[$kodKreskowy];
                     } else {
                         // If KodKreskowy does not exist in the location data, set the column to null or 0
                         $product->$loc_name = null; // or 0, depending on your requirements
