@@ -86,7 +86,7 @@ import moment from "moment";
 export default {
   name: "wo2wz",
   components: {
-    productHistory,
+
     Datepicker,
   },
   data: () => ({
