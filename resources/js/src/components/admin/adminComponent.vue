@@ -77,6 +77,7 @@ export default {
       { text: "logView", name: "logViewer", icon: "mdi-file-account" },
       { text: "Dostawa do magazynu", name: "coming", icon: "mdi-van-utility" },
       { text: "Zwroty", name: "zwroty", icon: "mdi-database-plus" },
+      { text: "WO->WZ", name: "wo2wz", icon: "mdi-arrange-bring-forward" },
     ],
   }),
   computed: {
@@ -94,6 +95,10 @@ export default {
       if (this.theMenu == "zwroty")
         return defineAsyncComponent(() =>
           import("../manager/refunds2Component.vue")
+        );
+      if (this.theMenu == "wo2wz")
+        return defineAsyncComponent(() =>
+          import("../client/wo2wzComponent.vue")
         );
     },
   },

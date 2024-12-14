@@ -724,4 +724,48 @@ class MagazynController extends Controller
 
         return $products;
     }
+
+    public function getOrders(Request $request)
+    {
+
+        $res = [];
+        $data = $request->all();
+        $IDWarehouse = $data['IDWarehouse'];
+        $dateMin = new Carbon($data['dateMin']);
+        $dateMax = new Carbon($data['dateMax']);
+        $dateMin = $dateMin->setTime(00, 00, 00)->format('Y-m-d H:i:s');
+        $dateMax = $dateMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
+        $IDType2 = 2;
+        $res['orders'] = DB::table('Orders as ord')->select(
+            'IDOrder',
+            '_OrdersTempString5 as product_Chang',
+            'rm.NrDokumentu as Powiązane_WZ',
+            'Date',
+            'Number',
+            'con.Nazwa as Kontrahent',
+            // 'Status',
+            'Remarks as Uwagi',
+            'Modified as Zmodyfikowane',
+            'ord.TransportNumber as Rodzaj_transportu',
+            '_OrdersTempDecimal2 as Nr_Baselinker',
+            '_OrdersTempString2 as Nr_Nadania',
+            '_OrdersTempString1 as Nr_Faktury',
+            '_OrdersTempString4 as Nr_Zwrotny',
+            '_OrdersTempString3 as Nr_Korekty',
+            '_OrdersTempString7 as Źródło',
+            '_OrdersTempString8 as External_id',
+            '_OrdersTempString9 as Login_klienta'
+        )
+            ->leftJoin('Kontrahent as con', 'con.IDKontrahenta', 'ord.IDAccount')
+            ->leftJoin('DocumentRelations as do', function ($join) {
+                $join->on('do.ID2', '=', 'ord.IDOrder')
+                    ->on('do.IDType1', '=', DB::raw('2'));
+            })
+            ->leftJoin('RuchMagazynowy as rm', 'rm.IDRuchuMagazynowego', 'do.ID1')
+            ->where('IDWarehouse', $IDWarehouse)
+            ->whereBetween('Date', [$dateMin, $dateMax])
+            ->get();
+
+        return $res;
+    }
 }
