@@ -296,9 +296,8 @@ class ReturnController extends Controller
     {
         $data = $request->all();
         $IDWarehouse = trim($data['IDWarehouse']);
-        $dateMin = $data['dateMin'] . ' 00:00:00';
-        $dateMax = $data['dateMax'] . ' 23:59:59';
-
+        $dateMin = Carbon::parse($data['dateMin'])->setTime(00, 00, 00)->format('m.d.Y H:i:s');
+        $dateMax = Carbon::parse($data['dateMax'])->setTime(23, 59, 59)->format('m.d.Y H:i:s');
 
         $res = [];
         $res['DocsWZk'] = DB::table('RuchMagazynowy as rm')
