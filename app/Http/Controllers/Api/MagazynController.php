@@ -768,4 +768,12 @@ class MagazynController extends Controller
 
         return $res;
     }
+
+    public function createWZfromZO(Request $request)
+    {
+        $data = $request->all();
+        $IDOrders = $data['IDOrders'];
+        $IDWarehouse = $data['IDWarehouse'];
+        $IDType2 = 2;
+    }
 }

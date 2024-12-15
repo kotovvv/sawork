@@ -68,6 +68,9 @@
                     clearable
                   ></v-text-field>
                 </v-col>
+                <v-btn @click.once="createWZfromZO" v-if="selected.length > 0"
+                  >create WZ</v-btn
+                >
               </v-row>
             </template>
           </v-data-table>
@@ -86,7 +89,6 @@ import moment from "moment";
 export default {
   name: "wo2wz",
   components: {
-
     Datepicker,
   },
   data: () => ({
@@ -119,6 +121,20 @@ export default {
     },
   },
   methods: {
+    createWZfromZO() {
+      const vm = this;
+      vm.loading = true;
+      if (vm.selected.length > 0) {
+        axios
+          .post("/api/createWZfromZO", { IDOrders: vm.selected })
+          .then((res) => {
+            if (res.status == 200) {
+            }
+            vm.loading = false;
+          })
+          .catch((error) => console.log(error));
+      }
+    },
     colorRowItem(item) {
       if (
         item.item.IDTowaru != undefined &&
