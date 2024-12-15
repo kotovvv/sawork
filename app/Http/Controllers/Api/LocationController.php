@@ -224,8 +224,8 @@ class LocationController extends Controller
         $data = $request->all();
         $res = [];
         $IDWarehouse = $data['IDWarehouse'];
-        $dateMin = $data['dateMin'] . ' 00:00:00';
-        $dateMax = $data['dateMax'] . ' 23:59:59';
+        $dateMin = Carbon::parse($data['dateMin'])->setTime(00, 00, 00)->format('m.d.Y H:i:s');
+        $dateMax = Carbon::parse($data['dateMax'])->setTime(23, 59, 59)->format('m.d.Y H:i:s');
 
         // get all WZk for magazin
         $res['allWZk'] = DB::table('RuchMagazynowy')
