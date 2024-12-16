@@ -12,6 +12,17 @@ use Carbon\Carbon;
 
 class ReturnController extends Controller
 {
+
+    public function logUsers($user, $what, $ip = 0)
+    {
+        $myLogInfo = date('Y-m-d H:i:s') . ', ' . $ip . ', ' . $user->NazwaUzytkownika . ', ' . $what;
+        file_put_contents(
+            storage_path() . '/logs/useReport.log',
+            $myLogInfo . PHP_EOL,
+            FILE_APPEND | LOCK_EX
+        );
+    }
+
     public function getWarehouse(Request $request)
     {
         if (isset($request->user)) {
@@ -294,6 +305,8 @@ class ReturnController extends Controller
 
     public function getDocsWZk(Request $request)
     {
+        $this->logUsers($request->user, 'Wzrot', $request->ip());
+
         $data = $request->all();
         $IDWarehouse = trim($data['IDWarehouse']);
         $dateMin = Carbon::parse($data['dateMin'])->setTime(00, 00, 00)->format('m.d.Y H:i:s');
