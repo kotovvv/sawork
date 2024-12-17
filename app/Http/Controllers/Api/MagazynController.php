@@ -735,36 +735,61 @@ class MagazynController extends Controller
         $dateMax = new Carbon($data['dateMax']);
         $dateMin = $dateMin->setTime(00, 00, 00)->format('Y-m-d H:i:s');
         $dateMax = $dateMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
-        $IDType2 = 2;
-        $res['orders'] = DB::table('Orders as ord')->select(
-            'IDOrder',
-            '_OrdersTempString5 as product_Chang',
-            'rm.NrDokumentu as Powiązane_WZ',
-            'Date',
-            'Number',
-            'con.Nazwa as Kontrahent',
-            // 'Status',
-            'Remarks as Uwagi',
-            'Modified as Zmodyfikowane',
-            'ord.TransportNumber as Rodzaj_transportu',
-            '_OrdersTempDecimal2 as Nr_Baselinker',
-            '_OrdersTempString2 as Nr_Nadania',
-            '_OrdersTempString1 as Nr_Faktury',
-            '_OrdersTempString4 as Nr_Zwrotny',
-            '_OrdersTempString3 as Nr_Korekty',
-            '_OrdersTempString7 as Źródło',
-            '_OrdersTempString8 as External_id',
-            '_OrdersTempString9 as Login_klienta'
-        )
+        $empty = $data['empty'];
+        $full = $data['full'];
+
+        $query = DB::table('Orders as ord')
+            ->select(
+                'IDOrder',
+                '_OrdersTempString5 as product_Chang',
+                'rm.NrDokumentu as Powiązane_WZ',
+                'Date',
+                'Number',
+                'con.Nazwa as Kontrahent',
+                'os.Name as Status',
+                'ord.Remarks as Uwagi',
+                'ord.Modified as Zmodyfikowane',
+                'rt.Nazwa as Rodzaj_transportu',
+                '_OrdersTempDecimal2 as Nr_Baselinker',
+                '_OrdersTempString2 as Nr_Nadania',
+                '_OrdersTempString1 as Nr_Faktury',
+                '_OrdersTempString4 as Nr_Zwrotny',
+                '_OrdersTempString3 as Nr_Korekty',
+                '_OrdersTempString7 as Źródło',
+                '_OrdersTempString8 as External_id',
+                '_OrdersTempString9 as Login_klienta'
+            )
+            ->leftJoin('OrderStatus as os', 'os.IDOrderStatus', 'ord.IDOrderStatus')
             ->leftJoin('Kontrahent as con', 'con.IDKontrahenta', 'ord.IDAccount')
             ->leftJoin('DocumentRelations as do', function ($join) {
                 $join->on('do.ID2', '=', 'ord.IDOrder')
                     ->on('do.IDType1', '=', DB::raw('2'));
             })
             ->leftJoin('RuchMagazynowy as rm', 'rm.IDRuchuMagazynowego', 'do.ID1')
+            ->leftJoin('RodzajTransportu as rt', 'rt.IDRodzajuTransportu', 'ord.IDTransport')
             ->where('IDWarehouse', $IDWarehouse)
-            ->whereBetween('Date', [$dateMin, $dateMax])
-            ->get();
+            ->when(count($data['statuses']) > 0, function ($query) use ($data) {
+                $query->whereIn('ord.IDOrderStatus', $data['statuses']);
+            })
+            ->whereBetween('Date', [$dateMin, $dateMax]);
+
+        if (count($full) > 0) {
+            foreach ($full as $el) {
+                $query->where(function ($query) use ($el) {
+                    $query->whereNotNull($el)->where($el, '!=', '');
+                });
+            }
+        }
+        if (count($empty) > 0) {
+            foreach ($empty as $el) {
+                $query->where(
+                    function ($query) use ($el) {
+                        $query->whereNull($el)->orWhere($el, '=', '');
+                    }
+                );
+            }
+        }
+        $res['orders'] = $query->get();
 
         return $res;
     }
@@ -839,11 +864,13 @@ LEFT(NrDokumentu, LEN(NrDokumentu) - 11)) <> 0', [
                     ->select('ID1 as id', 'NrDokumentu as Powiązane_WZ', 'Data as date')
                     ->first();
             }
-
             $listOrders[$orderId] = $relatedDocument;
         }
-
-        // Возвращение результата
         return $listOrders;
+    }
+
+    public function getStatuses()
+    {
+        return DB::table('OrderStatus')->select('IDOrderStatus as value', 'Name as title')->get();
     }
 }
