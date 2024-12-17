@@ -55,6 +55,7 @@
             @click:row="handleClick"
             v-model="selected"
             show-select
+            return-object
             :row-props="colorRowItem"
             height="55vh"
             fixed-header
@@ -66,10 +67,14 @@
                     label="odzyskiwanie"
                     v-model="searchInTable"
                     clearable
+                    hide-details="auto"
                   ></v-text-field>
                 </v-col>
-                <v-btn @click.once="createWZfromZO" v-if="selected.length > 0"
-                  >create WZ</v-btn
+                <v-btn
+                  @click="createWZfromZO"
+                  v-if="selected.length > 0"
+                  size="x-large"
+                  >{{ selected.length }} create WZ</v-btn
                 >
               </v-row>
             </template>
@@ -87,7 +92,7 @@ import axios from "axios";
 import moment from "moment";
 
 export default {
-  name: "wo2wz",
+  name: "zo2wz",
   components: {
     Datepicker,
   },
@@ -126,9 +131,32 @@ export default {
       vm.loading = true;
       if (vm.selected.length > 0) {
         axios
-          .post("/api/createWZfromZO", { IDOrders: vm.selected })
+          .post("/api/createWZfromZO", {
+            IDOrders: vm.selected
+              .filter((order) => order.Powiązane_WZ == null)
+              .map((order) => ({
+                IDOrder: order.IDOrder,
+                Number: order.Number,
+              })),
+            warehouse: vm.warehouses
+              .filter((warehouse) => warehouse.IDMagazynu == vm.IDWarehouse)
+              .map((warehouse) => ({
+                IDMagazynu: warehouse.IDMagazynu,
+                Symbol: warehouse.Symbol,
+              })),
+          })
           .then((res) => {
             if (res.status == 200) {
+              vm.selected = [];
+              let ret = res.data;
+
+              vm.listWO = vm.listWO.map((order) => {
+                let el = Object.keys(ret).find((key) => key == order.IDOrder);
+                if (el != undefined) {
+                  order.Powiązane_WZ = ret[el].Powiązane_WZ;
+                }
+                return order;
+              });
             }
             vm.loading = false;
           })

@@ -43,6 +43,7 @@ Route::middleware(['jwt.verify'])->group(function () {
 
     Route::get('getProductHistory/{IDTowaru}', [MagazynController::class, 'getProductHistory']);
     Route::post('getOrders', [MagazynController::class, 'getOrders']);
+    Route::post('createWZfromZO', [MagazynController::class, 'createWZfromZO']);
     Route::post('getOrder', [ReturnController::class, 'getOrder']);
     Route::get('getProduct/{id}', [LocationController::class, 'getProduct']);
     Route::post('doWz', [ReturnController::class, 'doWz']);

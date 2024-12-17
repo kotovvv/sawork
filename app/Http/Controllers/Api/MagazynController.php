@@ -769,11 +769,81 @@ class MagazynController extends Controller
         return $res;
     }
 
+    public function lastNumber($doc, $symbol)
+    {
+        $year = Carbon::now()->format('y');
+        $patern =  $doc . '%/' . $year . ' - ' . $symbol;
+        $res = DB::select('SELECT MAX(CAST(
+LEFT(NrDokumentu, LEN(NrDokumentu) - 11) AS INT)) AS maxNumber
+FROM
+(
+SELECT
+RIGHT(RTRIM(NrDokumentu), LEN(NrDokumentu) - :indexNumber) AS NrDokumentu
+FROM RuchMagazynowy
+WHERE RTRIM(NrDokumentu) LIKE :pattern
+) Q
+WHERE ISNUMERIC(
+LEFT(NrDokumentu, LEN(NrDokumentu) - 11)) <> 0', [
+            'indexNumber' => strlen($doc),
+            'pattern' => $patern
+        ]);
+
+        if ($res[0] == null) {
+            return str_replace('%', '1', $patern);
+        }
+        return str_replace('%', $res[0]->maxNumber + 1, $patern);
+    }
+
     public function createWZfromZO(Request $request)
     {
         $data = $request->all();
+        $listOrders = [];
         $IDOrders = $data['IDOrders'];
-        $IDWarehouse = $data['IDWarehouse'];
-        $IDType2 = 2;
+        $symbol = $data['warehouse'][0]['Symbol'];
+        $documentType = 2;
+        $userId = 1;
+        $amountFlag = 2;
+        $elementsGUID = NULL;
+
+        foreach ($IDOrders as $order) {
+            $orderId = $order['IDOrder'];
+            $relatedDocument = DB::table('DocumentRelations')->where('ID2', $orderId)->where('IDType2', 15)->where('IDType1', 2)->value('ID1');
+
+            $documentNumber = $this->lastNumber('WZ', $symbol);
+
+            if (!$relatedDocument) {
+                DB::statement('
+            DECLARE @DocumentID INT;
+            EXEC GenerateWZfromOrder
+                @DocumentType = :documentType,
+                @UserID = :userId,
+                @AmountFlag = :amountFlag,
+                @ElementsGUID = :elementsGUID,
+                @OrderID = :orderId,
+                @DocumentNumber = :documentNumber,
+                @DocumentID = @DocumentID OUTPUT;
+            ', [
+                    'documentType' => $documentType,
+                    'userId' => $userId,
+                    'amountFlag' => $amountFlag,
+                    'elementsGUID' => $elementsGUID,
+                    'orderId' => $orderId,
+                    'documentNumber' => $documentNumber
+                ]);
+
+                $relatedDocument = DB::table('DocumentRelations')
+                    ->leftJoin('RuchMagazynowy', 'DocumentRelations.ID1', 'RuchMagazynowy.IDRuchuMagazynowego')
+                    ->where('ID2', $orderId)
+                    ->where('IDType2', 15)
+                    ->where('IDType1', 2)
+                    ->select('ID1 as id', 'NrDokumentu as Powiązane_WZ', 'Data as date')
+                    ->first();
+            }
+
+            $listOrders[$orderId] = $relatedDocument;
+        }
+
+        // Возвращение результата
+        return $listOrders;
     }
 }
