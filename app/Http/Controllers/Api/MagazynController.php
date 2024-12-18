@@ -775,18 +775,32 @@ class MagazynController extends Controller
 
         if (count($full) > 0) {
             foreach ($full as $el) {
-                $query->where(function ($query) use ($el) {
-                    $query->whereNotNull($el)->where($el, '!=', '');
-                });
+                if ($el == '_OrdersTempDecimal2') {
+                    $query->where(function ($query) use ($el) {
+                        $query->whereNotNull($el);
+                    });
+                } else {
+                    $query->where(function ($query) use ($el) {
+                        $query->whereNotNull($el)->where($el, '!=', '');
+                    });
+                }
             }
         }
         if (count($empty) > 0) {
             foreach ($empty as $el) {
-                $query->where(
-                    function ($query) use ($el) {
-                        $query->whereNull($el)->orWhere($el, '=', '');
-                    }
-                );
+                if ($el == '_OrdersTempDecimal2') {
+                    $query->where(
+                        function ($query) use ($el) {
+                            $query->whereNull($el);
+                        }
+                    );
+                } else {
+                    $query->where(
+                        function ($query) use ($el) {
+                            $query->whereNull($el)->orWhere($el, '=', '');
+                        }
+                    );
+                }
             }
         }
         $res['orders'] = $query->get();
