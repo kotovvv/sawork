@@ -359,12 +359,13 @@ class MagazynController extends Controller
                                     ->from('RuchMagazynowy as r')
                                     ->where('r.IDRodzajuRuchuMagazynowego', 12)
                                     ->where('r.Operator', 1)
-                                    ->when($noklient, function ($query, $noklient) {
-                                        return $query->whereNotIn('r.IDKontrahenta', $noklient);
-                                    })
+
                                     ->where('r.Data', '<=', $dataMax)
                                     ->where('r.IDMagazynu', $idMagazynu)
                                     ->whereColumn('r.IDMagazynu', 't.IDMagazynu');
+                            })
+                            ->when($noklient, function ($query, $noklient) {
+                                return $query->whereNotIn('RuchWZ.IDKontrahenta', $noklient);
                             })
                             ->whereRaw('(RuchWZ.Operator * WZ.ilosc) < 0')
                             ->groupBy('t.IDTowaru');
