@@ -336,6 +336,9 @@ class MagazynController extends Controller
                             ->where('r.IDMagazynu', $idMagazynu)
                             ->whereColumn('r.IDMagazynu', 't.IDMagazynu');
                     })
+                    ->when($noklient, function ($query, $noklient) {
+                        return $query->whereNotIn('RuchPZ.IDKontrahenta', $noklient);
+                    })
                     ->where('RuchPZ.Operator', '>', 0)
                     ->where('PZ.Ilosc', '>', 0)
                     ->groupBy('t.IDTowaru')
