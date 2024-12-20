@@ -45,6 +45,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('getOrders', [MagazynController::class, 'getOrders']);
     Route::post('createWZfromZO', [MagazynController::class, 'createWZfromZO']);
     Route::get('getStatuses', [MagazynController::class, 'getStatuses']);
+    Route::get('getClients', [MagazynController::class, 'getClients']);
     Route::post('getOrder', [ReturnController::class, 'getOrder']);
     Route::get('getProduct/{id}', [LocationController::class, 'getProduct']);
     Route::post('doWz', [ReturnController::class, 'doWz']);

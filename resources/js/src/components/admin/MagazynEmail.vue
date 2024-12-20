@@ -93,6 +93,15 @@
                     label="IDKontrahenta"
                   ></v-text-field>
                 </v-col>
+                <v-col cols="12">
+                  <v-autocomplete
+                    v-model="editedItem.noklient"
+                    clearable
+                    label="No client"
+                    :items="noclients"
+                    multiple
+                  ></v-autocomplete>
+                </v-col>
               </v-row>
             </v-card-text>
 
@@ -138,6 +147,7 @@ export default {
         { title: "Details", value: "eMailAddress" },
         { title: "IDKontrahenta", value: "IDKontrahenta" },
         { title: "Dokument Cod", value: "cod", name: "cod", width: "180" },
+        { title: "No client", value: "noklient", nowrap: true },
         { title: "Action", value: "actions", sortable: false },
       ],
       magEmail: [],
@@ -145,19 +155,34 @@ export default {
       editedItem: {},
       warehouses: [],
       cod: ["WZk"],
+      noclients: [],
     };
   },
   mounted() {
     this.loadMagEmail();
     this.getWarehouse();
+    this.getClients();
   },
   methods: {
+    getClients() {
+      const vm = this;
+      axios.get("/api/getClients").then((res) => {
+        if (res.status == 200) {
+          vm.noclients = res.data;
+        }
+      });
+    },
     loadMagEmail() {
       const self = this;
       axios
         .get("/api/loadMagEmail")
         .then((response) => {
           self.magazyns = response.data;
+          self.magazyns.forEach((element) => {
+            element.noklient = element.noklient
+              ? JSON.parse(element.noklient)
+              : [];
+          });
         })
         .catch((error) => {
           console.log(error);
@@ -190,6 +215,7 @@ export default {
       data.Zniszczony = item.Zniszczony;
       data.Naprawa = item.Naprawa;
       data.IDKontrahenta = item.IDKontrahenta;
+      data.noklient = item.noklient;
 
       // save the record
       axios
