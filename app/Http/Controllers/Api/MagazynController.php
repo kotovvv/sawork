@@ -294,13 +294,6 @@ class MagazynController extends Controller
 
     private function getWarehouseData($dataMax, $idMagazynu)
     {
-
-        $noklient = DB::table('EMailMagazyn')->where('IDMagazyn', $idMagazynu)->whereNotNull('noklient')->whereRaw("LEN(CAST(noklient AS VARCHAR(MAX))) > 5")->value('noklient');
-        $noklient = json_decode($noklient, true);
-        if (is_array($noklient) && count($noklient) == 0) {
-            $noklient = [];
-        }
-
         return DB::table('Towar as t')
             ->select([
                 't.IDTowaru',
@@ -308,14 +301,13 @@ class MagazynController extends Controller
                 't.KodKreskowy',
                 'GrupyTowarow.Nazwa as GrupaTowarów',
                 DB::raw('t._TowarTempString1 as sku'),
-                DB::raw('t._TowarTempString2 as Analiz_ABC'),
                 DB::raw('CAST(SUM(DostawyMinusWydania.Wartosc) as decimal(32,2)) as wartosc'),
                 DB::raw('CAST(ISNULL(SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2, 0) as decimal(32,2)) as m3xstan'),
                 DB::raw('CAST(SUM(DostawyMinusWydania.ilosc) AS INT) as stan'),
                 DB::raw('CAST(ISNULL(ol.ProductCountWithoutWZ, 0) AS INT) as rezerv'),
                 DB::raw('CAST(ISNULL(SUM(DostawyMinusWydania.ilosc) - ISNULL(ol.ProductCountWithoutWZ, 0), 0) AS INT) as pozostać')
             ])
-            ->joinSub(function ($query) use ($dataMax, $idMagazynu, $noklient) {
+            ->joinSub(function ($query) use ($dataMax, $idMagazynu) {
                 $query->from('ElementRuchuMagazynowego as PZ')
                     ->select([
                         't.IdTowaru',
@@ -336,13 +328,10 @@ class MagazynController extends Controller
                             ->where('r.IDMagazynu', $idMagazynu)
                             ->whereColumn('r.IDMagazynu', 't.IDMagazynu');
                     })
-                    ->when($noklient, function ($query, $noklient) {
-                        return $query->whereNotIn('RuchPZ.IDKontrahenta', $noklient);
-                    })
                     ->where('RuchPZ.Operator', '>', 0)
                     ->where('PZ.Ilosc', '>', 0)
                     ->groupBy('t.IDTowaru')
-                    ->unionAll(function ($query) use ($dataMax, $idMagazynu, $noklient) {
+                    ->unionAll(function ($query) use ($dataMax, $idMagazynu) {
                         $query->from('ZaleznosciPZWZ as PZWZ')
                             ->select([
                                 't.IdTowaru',
@@ -357,18 +346,14 @@ class MagazynController extends Controller
                             ->join('Towar as t', 't.IDTowaru', '=', 'WZ.IDTowaru')
                             ->where('t.Usluga', 0)
                             ->where('RuchWZ.Data', '<=', $dataMax)
-                            ->where('RuchWZ.Data', '>=', function ($query) use ($dataMax, $idMagazynu, $noklient) {
+                            ->where('RuchWZ.Data', '>=', function ($query) use ($dataMax, $idMagazynu) {
                                 $query->select(DB::raw('ISNULL(MAX(r.Data), \'1900-01-01\')'))
                                     ->from('RuchMagazynowy as r')
                                     ->where('r.IDRodzajuRuchuMagazynowego', 12)
                                     ->where('r.Operator', 1)
-
                                     ->where('r.Data', '<=', $dataMax)
                                     ->where('r.IDMagazynu', $idMagazynu)
                                     ->whereColumn('r.IDMagazynu', 't.IDMagazynu');
-                            })
-                            ->when($noklient, function ($query, $noklient) {
-                                return $query->whereNotIn('RuchWZ.IDKontrahenta', $noklient);
                             })
                             ->whereRaw('(RuchWZ.Operator * WZ.ilosc) < 0')
                             ->groupBy('t.IDTowaru');
@@ -409,7 +394,6 @@ class MagazynController extends Controller
                 't._TowarTempDecimal2',
                 'GrupyTowarow.Nazwa',
                 '_TowarTempString1',
-                '_TowarTempString2',
                 'j.Nazwa',
                 'ol.ProductCountWithoutWZ'
             ])
@@ -558,7 +542,7 @@ class MagazynController extends Controller
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y/d/m H:i:s');
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('d.m.Y H:i:s');
         $IDMagazynu = $data['IDMagazynu'];
-        // $IDKontrahenta = $data['IDKontrahenta'];
+        $IDKontrahenta = $data['IDKontrahenta'];
         $AllowDiscountDocs = 0;
         $AllowZLDocs = 0;
 

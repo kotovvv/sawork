@@ -199,7 +199,10 @@ class ComingController extends Controller
                 't.KodKreskowy as KodKreskowy',
                 't._TowarTempBool1 as noBaselink',
                 DB::raw('t._TowarTempString1 as sku'),
-            )->leftJoin('dbo.Towar as t', 't.IDTowaru', '=', 'erm.IDTowaru')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
+            )
+            ->leftJoin('dbo.Towar as t', 't.IDTowaru', '=', 'erm.IDTowaru')
+            ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
+            ->where('t.Usluga', '!=', 1)
             ->leftJoin('dbo.WarehouseLocations as wl', 'wl.IDWarehouseLocation', '=', 'erm.IDWarehouseLocation')
             ->get();
 
