@@ -814,26 +814,20 @@ class MagazynController extends Controller
     public function lastNumber($doc, $symbol)
     {
         $year = Carbon::now()->format('y');
-        $patern =  $doc . '%/' . $year . ' - ' . $symbol;
-        $res = DB::select('SELECT MAX(CAST(
-LEFT(NrDokumentu, LEN(NrDokumentu) - 11) AS INT)) AS maxNumber
-FROM
-(
-SELECT
-RIGHT(RTRIM(NrDokumentu), LEN(NrDokumentu) - :indexNumber) AS NrDokumentu
-FROM RuchMagazynowy
-WHERE RTRIM(NrDokumentu) LIKE :pattern
-) Q
-WHERE ISNUMERIC(
-LEFT(NrDokumentu, LEN(NrDokumentu) - 11)) <> 0', [
-            'indexNumber' => strlen($doc),
-            'pattern' => $patern
-        ]);
+        $pattern =  $doc . '%/' . $year . ' - ' . $symbol;
+        $patternIndex = strlen($doc);
+        $patternToEndLen = strlen($symbol) + 6; // 6 символов: " - " + год (2 символа) + "/"
 
-        if ($res[0] == null) {
-            return str_replace('%', '1', $patern);
+        $res = DB::table('RuchMagazynowy')
+            ->select(DB::raw('MAX(CAST(SUBSTRING(NrDokumentu, ' . ($patternIndex + 1) . ', LEN(NrDokumentu) - ' . ($patternToEndLen + $patternIndex) . ') AS INT)) as max_number'))
+            ->whereRaw('RTRIM(NrDokumentu) LIKE ?', [$pattern])
+            ->whereRaw('ISNUMERIC(SUBSTRING(NrDokumentu, ' . ($patternIndex + 1) . ', LEN(NrDokumentu) - ' . ($patternToEndLen + $patternIndex) . ')) <> 0')
+            ->value('max_number');
+
+        if ($res === null) {
+            return str_replace('%', '1', $pattern);
         }
-        return str_replace('%', $res[0]->maxNumber + 1, $patern);
+        return str_replace('%', $res + 1, $pattern);
     }
 
     public function createWZfromZO(Request $request)
