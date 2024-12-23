@@ -542,7 +542,7 @@ class MagazynController extends Controller
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y/d/m H:i:s');
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('d.m.Y H:i:s');
         $IDMagazynu = $data['IDMagazynu'];
-        $IDKontrahenta = $data['IDKontrahenta'];
+        $IDKontrahents = $data['IDKontrahents'];
         $AllowDiscountDocs = 0;
         $AllowZLDocs = 0;
 
@@ -551,6 +551,7 @@ class MagazynController extends Controller
                 't.IDTowaru',
                 't.Nazwa as Towar',
                 't.KodKreskowy as KodKreskowy',
+
                 // 'GrupyTowarow.Nazwa as GrupaTowarów',
                 DB::raw('t._TowarTempString1 as sku'),
                 DB::raw('CAST(ISNULL(MAX(StanPoczatkowy.ilosc), 0) as INT) as StanPoczatkowy'),
@@ -568,9 +569,10 @@ class MagazynController extends Controller
             ->leftJoin(DB::raw("dbo.StanyWDniu('$dataMin') as StanPoczatkowy"), 'StanPoczatkowy.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin(DB::raw("dbo.StanyWDniu('$dataMax') as StanKoncowy"), 'StanKoncowy.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin('ElementRuchuMagazynowego as el', 'el.IDTowaru', '=', 't.IDTowaru')
-            ->leftJoin('RuchMagazynowy', function ($join) use ($dataMin, $dataMax) {
+            ->leftJoin('RuchMagazynowy', function ($join) use ($dataMin, $dataMax, $IDKontrahents) {
                 $join->on('el.IDRuchuMagazynowego', '=', 'RuchMagazynowy.IDRuchuMagazynowego')
-                    ->whereBetween('RuchMagazynowy.Data', [$dataMin,  $dataMax]);
+                    ->whereBetween('RuchMagazynowy.Data', [$dataMin, $dataMax])
+                    ->whereNotIn('RuchMagazynowy.IDKontrahenta', $IDKontrahents);
             })
             // ->leftJoin('GrupyTowarow', 't.IDGrupyTowarow', '=', 'GrupyTowarow.IDGrupyTowarow')
             ->where('Magazyn.IDMagazynu', $IDMagazynu)
@@ -586,6 +588,7 @@ class MagazynController extends Controller
             ->groupBy('t.IDTowaru', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy',  'JednostkaMiary.Nazwa', 't.Uwagi')
             ->havingRaw('ISNULL(MAX(StanPoczatkowy.ilosc), 0) > 0 OR ISNULL(MAX(StanKoncowy.ilosc), 0) > 0 OR SUM(ABS(el.Ilosc * RuchMagazynowy.Operator)) > 0')
             ->get();
+
 
         // $sql_with_bindings = Str::replaceArray('?', $results->getBindings(), $results->toSql());
         // dd($sql_with_bindings);
@@ -672,15 +675,21 @@ class MagazynController extends Controller
             }
         }
 
+        $noklient = DB::table('EMailMagazyn')->where('IDMagazyn', $IDMagazynu)->whereNotNull('noklient')->whereRaw("LEN(CAST(noklient AS VARCHAR(MAX))) > 5")->value('noklient');
+        $noklient = json_decode($noklient, true);
+        if (is_array($noklient) && count($noklient) == 0) {
+            $noklient = [];
+        }
+
         $request = new \Illuminate\Http\Request();
-        $request->replace(['dataMin' => $dateDoMinF, 'dataMax' => $dateDoMaxF, 'IDMagazynu' => $IDMagazynu]);
+        $request->replace(['dataMin' => $dateDoMinF, 'dataMax' => $dateDoMaxF, 'IDMagazynu' => $IDMagazynu, 'IDKontrahents' => $noklient]);
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
                 $a_products[$product->IDTowaru]['oborotOld'] = $product->IlośćWychodząca;
             }
         }
-        $request->replace(['dataMin' => $dateMinF, 'dataMax' => $dateMaxF, 'IDMagazynu' => $IDMagazynu]);
+        $request->replace(['dataMin' => $dateMinF, 'dataMax' => $dateMaxF, 'IDMagazynu' => $IDMagazynu, 'IDKontrahents' => $noklient]);
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
