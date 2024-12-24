@@ -542,16 +542,23 @@ class MagazynController extends Controller
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y/d/m H:i:s');
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('d.m.Y H:i:s');
         $IDMagazynu = $data['IDMagazynu'];
-        $IDKontrahents = $data['IDKontrahents'];
+        if (isset($data['IDKontrahents'])) {
+            $IDKontrahents = $data['IDKontrahents'];
+        } else {
+            $IDKontrahents = [];
+        }
+
         $AllowDiscountDocs = 0;
         $AllowZLDocs = 0;
+        $AllItems = 1;
 
         $results = DB::table('Towar as t')
             ->select([
                 't.IDTowaru',
                 't.Nazwa as Towar',
+                't.Uwagi',
                 't.KodKreskowy as KodKreskowy',
-
+                't._TowarTempString2 as AnalizABC',
                 // 'GrupyTowarow.Nazwa as GrupaTowarów',
                 DB::raw('t._TowarTempString1 as sku'),
                 DB::raw('CAST(ISNULL(MAX(StanPoczatkowy.ilosc), 0) as INT) as StanPoczatkowy'),
@@ -569,24 +576,30 @@ class MagazynController extends Controller
             ->leftJoin(DB::raw("dbo.StanyWDniu('$dataMin') as StanPoczatkowy"), 'StanPoczatkowy.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin(DB::raw("dbo.StanyWDniu('$dataMax') as StanKoncowy"), 'StanKoncowy.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin('ElementRuchuMagazynowego as el', 'el.IDTowaru', '=', 't.IDTowaru')
-            ->leftJoin('RuchMagazynowy', function ($join) use ($dataMin, $dataMax, $IDKontrahents) {
+            ->leftJoin('RuchMagazynowy', function ($join) use ($dataMin, $dataMax) {
                 $join->on('el.IDRuchuMagazynowego', '=', 'RuchMagazynowy.IDRuchuMagazynowego')
-                    ->whereBetween('RuchMagazynowy.Data', [$dataMin, $dataMax])
-                    ->whereNotIn('RuchMagazynowy.IDKontrahenta', $IDKontrahents);
+                    ->whereBetween('RuchMagazynowy.Data', [$dataMin, $dataMax]);
             })
-            // ->leftJoin('GrupyTowarow', 't.IDGrupyTowarow', '=', 'GrupyTowarow.IDGrupyTowarow')
+            ->leftJoin('GrupyTowarow', 't.IDGrupyTowarow', '=', 'GrupyTowarow.IDGrupyTowarow')
+            ->leftJoin('Kontrahent', 'Kontrahent.IDKontrahenta', '=', 'RuchMagazynowy.IDKontrahenta')
+
             ->where('Magazyn.IDMagazynu', $IDMagazynu)
             ->where('Magazyn.Hidden', 0)
-            ->where(function ($query) use ($AllowDiscountDocs, $AllowZLDocs) {
-                if ($AllowDiscountDocs == 0) {
-                    $query->where('RuchMagazynowy.IDRodzajuRuchuMagazynowego', '<>', 8);
-                }
-                if ($AllowZLDocs == 0) {
-                    $query->where('RuchMagazynowy.IDRodzajuRuchuMagazynowego', '<>', 27);
-                }
+            ->when(count($IDKontrahents) > 0, function ($query, $IDKontrahents) {
+                return $query->whereIn('RuchMagazynowy.IDKontrahenta', $IDKontrahents);
             })
-            ->groupBy('t.IDTowaru', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy',  'JednostkaMiary.Nazwa', 't.Uwagi')
-            ->havingRaw('ISNULL(MAX(StanPoczatkowy.ilosc), 0) > 0 OR ISNULL(MAX(StanKoncowy.ilosc), 0) > 0 OR SUM(ABS(el.Ilosc * RuchMagazynowy.Operator)) > 0')
+            // ->when($IDGrupyTowarow, function ($query, $IDGrupyTowarow) {
+            //     return $query->where('t.IDGrupyTowarow', $IDGrupyTowarow);
+            // })
+            ->when(!$AllowDiscountDocs, function ($query) {
+                return $query->where('RuchMagazynowy.IDRodzajuRuchuMagazynowego', '<>', 8);
+            })
+            ->when(!$AllowZLDocs, function ($query) {
+                return $query->where('RuchMagazynowy.IDRodzajuRuchuMagazynowego', '<>', 27);
+            })
+            ->groupBy('t.IDTowaru', 't.Nazwa', 't.KodKreskowy', 't.Uwagi', 't._TowarTempString1', 't._TowarTempString2')
+            ->havingRaw($AllItems ? '1=1' : 'ISNULL(MAX(StanPoczatkowy.ilosc), 0) > 0 OR ISNULL(MAX(StanKoncowy.ilosc), 0) > 0 OR SUM(ABS(el.Ilosc * RuchMagazynowy.Operator)) > 0')
+            ->orderBy('t.IDTowaru', 'ASC')
             ->get();
 
 
