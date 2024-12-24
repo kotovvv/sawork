@@ -85,6 +85,9 @@
             height="55vh"
             fixed-header
           >
+            <template v-slot:top="{}" v-if="kontahenty.length > 3">
+              No kotrahent: {{ kontahenty }}
+            </template>
           </v-data-table>
         </v-col>
       </v-row>
@@ -166,6 +169,7 @@ export default {
       ],
       message: "",
       snackbar: false,
+      kontahenty: "",
     };
   },
 
@@ -219,7 +223,8 @@ export default {
         .post("/api/getQuantity", data)
         .then((res) => {
           if (res.status == 200) {
-            vm.dataforxsls = res.data;
+            vm.dataforxsls = res.data.products;
+            vm.kontahenty = res.data.kontahenty;
           } else {
             vm.message = res.data.message;
             vm.snackbar = true;

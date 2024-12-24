@@ -532,6 +532,7 @@ class MagazynController extends Controller
         }
 
         $data = $request->all();
+        $allClients = $data['allClients'];
         $c_dataMin = new Carbon($data['dataMin']);
 
         $dataMin = $c_dataMin->format('Y-m-d H:i:s');
@@ -582,7 +583,7 @@ class MagazynController extends Controller
 
             ->where('Magazyn.IDMagazynu', $IDMagazynu)
             ->where('Magazyn.Hidden', 0)
-            ->when($noklient, function ($query, $noklient) {
+            ->when(!$allClients && is_array($noklient) && !empty($noklient), function ($query) use ($noklient) {
                 return $query->whereNotIn('RuchMagazynowy.IDKontrahenta', $noklient);
             })
             // ->when($IDGrupyTowarow, function ($query, $IDGrupyTowarow) {
@@ -617,10 +618,10 @@ class MagazynController extends Controller
         return $noklient;
     }
 
-    public function getQuantity(Request $request)
+    public function  getQuantity(Request $request)
     {
         $data = $request->all();
-
+        $res = [];
         if (isset($request->user)) {
             $this->logUsers($request->user, 'Zamawianie towarów', $request->ip());
         }
@@ -642,6 +643,9 @@ class MagazynController extends Controller
         $DaysOn = $data['DaysOn'];
 
         $IDMagazynu = $data['IDMagazynu'];
+
+        $noklient = $this->dontGetDocKlient($IDMagazynu);
+        $res['kontahenty'] = implode(',', DB::table('Kontrahent')->whereIn('IDKontrahenta', $noklient)->pluck('Nazwa')->toArray());
 
         $a_products = [];
         for ($date = $dateDoMin->copy(); $date->lte($dateDoMax); $date->addDay()) {
@@ -713,14 +717,14 @@ class MagazynController extends Controller
                 $a_products[$product->IDTowaru]['oborotNew'] = $product->IlośćWychodząca;
             }
         }
-        $products = [];
+        $res['products'] = [];
         foreach ($a_products as $IDTowaru => $product) {
             $selondayOld = $product['qtyOld'] > 0 ? round($product['oborotOld'] / $product['qtyOld'], 2) : 0;
             $selonday = $product['qtyNew'] > 0 ? round($product['oborotNew'] / $product['qtyNew'], 2) : 0;
             $tendent = $selondayOld > 0 && $selonday > 0 ? round(($selonday - $selondayOld) / $selondayOld * 100, 2) : 0;
             $zamov = $tendent > 0 ? round(($DaysOn * $selonday - $product['stan']) + ($DaysOn * $selonday - $product['stan']) /  $tendent, 2) : round($DaysOn * $selonday - $product['stan'], 2);
             $haveDay = $selonday > 0 ? $product['stan'] / $selonday : 0;
-            $products[] = [
+            $res['products'][] = [
                 'IDTowaru' => $IDTowaru,
                 'Nazwa' => $product['Nazwa'],
                 'KodKreskowy' => (int)$product['KodKreskowy'],
@@ -751,7 +755,7 @@ class MagazynController extends Controller
             ];
         }
 
-        return $products;
+        return $res;
     }
 
     public function getOrders(Request $request)
