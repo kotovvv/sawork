@@ -542,11 +542,8 @@ class MagazynController extends Controller
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y/d/m H:i:s');
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('d.m.Y H:i:s');
         $IDMagazynu = $data['IDMagazynu'];
-        if (isset($data['IDKontrahents'])) {
-            $IDKontrahents = $data['IDKontrahents'];
-        } else {
-            $IDKontrahents = [];
-        }
+
+        $noklient = $this->dontGetDocKlient($IDMagazynu);
 
         $AllowDiscountDocs = 0;
         $AllowZLDocs = 0;
@@ -585,8 +582,8 @@ class MagazynController extends Controller
 
             ->where('Magazyn.IDMagazynu', $IDMagazynu)
             ->where('Magazyn.Hidden', 0)
-            ->when(count($IDKontrahents) > 0, function ($query, $IDKontrahents) {
-                return $query->whereIn('RuchMagazynowy.IDKontrahenta', $IDKontrahents);
+            ->when($noklient, function ($query, $noklient) {
+                return $query->whereNotIn('RuchMagazynowy.IDKontrahenta', $noklient);
             })
             // ->when($IDGrupyTowarow, function ($query, $IDGrupyTowarow) {
             //     return $query->where('t.IDGrupyTowarow', $IDGrupyTowarow);
@@ -607,6 +604,19 @@ class MagazynController extends Controller
         // dd($sql_with_bindings);
         return $results;
     }
+
+    private function dontGetDocKlient($IDMagazynu)
+    {
+        $noklient = DB::table('EMailMagazyn')->where('IDMagazyn', $IDMagazynu)->whereNotNull('noklient')->whereRaw("LEN(CAST(noklient AS VARCHAR(MAX))) > 5")->value('noklient');
+        $noklient = json_decode($noklient, true);
+
+        if (is_null($noklient) or (is_array($noklient) && count($noklient) == 0)) {
+            $noklient = [];
+        }
+
+        return $noklient;
+    }
+
     public function getQuantity(Request $request)
     {
         $data = $request->all();
@@ -688,21 +698,15 @@ class MagazynController extends Controller
             }
         }
 
-        $noklient = DB::table('EMailMagazyn')->where('IDMagazyn', $IDMagazynu)->whereNotNull('noklient')->whereRaw("LEN(CAST(noklient AS VARCHAR(MAX))) > 5")->value('noklient');
-        $noklient = json_decode($noklient, true);
-        if (is_array($noklient) && count($noklient) == 0) {
-            $noklient = [];
-        }
-
         $request = new \Illuminate\Http\Request();
-        $request->replace(['dataMin' => $dateDoMinF, 'dataMax' => $dateDoMaxF, 'IDMagazynu' => $IDMagazynu, 'IDKontrahents' => $noklient]);
+        $request->replace(['dataMin' => $dateDoMinF, 'dataMax' => $dateDoMaxF, 'IDMagazynu' => $IDMagazynu]);
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
                 $a_products[$product->IDTowaru]['oborotOld'] = $product->IlośćWychodząca;
             }
         }
-        $request->replace(['dataMin' => $dateMinF, 'dataMax' => $dateMaxF, 'IDMagazynu' => $IDMagazynu, 'IDKontrahents' => $noklient]);
+        $request->replace(['dataMin' => $dateMinF, 'dataMax' => $dateMaxF, 'IDMagazynu' => $IDMagazynu]);
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
