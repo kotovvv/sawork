@@ -299,6 +299,7 @@ class MagazynController extends Controller
                 't.IDTowaru',
                 DB::raw('t.Nazwa as "Nazwa"'),
                 't.KodKreskowy',
+                't._TowarTempString2 as AnalizABC',
                 'GrupyTowarow.Nazwa as GrupaTowarów',
                 DB::raw('t._TowarTempString1 as sku'),
                 DB::raw('CAST(SUM(DostawyMinusWydania.Wartosc) as decimal(32,2)) as wartosc'),
@@ -392,6 +393,7 @@ class MagazynController extends Controller
                 't.Archiwalny',
                 't.Usluga',
                 't._TowarTempDecimal2',
+                't._TowarTempString2',
                 'GrupyTowarow.Nazwa',
                 '_TowarTempString1',
                 'j.Nazwa',
@@ -667,6 +669,7 @@ class MagazynController extends Controller
                         'oborotOld' => 0,
                         'oborotNew' => 0,
                         'stan' => 0,
+                        'AnalizABC' => $product->AnalizABC,
                     ];
                 }
             }
@@ -690,6 +693,7 @@ class MagazynController extends Controller
                         'oborotOld' => 0,
                         'oborotNew' => 0,
                         'stan' => 0,
+                        'AnalizABC' => $product->AnalizABC,
                     ];
                 }
             }
@@ -730,6 +734,7 @@ class MagazynController extends Controller
                 'Nazwa' => $product['Nazwa'],
                 'KodKreskowy' => (int)$product['KodKreskowy'],
                 'SKU' => $product['sku'],
+                'AnalizABC' => $product['AnalizABC'],
                 'GrupaTowarów' => $product['GrupaTowarów'],
                 'stan' => (int)$product['stan'],
                 'DniNaDostawę' => (int)$DaysOn,
