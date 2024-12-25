@@ -200,26 +200,33 @@ class MagazynController extends Controller
         return response('No default warehouse', 404);
     }
 
-    private function getProductsInLocation($IDWarehouseLocation, $date = null)
+    private function getProductsInLocation($idwarehouse, $date = null)
     {
         if (!$date) {
             $date = Carbon::now()->format('Y/m/d H:i:s');
         }
+        $productsInLocation = [];
+        $loc_names =  (array) DB::table('EMailMagazyn')
+            ->where('IDMagazyn', $idwarehouse)
+            ->select('Zniszczony', 'Naprawa')
+            ->first();
+        foreach ($loc_names as $loc_name => $loc_id) {
+            $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
+            $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
+            $result = DB::select($query, [$loc_id, $date, $param]);
+            $resultString = $result[0]->Stock ?? null;
+            $array = [];
 
-        $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
-        $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
-        $result = DB::select($query, [$IDWarehouseLocation, $date, $param]);
-        $resultString = $result[0]->Stock ?? null;
-        $array = [];
-
-        if ($resultString) {
-            $pairs = explode(', ', $resultString);
-            foreach ($pairs as $pair) {
-                list($key, $value) = explode(': ', $pair);
-                $array[$key] = (int) $value;
+            if ($resultString) {
+                $pairs = explode(', ', $resultString);
+                foreach ($pairs as $pair) {
+                    list($key, $value) = explode(': ', $pair);
+                    $array[$key] = (int) $value;
+                }
+                $productsInLocation[$loc_name] = $array;
             }
         }
-        return $array;
+        return $productsInLocation;
     }
 
     public function getDataForXLSDay(Request $request, $day, $idwarehouse)
@@ -231,21 +238,7 @@ class MagazynController extends Controller
             // $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('Y-m-d H:i:s');
             $date = Carbon::parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
 
-            $productsInLocation = [];
-            // get locations name
-            $loc_names =  (array) DB::table('EMailMagazyn')
-                ->where('IDMagazyn', $idwarehouse)
-                ->select('Zniszczony', 'Naprawa')
-                ->first();
-            /*
-            для каждой строки $products нужно добавить колонки $loc_name
-где товар из $products имеет поле "KodKreskowy"
-значения в колонки $loc_name брать из массива $productsInLocation[$loc_name] который состоит из массива [KodKreskowy=>1]
-
-            */
-            foreach ($loc_names as $loc_name => $loc_id) {
-                $productsInLocation[$loc_name] = $this->getProductsInLocation($loc_id, $date);
-            }
+            $productsInLocation = $this->getProductsInLocation($idwarehouse, $date);
 
             $products = $this->getWarehouseData($date, $idwarehouse);
             foreach ($products as $product) {
@@ -724,6 +717,16 @@ class MagazynController extends Controller
         }
         $res['products'] = [];
         foreach ($a_products as $IDTowaru => $product) {
+
+            // product in 'Zniszczony', 'Naprawa'
+            $productsInLocation = $this->getProductsInLocation($IDMagazynu, $dateMaxF);
+            foreach ($productsInLocation as $loc_name => $locationData) {
+                if (isset($locationData[$product['KodKreskowy']])) {
+                    $product['stan'] -= $locationData[$product['KodKreskowy']];
+                    $product[$loc_name] = $locationData[$product['KodKreskowy']];
+                }
+            }
+
             $selondayOld = $product['qtyOld'] > 0 ? round($product['oborotOld'] / $product['qtyOld'], 2) : 0;
             $selonday = $product['qtyNew'] > 0 ? round($product['oborotNew'] / $product['qtyNew'], 2) : 0;
             $tendent = $selondayOld > 0 && $selonday > 0 ? round(($selonday - $selondayOld) / $selondayOld * 100, 2) : 0;
@@ -733,6 +736,8 @@ class MagazynController extends Controller
                 'IDTowaru' => $IDTowaru,
                 'Nazwa' => $product['Nazwa'],
                 'KodKreskowy' => (int)$product['KodKreskowy'],
+                'Zniszczony' => $product['Zniszczony'],
+                'Naprawa' => $product['Naprawa'],
                 'SKU' => $product['sku'],
                 'AnalizABC' => $product['AnalizABC'],
                 'GrupaTowarów' => $product['GrupaTowarów'],
