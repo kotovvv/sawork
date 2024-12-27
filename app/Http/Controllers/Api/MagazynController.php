@@ -647,23 +647,31 @@ class MagazynController extends Controller
 
             // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
             $products = $this->getWarehouseData($date->setTime(00, 00, 00)->format('Y-m-d H:i:s'), $IDMagazynu);
-            foreach ($products as $product) {
 
-                if (isset($a_products[$product->IDTowaru])) {
-                    $a_products[$product->IDTowaru]['qtyOld']++;
-                } else {
-                    $a_products[$product->IDTowaru] = [
-                        "Nazwa" => $product->Nazwa,
-                        'KodKreskowy' => $product->KodKreskowy,
-                        'sku' => $product->sku,
-                        'GrupaTowarów' => $product->GrupaTowarów,
-                        'qtyOld' => 1,
-                        'qtyNew' => 0,
-                        'oborotOld' => 0,
-                        'oborotNew' => 0,
-                        'stan' => 0,
-                        'AnalizABC' => $product->AnalizABC,
-                    ];
+            $productsInLocation = $this->getProductsInLocation($IDMagazynu, $date);
+            foreach ($products as $product) {
+                foreach ($productsInLocation as $loc_name => $locationData) {
+                    if (isset($locationData[$product->KodKreskowy])) {
+                        $product->stan -= $locationData[$product->KodKreskowy];
+                    }
+                }
+                if ($product->stan > 0) {
+                    if (isset($a_products[$product->IDTowaru])) {
+                        $a_products[$product->IDTowaru]['qtyOld']++;
+                    } else {
+                        $a_products[$product->IDTowaru] = [
+                            "Nazwa" => $product->Nazwa,
+                            'KodKreskowy' => $product->KodKreskowy,
+                            'sku' => $product->sku,
+                            'GrupaTowarów' => $product->GrupaTowarów,
+                            'qtyOld' => 1,
+                            'qtyNew' => 0,
+                            'oborotOld' => 0,
+                            'oborotNew' => 0,
+                            'stan' => 0,
+                            'AnalizABC' => $product->AnalizABC,
+                        ];
+                    }
                 }
             }
         }
@@ -671,23 +679,31 @@ class MagazynController extends Controller
 
             // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
             $products = $this->getWarehouseData($date->setTime(00, 00, 00)->format('Y-m-d H:i:s'), $IDMagazynu);
+            $productsInLocation = $this->getProductsInLocation($IDMagazynu, $date);
             foreach ($products as $product) {
 
-                if (isset($a_products[$product->IDTowaru])) {
-                    $a_products[$product->IDTowaru]['qtyNew']++;
-                } else {
-                    $a_products[$product->IDTowaru] = [
-                        "Nazwa" => $product->Nazwa,
-                        'KodKreskowy' => $product->KodKreskowy,
-                        'sku' => $product->sku,
-                        'GrupaTowarów' => $product->GrupaTowarów,
-                        'qtyOld' => 0,
-                        'qtyNew' => 1,
-                        'oborotOld' => 0,
-                        'oborotNew' => 0,
-                        'stan' => 0,
-                        'AnalizABC' => $product->AnalizABC,
-                    ];
+                foreach ($productsInLocation as $loc_name => $locationData) {
+                    if (isset($locationData[$product->KodKreskowy])) {
+                        $product->stan -= $locationData[$product->KodKreskowy];
+                    }
+                }
+                if ($product->stan > 0) {
+                    if (isset($a_products[$product->IDTowaru])) {
+                        $a_products[$product->IDTowaru]['qtyNew']++;
+                    } else {
+                        $a_products[$product->IDTowaru] = [
+                            "Nazwa" => $product->Nazwa,
+                            'KodKreskowy' => $product->KodKreskowy,
+                            'sku' => $product->sku,
+                            'GrupaTowarów' => $product->GrupaTowarów,
+                            'qtyOld' => 0,
+                            'qtyNew' => 1,
+                            'oborotOld' => 0,
+                            'oborotNew' => 0,
+                            'stan' => 0,
+                            'AnalizABC' => $product->AnalizABC,
+                        ];
+                    }
                 }
             }
         }
