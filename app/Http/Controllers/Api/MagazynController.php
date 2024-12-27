@@ -716,11 +716,12 @@ class MagazynController extends Controller
             }
         }
         $res['products'] = [];
+        // product in 'Zniszczony', 'Naprawa'
+        $productsInLocation = $this->getProductsInLocation($IDMagazynu, $dateMaxF);
         foreach ($a_products as $IDTowaru => $product) {
 
-            // product in 'Zniszczony', 'Naprawa'
-            $productsInLocation = $this->getProductsInLocation($IDMagazynu, $dateMaxF);
             foreach ($productsInLocation as $loc_name => $locationData) {
+                $product[$loc_name] = 0;
                 if (isset($locationData[$product['KodKreskowy']])) {
                     $product['stan'] -= $locationData[$product['KodKreskowy']];
                     $product[$loc_name] = $locationData[$product['KodKreskowy']];
