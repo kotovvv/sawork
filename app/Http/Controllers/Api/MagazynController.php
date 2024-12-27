@@ -12,7 +12,7 @@ class MagazynController extends Controller
 {
     public function loadMagEmail()
     {
-        return DB::select('SELECT [ID],[IDMagazynu] ,[Nazwa] ,[Symbol] ,em.eMailAddress ,em.cod,em.IDLokalizaciiZwrot,em.IDKontrahenta, em.Zniszczony, em.Naprawa FROM [dbo].[Magazyn] RIGHT JOIN dbo.EMailMagazyn em ON em.IDMagazyn = IDMagazynu');
+        return DB::select('SELECT [ID],[IDMagazynu] ,[Nazwa] ,[Symbol] ,em.eMailAddress ,em.cod,em.IDLokalizaciiZwrot,em.IDKontrahenta, em.Zniszczony, em.Naprawa, em.noklient FROM [dbo].[Magazyn] RIGHT JOIN dbo.EMailMagazyn em ON em.IDMagazyn = IDMagazynu');
     }
 
 
@@ -34,6 +34,8 @@ class MagazynController extends Controller
         $IDLokalizaciiZwrot = $data['IDLokalizaciiZwrot'];
         $Zniszczony = $data['Zniszczony'];
         $Naprawa = $data['Naprawa'];
+        $noklient = $data['noklient'];
+
         if (isset($data['id'])) {
             $res = DB::table('dbo.EMailMagazyn')
                 ->where('ID', (int) $data['id'])
@@ -44,7 +46,8 @@ class MagazynController extends Controller
                     'Naprawa' => $Naprawa,
                     'Zniszczony' => $Zniszczony,
                     'cod' => $cod,
-                    'IDLokalizaciiZwrot' => $IDLokalizaciiZwrot
+                    'IDLokalizaciiZwrot' => $IDLokalizaciiZwrot,
+                    'noklient' => json_encode($noklient)
                 ]);
             if ($res) {
                 return 0;
@@ -197,26 +200,33 @@ class MagazynController extends Controller
         return response('No default warehouse', 404);
     }
 
-    private function getProductsInLocation($IDWarehouseLocation, $date = null)
+    private function getProductsInLocation($idwarehouse, $date = null)
     {
         if (!$date) {
             $date = Carbon::now()->format('Y/m/d H:i:s');
         }
+        $productsInLocation = [];
+        $loc_names =  (array) DB::table('EMailMagazyn')
+            ->where('IDMagazyn', $idwarehouse)
+            ->select('Zniszczony', 'Naprawa')
+            ->first();
+        foreach ($loc_names as $loc_name => $loc_id) {
+            $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
+            $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
+            $result = DB::select($query, [$loc_id, $date, $param]);
+            $resultString = $result[0]->Stock ?? null;
+            $array = [];
 
-        $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
-        $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
-        $result = DB::select($query, [$IDWarehouseLocation, $date, $param]);
-        $resultString = $result[0]->Stock ?? null;
-        $array = [];
-
-        if ($resultString) {
-            $pairs = explode(', ', $resultString);
-            foreach ($pairs as $pair) {
-                list($key, $value) = explode(': ', $pair);
-                $array[$key] = (int) $value;
+            if ($resultString) {
+                $pairs = explode(', ', $resultString);
+                foreach ($pairs as $pair) {
+                    list($key, $value) = explode(': ', $pair);
+                    $array[$key] = (int) $value;
+                }
+                $productsInLocation[$loc_name] = $array;
             }
         }
-        return $array;
+        return $productsInLocation;
     }
 
     public function getDataForXLSDay(Request $request, $day, $idwarehouse)
@@ -228,21 +238,7 @@ class MagazynController extends Controller
             // $date = Carbon::now()->parse($day)->setTime(23, 59, 59)->format('Y-m-d H:i:s');
             $date = Carbon::parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
 
-            $productsInLocation = [];
-            // get locations name
-            $loc_names =  (array) DB::table('EMailMagazyn')
-                ->where('IDMagazyn', $idwarehouse)
-                ->select('Zniszczony', 'Naprawa')
-                ->first();
-            /*
-            для каждой строки $products нужно добавить колонки $loc_name
-где товар из $products имеет поле "KodKreskowy"
-значения в колонки $loc_name брать из массива $productsInLocation[$loc_name] который состоит из массива [KodKreskowy=>1]
-
-            */
-            foreach ($loc_names as $loc_name => $loc_id) {
-                $productsInLocation[$loc_name] = $this->getProductsInLocation($loc_id, $date);
-            }
+            $productsInLocation = $this->getProductsInLocation($idwarehouse, $date);
 
             $products = $this->getWarehouseData($date, $idwarehouse);
             foreach ($products as $product) {
@@ -296,6 +292,7 @@ class MagazynController extends Controller
                 't.IDTowaru',
                 DB::raw('t.Nazwa as "Nazwa"'),
                 't.KodKreskowy',
+                't._TowarTempString2 as AnalizABC',
                 'GrupyTowarow.Nazwa as GrupaTowarów',
                 DB::raw('t._TowarTempString1 as sku'),
                 DB::raw('CAST(SUM(DostawyMinusWydania.Wartosc) as decimal(32,2)) as wartosc'),
@@ -389,6 +386,7 @@ class MagazynController extends Controller
                 't.Archiwalny',
                 't.Usluga',
                 't._TowarTempDecimal2',
+                't._TowarTempString2',
                 'GrupyTowarow.Nazwa',
                 '_TowarTempString1',
                 'j.Nazwa',
@@ -529,6 +527,7 @@ class MagazynController extends Controller
         }
 
         $data = $request->all();
+        $allClients = $data['allClients'];
         $c_dataMin = new Carbon($data['dataMin']);
 
         $dataMin = $c_dataMin->format('Y-m-d H:i:s');
@@ -539,15 +538,20 @@ class MagazynController extends Controller
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('Y/d/m H:i:s');
         // $dataMax = $c_dataMax->setTime(23, 59, 59)->format('d.m.Y H:i:s');
         $IDMagazynu = $data['IDMagazynu'];
-        // $IDKontrahenta = $data['IDKontrahenta'];
+
+        $noklient = $this->dontGetDocKlient($IDMagazynu);
+
         $AllowDiscountDocs = 0;
         $AllowZLDocs = 0;
+        $AllItems = 1;
 
         $results = DB::table('Towar as t')
             ->select([
                 't.IDTowaru',
                 't.Nazwa as Towar',
+                't.Uwagi',
                 't.KodKreskowy as KodKreskowy',
+                't._TowarTempString2 as AnalizABC',
                 // 'GrupyTowarow.Nazwa as GrupaTowarów',
                 DB::raw('t._TowarTempString1 as sku'),
                 DB::raw('CAST(ISNULL(MAX(StanPoczatkowy.ilosc), 0) as INT) as StanPoczatkowy'),
@@ -567,31 +571,52 @@ class MagazynController extends Controller
             ->leftJoin('ElementRuchuMagazynowego as el', 'el.IDTowaru', '=', 't.IDTowaru')
             ->leftJoin('RuchMagazynowy', function ($join) use ($dataMin, $dataMax) {
                 $join->on('el.IDRuchuMagazynowego', '=', 'RuchMagazynowy.IDRuchuMagazynowego')
-                    ->whereBetween('RuchMagazynowy.Data', [$dataMin,  $dataMax]);
+                    ->whereBetween('RuchMagazynowy.Data', [$dataMin, $dataMax]);
             })
-            // ->leftJoin('GrupyTowarow', 't.IDGrupyTowarow', '=', 'GrupyTowarow.IDGrupyTowarow')
+            ->leftJoin('GrupyTowarow', 't.IDGrupyTowarow', '=', 'GrupyTowarow.IDGrupyTowarow')
+            ->leftJoin('Kontrahent', 'Kontrahent.IDKontrahenta', '=', 'RuchMagazynowy.IDKontrahenta')
+
             ->where('Magazyn.IDMagazynu', $IDMagazynu)
             ->where('Magazyn.Hidden', 0)
-            ->where(function ($query) use ($AllowDiscountDocs, $AllowZLDocs) {
-                if ($AllowDiscountDocs == 0) {
-                    $query->where('RuchMagazynowy.IDRodzajuRuchuMagazynowego', '<>', 8);
-                }
-                if ($AllowZLDocs == 0) {
-                    $query->where('RuchMagazynowy.IDRodzajuRuchuMagazynowego', '<>', 27);
-                }
+            ->when(!$allClients && is_array($noklient) && !empty($noklient), function ($query) use ($noklient) {
+                return $query->whereNotIn('RuchMagazynowy.IDKontrahenta', $noklient);
             })
-            ->groupBy('t.IDTowaru', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy',  'JednostkaMiary.Nazwa', 't.Uwagi')
-            ->havingRaw('ISNULL(MAX(StanPoczatkowy.ilosc), 0) > 0 OR ISNULL(MAX(StanKoncowy.ilosc), 0) > 0 OR SUM(ABS(el.Ilosc * RuchMagazynowy.Operator)) > 0')
+            // ->when($IDGrupyTowarow, function ($query, $IDGrupyTowarow) {
+            //     return $query->where('t.IDGrupyTowarow', $IDGrupyTowarow);
+            // })
+            ->when(!$AllowDiscountDocs, function ($query) {
+                return $query->where('RuchMagazynowy.IDRodzajuRuchuMagazynowego', '<>', 8);
+            })
+            ->when(!$AllowZLDocs, function ($query) {
+                return $query->where('RuchMagazynowy.IDRodzajuRuchuMagazynowego', '<>', 27);
+            })
+            ->groupBy('t.IDTowaru', 't.Nazwa', 't.KodKreskowy', 't.Uwagi', 't._TowarTempString1', 't._TowarTempString2')
+            ->havingRaw($AllItems ? '1=1' : 'ISNULL(MAX(StanPoczatkowy.ilosc), 0) > 0 OR ISNULL(MAX(StanKoncowy.ilosc), 0) > 0 OR SUM(ABS(el.Ilosc * RuchMagazynowy.Operator)) > 0')
+            ->orderBy('t.IDTowaru', 'ASC')
             ->get();
+
 
         // $sql_with_bindings = Str::replaceArray('?', $results->getBindings(), $results->toSql());
         // dd($sql_with_bindings);
         return $results;
     }
-    public function getQuantity(Request $request)
+
+    private function dontGetDocKlient($IDMagazynu)
+    {
+        $noklient = DB::table('EMailMagazyn')->where('IDMagazyn', $IDMagazynu)->whereNotNull('noklient')->whereRaw("LEN(CAST(noklient AS VARCHAR(MAX))) > 5")->value('noklient');
+        $noklient = json_decode($noklient, true);
+
+        if (is_null($noklient) or (is_array($noklient) && count($noklient) == 0)) {
+            $noklient = [];
+        }
+
+        return $noklient;
+    }
+
+    public function  getQuantity(Request $request)
     {
         $data = $request->all();
-
+        $res = [];
         if (isset($request->user)) {
             $this->logUsers($request->user, 'Zamawianie towarów', $request->ip());
         }
@@ -614,27 +639,39 @@ class MagazynController extends Controller
 
         $IDMagazynu = $data['IDMagazynu'];
 
+        $noklient = $this->dontGetDocKlient($IDMagazynu);
+        $res['kontahenty'] = implode(',', DB::table('Kontrahent')->whereIn('IDKontrahenta', $noklient)->pluck('Nazwa')->toArray());
+
         $a_products = [];
         for ($date = $dateDoMin->copy(); $date->lte($dateDoMax); $date->addDay()) {
 
             // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
             $products = $this->getWarehouseData($date->setTime(00, 00, 00)->format('Y-m-d H:i:s'), $IDMagazynu);
-            foreach ($products as $product) {
 
-                if (isset($a_products[$product->IDTowaru])) {
-                    $a_products[$product->IDTowaru]['qtyOld']++;
-                } else {
-                    $a_products[$product->IDTowaru] = [
-                        "Nazwa" => $product->Nazwa,
-                        'KodKreskowy' => $product->KodKreskowy,
-                        'sku' => $product->sku,
-                        'GrupaTowarów' => $product->GrupaTowarów,
-                        'qtyOld' => 1,
-                        'qtyNew' => 0,
-                        'oborotOld' => 0,
-                        'oborotNew' => 0,
-                        'stan' => 0,
-                    ];
+            $productsInLocation = $this->getProductsInLocation($IDMagazynu, $date);
+            foreach ($products as $product) {
+                foreach ($productsInLocation as $loc_name => $locationData) {
+                    if (isset($locationData[$product->KodKreskowy])) {
+                        $product->stan -= $locationData[$product->KodKreskowy];
+                    }
+                }
+                if ($product->stan > 0) {
+                    if (isset($a_products[$product->IDTowaru])) {
+                        $a_products[$product->IDTowaru]['qtyOld']++;
+                    } else {
+                        $a_products[$product->IDTowaru] = [
+                            "Nazwa" => $product->Nazwa,
+                            'KodKreskowy' => $product->KodKreskowy,
+                            'sku' => $product->sku,
+                            'GrupaTowarów' => $product->GrupaTowarów,
+                            'qtyOld' => 1,
+                            'qtyNew' => 0,
+                            'oborotOld' => 0,
+                            'oborotNew' => 0,
+                            'stan' => 0,
+                            'AnalizABC' => $product->AnalizABC,
+                        ];
+                    }
                 }
             }
         }
@@ -642,22 +679,31 @@ class MagazynController extends Controller
 
             // $products = $this->getWarehouseData($date->setTime(23, 59, 59)->format('d.m.Y H:i:s'), $IDMagazynu);
             $products = $this->getWarehouseData($date->setTime(00, 00, 00)->format('Y-m-d H:i:s'), $IDMagazynu);
+            $productsInLocation = $this->getProductsInLocation($IDMagazynu, $date);
             foreach ($products as $product) {
 
-                if (isset($a_products[$product->IDTowaru])) {
-                    $a_products[$product->IDTowaru]['qtyNew']++;
-                } else {
-                    $a_products[$product->IDTowaru] = [
-                        "Nazwa" => $product->Nazwa,
-                        'KodKreskowy' => $product->KodKreskowy,
-                        'sku' => $product->sku,
-                        'GrupaTowarów' => $product->GrupaTowarów,
-                        'qtyOld' => 0,
-                        'qtyNew' => 1,
-                        'oborotOld' => 0,
-                        'oborotNew' => 0,
-                        'stan' => 0,
-                    ];
+                foreach ($productsInLocation as $loc_name => $locationData) {
+                    if (isset($locationData[$product->KodKreskowy])) {
+                        $product->stan -= $locationData[$product->KodKreskowy];
+                    }
+                }
+                if ($product->stan > 0) {
+                    if (isset($a_products[$product->IDTowaru])) {
+                        $a_products[$product->IDTowaru]['qtyNew']++;
+                    } else {
+                        $a_products[$product->IDTowaru] = [
+                            "Nazwa" => $product->Nazwa,
+                            'KodKreskowy' => $product->KodKreskowy,
+                            'sku' => $product->sku,
+                            'GrupaTowarów' => $product->GrupaTowarów,
+                            'qtyOld' => 0,
+                            'qtyNew' => 1,
+                            'oborotOld' => 0,
+                            'oborotNew' => 0,
+                            'stan' => 0,
+                            'AnalizABC' => $product->AnalizABC,
+                        ];
+                    }
                 }
             }
         }
@@ -670,32 +716,47 @@ class MagazynController extends Controller
         }
 
         $request = new \Illuminate\Http\Request();
-        $request->replace(['dataMin' => $dateDoMinF, 'dataMax' => $dateDoMaxF, 'IDMagazynu' => $IDMagazynu]);
+        $request->replace(['dataMin' => $dateDoMinF, 'dataMax' => $dateDoMaxF, 'IDMagazynu' => $IDMagazynu, 'allClients' => 0]);
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
                 $a_products[$product->IDTowaru]['oborotOld'] = $product->IlośćWychodząca;
             }
         }
-        $request->replace(['dataMin' => $dateMinF, 'dataMax' => $dateMaxF, 'IDMagazynu' => $IDMagazynu]);
+        $request = new \Illuminate\Http\Request();
+        $request->replace(['dataMin' => $dateMinF, 'dataMax' => $dateMaxF, 'IDMagazynu' => $IDMagazynu, 'allClients' => 0]);
         $products = $this->getOborot($request);
         foreach ($products as $product) {
             if (isset($a_products[$product->IDTowaru])) {
                 $a_products[$product->IDTowaru]['oborotNew'] = $product->IlośćWychodząca;
             }
         }
-        $products = [];
+        $res['products'] = [];
+        // product in 'Zniszczony', 'Naprawa'
+        $productsInLocation = $this->getProductsInLocation($IDMagazynu, $dateMaxF);
         foreach ($a_products as $IDTowaru => $product) {
+
+            foreach ($productsInLocation as $loc_name => $locationData) {
+                $product[$loc_name] = 0;
+                if (isset($locationData[$product['KodKreskowy']])) {
+                    $product['stan'] -= $locationData[$product['KodKreskowy']];
+                    $product[$loc_name] = $locationData[$product['KodKreskowy']];
+                }
+            }
+
             $selondayOld = $product['qtyOld'] > 0 ? round($product['oborotOld'] / $product['qtyOld'], 2) : 0;
             $selonday = $product['qtyNew'] > 0 ? round($product['oborotNew'] / $product['qtyNew'], 2) : 0;
             $tendent = $selondayOld > 0 && $selonday > 0 ? round(($selonday - $selondayOld) / $selondayOld * 100, 2) : 0;
             $zamov = $tendent > 0 ? round(($DaysOn * $selonday - $product['stan']) + ($DaysOn * $selonday - $product['stan']) /  $tendent, 2) : round($DaysOn * $selonday - $product['stan'], 2);
             $haveDay = $selonday > 0 ? $product['stan'] / $selonday : 0;
-            $products[] = [
+            $res['products'][] = [
                 'IDTowaru' => $IDTowaru,
                 'Nazwa' => $product['Nazwa'],
                 'KodKreskowy' => (int)$product['KodKreskowy'],
+                'Zniszczony' => $product['Zniszczony'],
+                'Naprawa' => $product['Naprawa'],
                 'SKU' => $product['sku'],
+                'AnalizABC' => $product['AnalizABC'],
                 'GrupaTowarów' => $product['GrupaTowarów'],
                 'stan' => (int)$product['stan'],
                 'DniNaDostawę' => (int)$DaysOn,
@@ -722,6 +783,168 @@ class MagazynController extends Controller
             ];
         }
 
-        return $products;
+        return $res;
+    }
+
+    public function getOrders(Request $request)
+    {
+
+        $res = [];
+        $data = $request->all();
+        $IDWarehouse = $data['IDWarehouse'];
+        $dateMin = new Carbon($data['dateMin']);
+        $dateMax = new Carbon($data['dateMax']);
+        $dateMin = $dateMin->setTime(00, 00, 00)->format('Y-m-d H:i:s');
+        $dateMax = $dateMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
+        $empty = $data['empty'];
+        $full = $data['full'];
+
+        $query = DB::table('Orders as ord')
+            ->select(
+                'IDOrder',
+                '_OrdersTempString5 as product_Chang',
+                'rm.NrDokumentu as Powiązane_WZ',
+                'Date',
+                'Number',
+                'con.Nazwa as Kontrahent',
+                'os.Name as Status',
+                'ord.Remarks as Uwagi',
+                'ord.Modified as Zmodyfikowane',
+                'rt.Nazwa as Rodzaj_transportu',
+                '_OrdersTempDecimal2 as Nr_Baselinker',
+                '_OrdersTempString2 as Nr_Nadania',
+                '_OrdersTempString1 as Nr_Faktury',
+                '_OrdersTempString4 as Nr_Zwrotny',
+                '_OrdersTempString3 as Nr_Korekty',
+                '_OrdersTempString7 as Źródło',
+                '_OrdersTempString8 as External_id',
+                '_OrdersTempString9 as Login_klienta'
+            )
+            ->leftJoin('OrderStatus as os', 'os.IDOrderStatus', 'ord.IDOrderStatus')
+            ->leftJoin('Kontrahent as con', 'con.IDKontrahenta', 'ord.IDAccount')
+            ->leftJoin('DocumentRelations as do', function ($join) {
+                $join->on('do.ID2', '=', 'ord.IDOrder')
+                    ->on('do.IDType1', '=', DB::raw('2'));
+            })
+            ->leftJoin('RuchMagazynowy as rm', 'rm.IDRuchuMagazynowego', 'do.ID1')
+            ->leftJoin('RodzajTransportu as rt', 'rt.IDRodzajuTransportu', 'ord.IDTransport')
+            ->where('IDWarehouse', $IDWarehouse)
+            ->when(count($data['statuses']) > 0, function ($query) use ($data) {
+                $query->whereIn('ord.IDOrderStatus', $data['statuses']);
+            })
+            ->whereBetween('Date', [$dateMin, $dateMax]);
+
+        if (count($full) > 0) {
+            foreach ($full as $el) {
+                if ($el == '_OrdersTempDecimal2') {
+                    $query->where(function ($query) use ($el) {
+                        $query->whereNotNull($el);
+                    });
+                } else {
+                    $query->where(function ($query) use ($el) {
+                        $query->whereNotNull($el)->where($el, '!=', '');
+                    });
+                }
+            }
+        }
+        if (count($empty) > 0) {
+            foreach ($empty as $el) {
+                if ($el == '_OrdersTempDecimal2') {
+                    $query->where(
+                        function ($query) use ($el) {
+                            $query->whereNull($el);
+                        }
+                    );
+                } else {
+                    $query->where(
+                        function ($query) use ($el) {
+                            $query->whereNull($el)->orWhere($el, '=', '');
+                        }
+                    );
+                }
+            }
+        }
+        $res['orders'] = $query->get();
+
+        return $res;
+    }
+
+    public function lastNumber($doc, $symbol)
+    {
+        $year = Carbon::now()->format('y');
+        $pattern =  $doc . '%/' . $year . ' - ' . $symbol;
+        $patternIndex = strlen($doc);
+        $patternToEndLen = strlen($symbol) + 6; // 6 символов: " - " + год (2 символа) + "/"
+
+        $res = DB::table('RuchMagazynowy')
+            ->select(DB::raw('MAX(CAST(SUBSTRING(NrDokumentu, ' . ($patternIndex + 1) . ', LEN(NrDokumentu) - ' . ($patternToEndLen + $patternIndex) . ') AS INT)) as max_number'))
+            ->whereRaw('RTRIM(NrDokumentu) LIKE ?', [$pattern])
+            ->whereRaw('ISNUMERIC(SUBSTRING(NrDokumentu, ' . ($patternIndex + 1) . ', LEN(NrDokumentu) - ' . ($patternToEndLen + $patternIndex) . ')) <> 0')
+            ->value('max_number');
+
+        if ($res === null) {
+            return str_replace('%', '1', $pattern);
+        }
+        return str_replace('%', $res + 1, $pattern);
+    }
+
+    public function createWZfromZO(Request $request)
+    {
+        $data = $request->all();
+        $listOrders = [];
+        $IDOrders = $data['IDOrders'];
+        $symbol = $data['warehouse'][0]['Symbol'];
+        $documentType = 2;
+        $userId = 1;
+        $amountFlag = 2;
+        $elementsGUID = NULL;
+
+        foreach ($IDOrders as $order) {
+            $orderId = $order['IDOrder'];
+            $relatedDocument = DB::table('DocumentRelations')->where('ID2', $orderId)->where('IDType2', 15)->where('IDType1', 2)->value('ID1');
+
+            $documentNumber = $this->lastNumber('WZ', $symbol);
+
+            if (!$relatedDocument) {
+                DB::statement('
+            DECLARE @DocumentID INT;
+            EXEC GenerateWZfromOrder
+                @DocumentType = :documentType,
+                @UserID = :userId,
+                @AmountFlag = :amountFlag,
+                @ElementsGUID = :elementsGUID,
+                @OrderID = :orderId,
+                @DocumentNumber = :documentNumber,
+                @DocumentID = @DocumentID OUTPUT;
+            ', [
+                    'documentType' => $documentType,
+                    'userId' => $userId,
+                    'amountFlag' => $amountFlag,
+                    'elementsGUID' => $elementsGUID,
+                    'orderId' => $orderId,
+                    'documentNumber' => $documentNumber
+                ]);
+
+                $relatedDocument = DB::table('DocumentRelations')
+                    ->leftJoin('RuchMagazynowy', 'DocumentRelations.ID1', 'RuchMagazynowy.IDRuchuMagazynowego')
+                    ->where('ID2', $orderId)
+                    ->where('IDType2', 15)
+                    ->where('IDType1', 2)
+                    ->select('ID1 as id', 'NrDokumentu as Powiązane_WZ', 'Data as date')
+                    ->first();
+            }
+            $listOrders[$orderId] = $relatedDocument;
+        }
+        return $listOrders;
+    }
+
+    public function getStatuses()
+    {
+        return DB::table('OrderStatus')->select('IDOrderStatus as value', 'Name as title')->get();
+    }
+
+    public function getClients()
+    {
+        return DB::table('Kontrahent')->select('IDKontrahenta as value', 'Nazwa as title')->whereRaw('LEN(Nazwa) >= 3')->get();
     }
 }
