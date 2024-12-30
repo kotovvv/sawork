@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 
 class MagazynController extends Controller
@@ -946,5 +947,86 @@ class MagazynController extends Controller
     public function getClients()
     {
         return DB::table('Kontrahent')->select('IDKontrahenta as value', 'Nazwa as title')->whereRaw('LEN(Nazwa) >= 3')->get();
+    }
+
+    public function setCenaWZkFromWZ()
+    {
+        // Проверка данных перед обновлением
+        $prices = DB::table('ElementRuchuMagazynowego as erm_wzk')
+            ->join('DocumentRelations as dr', 'dr.ID1', '=', 'erm_wzk.IDRuchuMagazynowego')
+            ->join('ElementRuchuMagazynowego as erm_wz', function ($join) {
+                $join->on('erm_wz.IDRuchuMagazynowego', '=', 'dr.ID2')
+                    ->on('erm_wz.IDTowaru', '=', 'erm_wzk.IDTowaru');
+            })
+            ->where('dr.IDType1', 4)
+            ->where('dr.IDType2', 2)
+            ->whereColumn('erm_wzk.CenaJednostkowa', '!=', 'erm_wz.CenaJednostkowa')
+            ->select('erm_wzk.IDRuchuMagazynowego as id1_WZk', 'erm_wzk.CenaJednostkowa as CenaWZk', 'erm_wz.IDRuchuMagazynowego as id2_WZ',  'erm_wz.CenaJednostkowa as CenaWZ')
+            ->get();
+
+        // // Логирование данных для проверки
+        // Log::info('Prices before update', ['prices' => $prices]);
+
+        // // Обновление данных
+        $updatedRows = DB::table('ElementRuchuMagazynowego as erm_wzk')
+            ->join('DocumentRelations as dr', 'dr.ID1', '=', 'erm_wzk.IDRuchuMagazynowego')
+            ->join('ElementRuchuMagazynowego as erm_wz', function ($join) {
+                $join->on('erm_wz.IDRuchuMagazynowego', '=', 'dr.ID2')
+                    ->on('erm_wz.IDTowaru', '=', 'erm_wzk.IDTowaru');
+            })
+            ->where('dr.IDType1', 4)
+            ->where('dr.IDType2', 2)
+            ->whereColumn('erm_wzk.CenaJednostkowa', '!=', 'erm_wz.CenaJednostkowa')
+            ->update(['erm_wzk.CenaJednostkowa' => DB::raw('erm_wz.CenaJednostkowa')]);
+
+        return response()->json(['message' => 'Set price OK', 'updatedRows' => $updatedRows, 'prices' => $prices], 200);
+    }
+
+    public function setCenaZLfromPZ()
+    {
+        // Получаем все документы с IDRodzajuRuchuMagazynowego = 27 и не пустым WartoscDokumentu
+        $documents = DB::table('RuchMagazynowy as rm')
+            ->where('rm.IDRodzajuRuchuMagazynowego', 27)
+            ->whereNotNull('rm.WartoscDokumentu')
+            ->get();
+
+        $updatedRows = 0;
+
+        foreach ($documents as $document) {
+            // Получаем все товары для каждого документа
+            $items = DB::table('ElementRuchuMagazynowego as erm')
+                ->where('erm.IDRuchuMagazynowego', $document->IDRuchuMagazynowego)
+                ->get();
+
+            foreach ($items as $item) {
+                // Получаем IDElementuPZ для каждого товара
+                $relatedItem = DB::table('ZaleznosciPZWZ as pzwz')
+                    ->where('pzwz.IDElementuWZ', $item->IDElementuRuchuMagazynowego)
+                    ->first();
+
+                if ($relatedItem) {
+                    // Получаем цену связанного товара
+                    $relatedItemPrice = DB::table('ElementRuchuMagazynowego')
+                        ->where('IDElementuRuchuMagazynowego', $relatedItem->IDElementuPZ)
+                        ->value('CenaJednostkowa');
+
+                    if ($relatedItemPrice && $relatedItemPrice != $item->CenaJednostkowa) {
+                        // Обновляем цену у текущего товара
+                        DB::table('ElementRuchuMagazynowego')
+                            ->where('IDElementuRuchuMagazynowego', $item->IDElementuRuchuMagazynowego)
+                            ->update(['CenaJednostkowa' => $relatedItemPrice]);
+
+                        // Обновляем цену у товара с IDRodzic = текущий товар
+                        DB::table('ElementRuchuMagazynowego')
+                            ->where('IDRodzic', $item->IDElementuRuchuMagazynowego)
+                            ->update(['CenaJednostkowa' => $relatedItemPrice]);
+
+                        $updatedRows++;
+                    }
+                }
+            }
+        }
+
+        return response()->json(['message' => 'Set price OK', 'updatedRows' => $updatedRows], 200);
     }
 }
