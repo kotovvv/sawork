@@ -30,6 +30,7 @@ export default {
 
   methods: {
     setCenaWZkFromWZ() {
+      this.message = "";
       axios
         .get("/api/setCenaWZkFromWZ")
         .then((response) => {
@@ -43,6 +44,7 @@ export default {
         });
     },
     setCenaZLfromPZ() {
+      this.message = "";
       axios
         .get("/api/setCenaZLfromPZ")
         .then((response) => {
