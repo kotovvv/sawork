@@ -3,7 +3,7 @@
     <v-tabs v-model="tab" bg-color="primary">
       <v-tab value="email">Magazyn email</v-tab>
       <v-tab value="price">Magazyn price</v-tab>
-      <v-tab value="setprice">Set price WZk <- WZ</v-tab>
+      <v-tab value="setprice">Set price</v-tab>
     </v-tabs>
 
     <v-card-text>

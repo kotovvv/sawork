@@ -36,6 +36,9 @@ export default {
         .then((response) => {
           this.message = "Updated WZk docs: ";
           this.message += response.data.updatedRows;
+          console.log("documents:");
+          console.log(response.data.documents);
+          console.log("Prices:");
           console.log(response.data.prices);
           this.snackbar = true;
         })
@@ -50,6 +53,7 @@ export default {
         .then((response) => {
           this.message = "Updated ZL docs: ";
           this.message += response.data.updatedRows;
+
           this.snackbar = true;
         })
         .catch((error) => {

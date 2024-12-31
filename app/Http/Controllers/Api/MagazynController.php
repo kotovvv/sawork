@@ -951,8 +951,26 @@ class MagazynController extends Controller
 
     public function setCenaWZkFromWZ()
     {
-        // Проверка данных перед обновлением
-        $prices = DB::table('ElementRuchuMagazynowego as erm_wzk')
+
+        $o_prices = DB::table('ElementRuchuMagazynowego as erm_wzk')
+            ->join('DocumentRelations as dr', 'dr.ID1', '=', 'erm_wzk.IDRuchuMagazynowego')
+            ->join('ElementRuchuMagazynowego as erm_wz', function ($join) {
+                $join->on('erm_wz.IDRuchuMagazynowego', '=', 'dr.ID2')
+                    ->on('erm_wz.IDTowaru', '=', 'erm_wzk.IDTowaru');
+            })
+            ->where('dr.IDType1', 4)
+            ->where('dr.IDType2', 2)
+
+            ->whereColumn('erm_wzk.CenaJednostkowa', '!=', 'erm_wz.CenaJednostkowa')
+            ->select('erm_wzk.IDRuchuMagazynowego as id1_WZk', 'erm_wzk.CenaJednostkowa as CenaWZk', 'erm_wz.IDRuchuMagazynowego as id2_WZ',  'erm_wz.CenaJednostkowa as CenaWZ', 'erm_wz.IDTowaru')
+            ->get();
+        $prices = [];
+        foreach ($o_prices as $key => $row) {
+            $prices[] = $row->id2_WZ;
+        }
+        $prices = array_unique($prices);
+
+        $itemsToUpdate = DB::table('ElementRuchuMagazynowego as erm_wzk')
             ->join('DocumentRelations as dr', 'dr.ID1', '=', 'erm_wzk.IDRuchuMagazynowego')
             ->join('ElementRuchuMagazynowego as erm_wz', function ($join) {
                 $join->on('erm_wz.IDRuchuMagazynowego', '=', 'dr.ID2')
@@ -961,23 +979,25 @@ class MagazynController extends Controller
             ->where('dr.IDType1', 4)
             ->where('dr.IDType2', 2)
             ->whereColumn('erm_wzk.CenaJednostkowa', '!=', 'erm_wz.CenaJednostkowa')
-            ->select('erm_wzk.IDRuchuMagazynowego as id1_WZk', 'erm_wzk.CenaJednostkowa as CenaWZk', 'erm_wz.IDRuchuMagazynowego as id2_WZ',  'erm_wz.CenaJednostkowa as CenaWZ')
+            ->whereNotIn('erm_wz.IDRuchuMagazynowego', function ($query) {
+                $query->select('IDRuchuMagazynowego')
+                    ->from('ElementRuchuMagazynowego')
+                    ->groupBy('IDRuchuMagazynowego', 'IDTowaru')
+                    ->havingRaw('COUNT(IDTowaru) > 1');
+            })
+            ->select('erm_wzk.IDElementuRuchuMagazynowego', 'erm_wz.CenaJednostkowa')
             ->get();
 
-        // // Логирование данных для проверки
-        // Log::info('Prices before update', ['prices' => $prices]);
+        // Подсчитываем количество замен
+        $updatedRows = 0;
 
-        // // Обновление данных
-        $updatedRows = DB::table('ElementRuchuMagazynowego as erm_wzk')
-            ->join('DocumentRelations as dr', 'dr.ID1', '=', 'erm_wzk.IDRuchuMagazynowego')
-            ->join('ElementRuchuMagazynowego as erm_wz', function ($join) {
-                $join->on('erm_wz.IDRuchuMagazynowego', '=', 'dr.ID2')
-                    ->on('erm_wz.IDTowaru', '=', 'erm_wzk.IDTowaru');
-            })
-            ->where('dr.IDType1', 4)
-            ->where('dr.IDType2', 2)
-            ->whereColumn('erm_wzk.CenaJednostkowa', '!=', 'erm_wz.CenaJednostkowa')
-            ->update(['erm_wzk.CenaJednostkowa' => DB::raw('erm_wz.CenaJednostkowa')]);
+        // Обновляем записи
+        foreach ($itemsToUpdate as $item) {
+            DB::table('ElementRuchuMagazynowego')
+                ->where('IDElementuRuchuMagazynowego', $item->IDElementuRuchuMagazynowego)
+                ->update(['CenaJednostkowa' => $item->CenaJednostkowa]);
+            $updatedRows++;
+        }
 
         return response()->json(['message' => 'Set price OK', 'updatedRows' => $updatedRows, 'prices' => $prices], 200);
     }
