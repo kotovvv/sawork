@@ -433,7 +433,7 @@ class MagazynController extends Controller
         $now = Carbon::now();
         if ($this->canUseWarehouse($request->user, $idwarehouse)) {
             $year = $now->year;
-            if ($now->month == 0 && $month == 11) {
+            if ($now->month == 1 && $month == 11) {
                 $year = $now->year - 1;
             }
             $startDay = $now->createFromDate($year, $month + 1, '1')->setTime(0, 0, 0)->format('Y-m-d H:i:s');
