@@ -117,7 +117,7 @@ class ComingController extends Controller
         }
 
         DB::table('dbo.RuchMagazynowy')->insert($createPZ);
-        $pzID = DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $documentNumber)->first()->IDRuchuMagazynowego;
+        $pzID = DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $documentNumber)->value('IDRuchuMagazynowego');
 
         $LocationCode = 'prihod' . date('dmy');
         $location = [
