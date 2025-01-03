@@ -66,6 +66,25 @@ class ComingController extends Controller
             ->get();
     }
 
+    public function lastNumber($doc, $symbol)
+    {
+        $year = Carbon::now()->format('y');
+        $pattern =  $doc . '%/' . $year . ' - ' . $symbol;
+        $patternIndex = strlen($doc);
+        $patternToEndLen = strlen($symbol) + 6; // 6 символов: " - " + год (2 символа) + "/"
+
+        $res = DB::table('RuchMagazynowy')
+            ->select(DB::raw('MAX(CAST(SUBSTRING(NrDokumentu, ' . ($patternIndex + 1) . ', LEN(NrDokumentu) - ' . ($patternToEndLen + $patternIndex) . ') AS INT)) as max_number'))
+            ->whereRaw('RTRIM(NrDokumentu) LIKE ?', [$pattern])
+            ->whereRaw('ISNUMERIC(SUBSTRING(NrDokumentu, ' . ($patternIndex + 1) . ', LEN(NrDokumentu) - ' . ($patternToEndLen + $patternIndex) . ')) <> 0')
+            ->value('max_number');
+
+        if ($res === null) {
+            return str_replace('%', '1', $pattern);
+        }
+        return str_replace('%', $res + 1, $pattern);
+    }
+
     public function createPZ(Request $request)
     {
         $data = $request->all();
@@ -87,16 +106,18 @@ class ComingController extends Controller
 
 
 
-        $ndoc = DB::selectOne("SELECT TOP 1 NrDokumentu n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '1' AND IDMagazynu = " . $IDMagazynu . " AND year( Utworzono ) = " . date('Y') . " ORDER BY Data DESC");
-        preg_match('/^PZ(.*)\/.*/', $ndoc->n, $a_ndoc);
-        $createPZ['NrDokumentu'] = 'PZ' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $Symbol;
+        // $ndoc = DB::selectOne("SELECT TOP 1 NrDokumentu as n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '1' AND IDMagazynu = " . $IDMagazynu . " AND year( Utworzono ) = " . date('Y') . " ORDER BY Data DESC");
+        // preg_match('/^PZ(.*)\/.*/', $ndoc->n, $a_ndoc);
+        // $createPZ['NrDokumentu'] = 'PZ' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $Symbol;
+
+        $documentNumber = $this->lastNumber('PZ', $Symbol);
         // check if NrDokumentu exist in base
-        if (DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $createPZ['NrDokumentu'])->exists()) {
-            return response($createPZ['NrDokumentu'] . ' Został już utworzony', 200);
+        if (DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $documentNumber)->exists()) {
+            return response($documentNumber . ' Został już utworzony', 200);
         }
 
         DB::table('dbo.RuchMagazynowy')->insert($createPZ);
-        $pzID = DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $createPZ['NrDokumentu'])->first()->IDRuchuMagazynowego;
+        $pzID = DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $documentNumber)->first()->IDRuchuMagazynowego;
 
         $LocationCode = 'prihod' . date('dmy');
         $location = [
@@ -142,7 +163,7 @@ class ComingController extends Controller
             'IDType2' => 200
         ];
         DB::table('dbo.DocumentRelations')->insert($rel);
-        $res = ['message' => 'Utworzono ' . $createPZ['NrDokumentu'], 'ID1' => $pzID, 'NrDokumentu' => $createPZ['NrDokumentu']];
+        $res = ['message' => 'Utworzono ' . $documentNumber, 'ID1' => $pzID, 'NrDokumentu' => $documentNumber];
         return response($res, 200);
     }
 
