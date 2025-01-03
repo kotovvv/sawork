@@ -111,13 +111,19 @@ class ComingController extends Controller
         // $createPZ['NrDokumentu'] = 'PZ' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $Symbol;
 
         $documentNumber = $this->lastNumber('PZ', $Symbol);
+        $createPZ['NrDokumentu'] = $documentNumber;
+
         // check if NrDokumentu exist in base
         if (DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $documentNumber)->exists()) {
             return response($documentNumber . ' Został już utworzony', 200);
         }
 
         DB::table('dbo.RuchMagazynowy')->insert($createPZ);
-        $pzID = DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $documentNumber)->first()->IDRuchuMagazynowego;
+        $pzRecord = DB::table('dbo.RuchMagazynowy')->where('NrDokumentu', $documentNumber)->first();
+        if ($pzRecord === null) {
+            return response('Parent record does not exist', 400);
+        }
+        $pzID = $pzRecord->IDRuchuMagazynowego;
 
         $LocationCode = 'prihod' . date('dmy');
         $location = [
