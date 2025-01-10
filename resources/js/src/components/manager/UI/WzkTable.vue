@@ -23,7 +23,7 @@
         <span v-if="item.photo" class="photo">{{ item.photo }} </span>
         {{ item.NrDokumentu }}
       </template>
-      <template v-slot:top="{}" v-if="docsWZk.length">
+      <template v-slot:top="{}" v-if="docsWZk.length > 0">
         <v-row class="align-center">
           <v-col class="v-col-sm-6 v-col-md-2">
             <v-text-field
@@ -40,8 +40,10 @@
             v-if="$props.user.IDRoli != 4"
           >
             <v-tooltip bottom>
-              <template v-slot:activator="{ on, attrs }">
-                <v-icon v-bind="attrs" v-on="on">mdi-redo-variant</v-icon>
+              <template v-slot:activator="{ attrs }">
+                <v-icon v-bind="attrs" :click="refreshLocations"
+                  >mdi-redo-variant</v-icon
+                >
               </template>
               <span>Refresh Locations</span>
             </v-tooltip>
@@ -133,7 +135,9 @@ export default {
     },
     getDocsWZk() {
       const vm = this;
+
       if (vm.IDWarehouse == null) return;
+      vm.docsWZk = [];
       vm.loading = true;
       axios
         .post("/api/getDocsWZk", {

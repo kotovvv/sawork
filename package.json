@@ -17,6 +17,7 @@
         "@vitejs/plugin-vue": "^4.6.2",
         "file-saver": "^2.0.5",
         "html5-qrcode": "^2.3.8",
+        "jsbarcode": "^3.11.6",
         "less": "^4.2.0",
         "moment": "^2.30.1",
         "vue": "^3.4.33",

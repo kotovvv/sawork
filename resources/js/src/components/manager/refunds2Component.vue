@@ -126,11 +126,7 @@
       <v-row
         ><v-col>
           <v-card>
-            <v-tabs
-              v-model="tab"
-              bg-color="primary"
-              @update:modelValue="tabChanged"
-            >
+            <v-tabs v-model="tab" bg-color="primary" @change="tabChanged">
               <v-tab value="products"> Products </v-tab>
               <v-tab value="photo"> Photo </v-tab>
               <v-tab value="email"> Email </v-tab>
@@ -319,6 +315,7 @@
       </v-col>
     </v-row>
     <!-- Products -->
+
     <ConfirmDlg ref="confirm" />
     <v-dialog v-model="dialogMessageQty" width="auto">
       <v-card width="600" prepend-icon="mdi-pencil">
@@ -337,7 +334,7 @@
             v-model="edit.IDWarehouseLocation"
             :items="locations"
             label="Locations"
-            :item-value="key"
+            item-value="value"
           ></v-select>
         </v-card-text>
         <template v-slot:actions>
@@ -368,6 +365,7 @@
         </template>
       </v-card>
     </v-dialog>
+
     <v-dialog
       id="dialogProduct"
       ref="dProduct"
@@ -441,13 +439,20 @@
                       </h5>
                     </span>
                     <v-btn
-                      size="small"
+                      size="x-small"
                       @click="
                         edit = p;
                         dialogMessageQty = true;
                       "
                       icon="mdi-pencil"
                     ></v-btn>
+
+                    <v-btn
+                      size="x-small"
+                      @click="printBarcode(p.KodKreskowy, p._TowarTempString1)"
+                      icon="mdi-barcode"
+                    ></v-btn>
+                    <v-btn size="x-small" icon="mdi-printer"></v-btn>
                   </div>
                   <div v-if="p.Uwagi">Uwagi: {{ p.Uwagi }}</div>
                 </v-col>
@@ -530,6 +535,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <BarcodePrinter ref="barcodePrinter" />
   </v-container>
 </template>
 
@@ -541,6 +547,7 @@ import PhotoCapture from "../UI/PhotoCapture.vue";
 import ConfirmDlg from "../UI/ConfirmDlg.vue";
 import WzkTable from "./UI/WzkTable.vue";
 import productHistory from "../client/productHistory.vue";
+import BarcodePrinter from "./UI/BarcodePrinter.vue";
 export default {
   name: "Refund",
   components: {
@@ -549,6 +556,7 @@ export default {
     Modal,
     PhotoCapture,
     productHistory,
+    BarcodePrinter,
   },
   data() {
     return {
@@ -1117,6 +1125,11 @@ export default {
       // this.products.sort((a.qty, b.qty) => a.qty - b.qty);
       this.edit.id = 0;
       this.imputCod = "";
+    },
+    printBarcode(kod, sku) {
+      if (this.$refs.barcodePrinter) {
+        this.$refs.barcodePrinter.print(kod, sku);
+      }
     },
   },
 };
