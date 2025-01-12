@@ -336,7 +336,7 @@ class ReturnController extends Controller
         $res['DocsWZk'] = DB::table('RuchMagazynowy as rm')
             ->select(
                 'rm.IDRuchuMagazynowego',
-                'NrDokumentu as Number',
+                'NrDokumentu',
                 'Data',
                 'rm.IDKontrahenta',
                 'IDCompany',

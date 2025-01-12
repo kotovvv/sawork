@@ -19,7 +19,7 @@
       <v-row>
         <v-col>
           <h3>
-            {{ selectedItem.Number }}
+            {{ selectedItem.NrDokumentu }}
             <small>{{ selectedItem.Data.substring(0, 10) }}</small>
           </h3>
           <div v-if="selectedItem.Uwagi">
@@ -146,29 +146,12 @@
                       :row-props="colorRowItem"
                       select-strategy="single"
                     >
-                      <template v-slot:item.action="{ item }">
+                      <template v-slot:item.KodKreskowy="{ item }">
+                        {{ item.KodKreskowy }}
                         <v-btn
                           size="x-small"
-                          @click="
-                            printBarcode(
-                              item.KodKreskowy,
-                              item._TowarTempString1
-                            )
-                          "
+                          @click="printBarcode(item.KodKreskowy, item.sku)"
                           icon="mdi-barcode"
-                        ></v-btn>
-                        <v-btn
-                          size="x-small"
-                          icon="mdi-printer"
-                          @click="
-                            printBarcode(
-                              item.KodKreskowy,
-                              item._TowarTempString1,
-                              item.Nazwa,
-                              item.Uwagi,
-                              order
-                            )
-                          "
                         ></v-btn>
                       </template>
                       <template v-slot:top="{}">
@@ -739,7 +722,7 @@ export default {
       vm.loading = true;
       axios
         .post("api/sendEmail", {
-          NrDokumentu: vm.selectedItem.Number,
+          NrDokumentu: vm.selectedItem.NrDokumentu,
           IDRuchuMagazynowego: vm.selectedItem.IDRuchuMagazynowego,
         })
         .then((res) => {
