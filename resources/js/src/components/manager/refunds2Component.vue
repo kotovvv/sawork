@@ -19,7 +19,7 @@
       <v-row>
         <v-col>
           <h3>
-            {{ selectedItem.NrDokumentu }}
+            {{ selectedItem.Number }}
             <small>{{ selectedItem.Data.substring(0, 10) }}</small>
           </h3>
           <div v-if="selectedItem.Uwagi">
@@ -739,7 +739,7 @@ export default {
       vm.loading = true;
       axios
         .post("api/sendEmail", {
-          NrDokumentu: vm.selectedItem.NrDokumentu,
+          NrDokumentu: vm.selectedItem.Number,
           IDRuchuMagazynowego: vm.selectedItem.IDRuchuMagazynowego,
         })
         .then((res) => {
