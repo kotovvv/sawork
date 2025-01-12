@@ -146,6 +146,31 @@
                       :row-props="colorRowItem"
                       select-strategy="single"
                     >
+                      <template v-slot:item.action="{ item }">
+                        <v-btn
+                          size="x-small"
+                          @click="
+                            printBarcode(
+                              item.KodKreskowy,
+                              item._TowarTempString1
+                            )
+                          "
+                          icon="mdi-barcode"
+                        ></v-btn>
+                        <v-btn
+                          size="x-small"
+                          icon="mdi-printer"
+                          @click="
+                            printBarcode(
+                              item.KodKreskowy,
+                              item._TowarTempString1,
+                              item.Nazwa,
+                              item.Uwagi,
+                              order
+                            )
+                          "
+                        ></v-btn>
+                      </template>
                       <template v-slot:top="{}">
                         <v-row class="align-center">
                           <productHistory
@@ -449,9 +474,7 @@
 
                     <v-btn
                       size="x-small"
-                      @click="
-                        printBarcode(p.KodKreskowy, p._TowarTempString1, '', {})
-                      "
+                      @click="printBarcode(p.KodKreskowy, p._TowarTempString1)"
                       icon="mdi-barcode"
                     ></v-btn>
                     <v-btn
@@ -461,6 +484,7 @@
                         printBarcode(
                           p.KodKreskowy,
                           p._TowarTempString1,
+                          p.Nazwa,
                           p.Uwagi,
                           order
                         )
@@ -1139,9 +1163,9 @@ export default {
       this.edit.id = 0;
       this.imputCod = "";
     },
-    printBarcode(kod, sku, uwagi, order) {
+    printBarcode(kod, sku, nazwa = "", uwagi = "", doc = {}) {
       if (this.$refs.barcodePrinter) {
-        this.$refs.barcodePrinter.print(kod, sku, uwagi, order);
+        this.$refs.barcodePrinter.print(kod, sku, nazwa, uwagi, doc);
       }
     },
   },

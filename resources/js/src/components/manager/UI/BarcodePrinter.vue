@@ -11,7 +11,7 @@ import JsBarcode from "jsbarcode";
 
 export default {
   methods: {
-    print(barcode, sku, uwagi, order) {
+    print(barcode, sku, nazwa, uwagi, doc) {
       const barcodeElement = document.createElement("svg");
       JsBarcode(barcodeElement, barcode, {
         format: "CODE128",
@@ -20,10 +20,14 @@ export default {
         displayValue: true,
       });
       let info = "";
-      if (Object.keys(order).length !== 0) {
-        info += "<p>Order Number: " + order.Number + "</p>";
-        info += "<p>Order Uwagi: " + order.Uwagi + "</p>";
-        info += "<p>Product Uwagi: " + uwagi + "</p>";
+
+      if (Object.keys(doc).length !== 0) {
+        info += nazwa + "<br>";
+        if (uwagi !== "") {
+          info += "Product Uwagi: " + uwagi + "<br>";
+        }
+        info += "Number: " + doc.Number + "<br>";
+        info += "Uwagi: " + doc.Uwagi + "<br>";
       }
       this.$refs.printArea.innerHTML = "";
       this.$refs.printArea.appendChild(barcodeElement);
@@ -36,7 +40,9 @@ export default {
           </head>
           <body>
             ${this.$refs.printArea.innerHTML}
-            <p style="text-align:center">${sku}</p>
+            <br>
+            <div style="text-align:center">${sku}</div>
+            <br>
             ${info}
           </body>
         </html>
