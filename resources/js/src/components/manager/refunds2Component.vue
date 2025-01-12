@@ -449,10 +449,23 @@
 
                     <v-btn
                       size="x-small"
-                      @click="printBarcode(p.KodKreskowy, p._TowarTempString1)"
+                      @click="
+                        printBarcode(p.KodKreskowy, p._TowarTempString1, '', {})
+                      "
                       icon="mdi-barcode"
                     ></v-btn>
-                    <v-btn size="x-small" icon="mdi-printer"></v-btn>
+                    <v-btn
+                      size="x-small"
+                      icon="mdi-printer"
+                      @click="
+                        printBarcode(
+                          p.KodKreskowy,
+                          p._TowarTempString1,
+                          p.Uwagi,
+                          order
+                        )
+                      "
+                    ></v-btn>
                   </div>
                   <div v-if="p.Uwagi">Uwagi: {{ p.Uwagi }}</div>
                 </v-col>
@@ -1126,9 +1139,9 @@ export default {
       this.edit.id = 0;
       this.imputCod = "";
     },
-    printBarcode(kod, sku) {
+    printBarcode(kod, sku, uwagi, order) {
       if (this.$refs.barcodePrinter) {
-        this.$refs.barcodePrinter.print(kod, sku);
+        this.$refs.barcodePrinter.print(kod, sku, uwagi, order);
       }
     },
   },

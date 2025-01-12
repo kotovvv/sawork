@@ -11,7 +11,7 @@ import JsBarcode from "jsbarcode";
 
 export default {
   methods: {
-    print(barcode, sku) {
+    print(barcode, sku, uwagi, order) {
       const barcodeElement = document.createElement("svg");
       JsBarcode(barcodeElement, barcode, {
         format: "CODE128",
@@ -19,7 +19,12 @@ export default {
         height: 40,
         displayValue: true,
       });
-
+      let info = "";
+      if (Object.keys(order).length !== 0) {
+        info += "<p>Order Number: " + order.Number + "</p>";
+        info += "<p>Order Uwagi: " + order.Uwagi + "</p>";
+        info += "<p>Product Uwagi: " + uwagi + "</p>";
+      }
       this.$refs.printArea.innerHTML = "";
       this.$refs.printArea.appendChild(barcodeElement);
 
@@ -30,8 +35,9 @@ export default {
             <title>Drukowanie kodów kreskowych</title>
           </head>
           <body>
-            <p>SKU: ${sku}</p>
             ${this.$refs.printArea.innerHTML}
+            <p style="text-align:center">${sku}</p>
+            ${info}
           </body>
         </html>
       `);
