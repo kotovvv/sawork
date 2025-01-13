@@ -126,7 +126,11 @@
       <v-row
         ><v-col>
           <v-card>
-            <v-tabs v-model="tab" bg-color="primary" @change="tabChanged">
+            <v-tabs
+              v-model="tab"
+              bg-color="primary"
+              @update:modelValue="tabChanged"
+            >
               <v-tab value="products"> Products </v-tab>
               <v-tab value="photo"> Photo </v-tab>
               <v-tab value="email"> Email </v-tab>
