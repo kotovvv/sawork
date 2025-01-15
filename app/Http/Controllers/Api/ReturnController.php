@@ -364,38 +364,22 @@ class ReturnController extends Controller
             ->where('NrDokumentu', 'like', 'WZk%')
             ->where('rm.IDMagazynu', $IDWarehouse)
             ->whereBetween('Data', [$dateMin, $dateMax])
-            // ->groupBy(
-            //     'rm.IDRuchuMagazynowego',
-            //     'NrDokumentu',
-            //     'Data',
-            //     'rm.IDKontrahenta',
-            //     'IDCompany',
-            //     'IDUzytkownika',
-            //     'Operator',
-            //     'IDMagazynu',
-            //     'IDRodzajuRuchuMagazynowego',
-            //     'rm.Uwagi',
-            //     '_RuchMagazynowyTempDecimal1',
-            //     '_RuchMagazynowyTempString2',
-            //     '_RuchMagazynowyTempString1',
-            //     '_RuchMagazynowyTempString4',
-            //     '_RuchMagazynowyTempString5',
-            //     '_RuchMagazynowyTempString6',
-            //     '_RuchMagazynowyTempBool1',
-            //     '_RuchMagazynowyTempBool3',
-            //     'kon.Nazwa'
-            // )
             ->orderBy('Data', 'DESC')
             ->get();
 
-        $WarehouseLocations = DB::table('dbo.EMailMagazyn')->select('IDLokalizaciiZwrot', 'Zniszczony', 'Naprawa')->where('IDMagazyn', $IDWarehouse)->where('IDLokalizaciiZwrot', '>', 0)->get();
-        $res['Zwrot'] = $this->howmanyProductsInLocation($WarehouseLocations[0]->IDLokalizaciiZwrot);
-        $res['Zniszczony'] = $this->howmanyProductsInLocation($WarehouseLocations[0]->Zniszczony);
-        $res['Naprawa'] = $this->howmanyProductsInLocation($WarehouseLocations[0]->Naprawa);
+        $WarehouseLocations = DB::table('dbo.EMailMagazyn')
+            ->select('IDLokalizaciiZwrot', 'Zniszczony', 'Naprawa')
+            ->where('IDMagazyn', $IDWarehouse)
+            ->where('IDLokalizaciiZwrot', '>', 0)
+            ->first();
+
+        $res['Zwrot'] = count($this->arrayProductsInLocation($WarehouseLocations->IDLokalizaciiZwrot));
+        $res['Zniszczony'] = count($this->arrayProductsInLocation($WarehouseLocations->Zniszczony));
+        $res['Naprawa'] = count($this->arrayProductsInLocation($WarehouseLocations->Naprawa));
         return response($res);
     }
 
-    private function howmanyProductsInLocation($IDWarehouseLocation)
+    private function arrayProductsInLocation($IDWarehouseLocation)
     {
         $date = Carbon::now()->format('Y/m/d H:i:s');
 
@@ -412,8 +396,80 @@ class ReturnController extends Controller
                 $array[$key] = (int) $value;
             }
         }
-        return count($array);
+        return $array;
     }
+
+    public function getProductsInLocation($IDWarehouse, $location)
+    {
+        $location = htmlspecialchars($location, ENT_QUOTES, 'UTF-8');
+        $IDWarehouse = htmlspecialchars($IDWarehouse, ENT_QUOTES, 'UTF-8');
+        $date = Carbon::now()->format('Y/m/d');
+        $WarehouseLocations = DB::table('dbo.EMailMagazyn')
+            ->select('IDLokalizaciiZwrot', 'Zniszczony', 'Naprawa')
+            ->where('IDMagazyn', $IDWarehouse)
+            ->where('IDLokalizaciiZwrot', '>', 0)
+            ->first();
+
+        //$arrayKodKreskowy = array_map('strval', array_keys($this->arrayProductsInLocation($WarehouseLocations->$location)));
+
+        $locationsActive = DB::table('Ustawienia')->where('Nazwa', 'WarehouseLocations')->value('Wartosc');
+        if ($locationsActive !== 'Tak') {
+            return [];
+        }
+
+        $subQuery = DB::table('ElementRuchuMagazynowego as e')
+            ->join('Towar as t', 't.IDTowaru', '=', 'e.IDTowaru')
+            ->join(DB::raw('dbo.MostRecentOBDate(?) as BO'), function ($join) use ($date) {
+                $join->on('t.IDMagazynu', '=', 'BO.IDMagazynu')
+                    ->addBinding($date);
+            })
+            ->join('RuchMagazynowy as r', 'e.IDRuchuMagazynowego', '=', 'r.IDRuchuMagazynowego')
+            ->leftJoin('ZaleznosciPZWZ as pzwz', 'pzwz.IDElementuPZ', '=', 'e.IDElementuRuchuMagazynowego')
+            ->leftJoin('ElementRuchuMagazynowego as ewz', 'ewz.IDElementuRuchuMagazynowego', '=', 'pzwz.IDElementuWZ')
+            ->leftJoin('RuchMagazynowy as wz', 'ewz.IDRuchuMagazynowego', '=', 'wz.IDRuchuMagazynowego')
+            ->where('r.Operator', '>', 0)
+            ->where('r.Data', '<', $date)
+            ->where('r.Data', '>=', DB::raw('BO.MinDate'))
+            ->where('e.IDWarehouseLocation', $WarehouseLocations->$location)
+            ->where('t.Usluga', 0)
+            ->select(
+                't.IDTowaru',
+                't.Nazwa',
+                't.KodKreskowy',
+                DB::raw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) as ilosc')
+            )
+            ->groupBy('t.IDTowaru', 't.Nazwa', 't.KodKreskowy')
+            ->havingRaw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) > 0');
+
+        $details = DB::table('ElementRuchuMagazynowego as e')
+            ->joinSub($subQuery, 'Q', function ($join) {
+                $join->on('Q.IDTowaru', '=', 'e.IDTowaru');
+            })
+            ->join('Towar as t', 't.IDTowaru', '=', 'e.IDTowaru')
+            ->join('RuchMagazynowy as r', 'e.IDRuchuMagazynowego', '=', 'r.IDRuchuMagazynowego')
+            ->select(
+                'e.IDElementuRuchuMagazynowego',
+                'e.Uwagi',
+                'r.Data',
+                'r.NrDokumentu',
+                't.KodKreskowy',
+                't.Nazwa',
+                't._TowarTempString1 as SKU'
+            )
+            ->where('e.IDWarehouseLocation', $WarehouseLocations->$location)
+            ->where('r.Data', '<', $date)
+            ->where('r.Data', '>=', function ($query) use ($date) {
+                $query->select('MinDate')
+                    ->from(DB::raw('dbo.MostRecentOBDate(?) as BO'))
+                    ->whereColumn('BO.IDMagazynu', 't.IDMagazynu')
+                    ->addBinding($date);
+            })
+            ->where('r.Operator', '>', 0)
+            ->get();
+
+        return $details;
+    }
+
 
     public function getWZkProducts(Request $request)
     {

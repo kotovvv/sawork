@@ -51,34 +51,66 @@
 
           <v-col class="v-col-sm-12 v-col-md-3" v-if="$props.user.IDRoli != 4">
             <div class="d-flex ga-5 flex-wrap">
-              <span class="border-info border pa-2" v-if="locations.Zwrot"
-                >Ilość w zwrot: {{ locations.Zwrot }}</span
+              <v-btn
+                v-if="locations.Zwrot"
+                @click="openDialog('IDLokalizaciiZwrot')"
+                >Ilość w zwrot: {{ locations.Zwrot }}</v-btn
               >
-              <span class="border-info border pa-2" v-if="locations.Naprawa"
-                >Naprawa: {{ locations.Naprawa }}</span
+              <v-btn v-if="locations.Naprawa" @click="openDialog('Naprawa')"
+                >Naprawa: {{ locations.Naprawa }}</v-btn
               >
-              <span class="border-info border pa-2" v-if="locations.Zniszczony"
-                >Zniszczony: {{ locations.Zniszczony }}</span
+              <v-btn
+                v-if="locations.Zniszczony"
+                @click="openDialog('Zniszczony')"
+                >Zniszczony: {{ locations.Zniszczony }}</v-btn
               >
             </div>
           </v-col>
         </v-row>
       </template>
     </v-data-table>
+    <v-dialog
+      v-model="dialogProductsInLocation"
+      transition="dialog-bottom-transition"
+      fullscreen
+    >
+      <v-card>
+        <v-card-title class="headline">
+          <v-col>
+            <v-row>
+              Products in Location {{ location }}
+              <v-spacer></v-spacer>
+              <v-btn
+                color="blue darken-1"
+                text
+                @click="dialogProductsInLocation = false"
+                >Close</v-btn
+              >
+            </v-row>
+          </v-col>
+        </v-card-title>
+        <v-card-text>
+          <ProductsInLocation :location="location" :IDWarehouse="IDWarehouse" />
+        </v-card-text>
+        <v-card-actions> </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script>
 import Datepicker from "vuejs3-datepicker";
 import moment from "moment";
-
 import axios from "axios";
+
+import ProductsInLocation from "./ProductsInLocation.vue";
 
 export default {
   name: "WZkTable",
-  components: { Datepicker },
+  components: { Datepicker, ProductsInLocation },
   props: ["IDWarehouse", "user"],
   data: () => ({
+    dialogProductsInLocation: false,
     dateMin: moment().subtract(2, "months").format("YYYY-MM-DD"),
     dateMax: moment().format("YYYY-MM-DD"),
     docsWZk: [],
@@ -99,11 +131,18 @@ export default {
       Naprawa: 0,
       Zniszczony: 0,
     },
+
+    location: "",
   }),
   mounted() {
     this.getDocsWZk();
   },
   methods: {
+    openDialog(location) {
+      this.location = location;
+      this.dialogProductsInLocation = true;
+    },
+
     refreshLocations() {
       const vm = this;
       vm.loading = true;
