@@ -49,7 +49,7 @@
             </v-tooltip>
           </v-btn>
 
-          <v-col class="v-col-sm-12 v-col-md-3" v-if="$props.user.IDRoli != 4">
+          <v-col v-if="$props.user.IDRoli != 4">
             <div class="d-flex ga-5 flex-wrap">
               <v-btn
                 v-if="locations.Zwrot"
@@ -81,11 +81,9 @@
               Products in Location {{ location }}
               <v-spacer></v-spacer>
               <v-btn
-                color="blue darken-1"
-                text
+                icon="mdi-close"
                 @click="dialogProductsInLocation = false"
-                >Close</v-btn
-              >
+              ></v-btn>
             </v-row>
           </v-col>
         </v-card-title>
