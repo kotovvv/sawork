@@ -146,6 +146,7 @@
                     <v-data-table
                       :items="wzk_products"
                       :headers="headers_products"
+                      item-value="IDElementuRuchuMagazynowego"
                       @click:row="handleClick"
                       :row-props="colorRowItem"
                       select-strategy="single"
@@ -821,8 +822,9 @@ export default {
     },
     colorRowItem(item) {
       if (
-        item.item.IDTowaru != undefined &&
-        item.item.IDTowaru == this.selectedProduct.IDTowaru
+        item.item.IDElementuRuchuMagazynowego != undefined &&
+        item.item.IDElementuRuchuMagazynowego ==
+          this.selectedProduct.IDElementuRuchuMagazynowego
       ) {
         return { class: "bg-red-darken-4" };
       }
