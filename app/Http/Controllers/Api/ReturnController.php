@@ -545,69 +545,115 @@ class ReturnController extends Controller
 
         $folder_name = 'zwrot';
 
-        $data = [
-            'title' => 'Photo zwrot od odbiorcy ' . date('Y-m-d'),
-        ];
+
+
         $magazin = [];
-        $my = DB::selectOne("SELECT  k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.Kontrahent k WHERE k.IDKontrahenta = 1");
+        $my = DB::table('Kontrahent')
+            ->select('Nazwa', 'UlicaLokal', 'KodPocztowy', 'Miejscowosc', 'Telefon')
+            ->where('IDKontrahenta', 1)
+            ->first();
 
-        $docsWZk = DB::select("SELECT rm.IDRuchuMagazynowego, rm.Data, rm.Uwagi, rm.IDMagazynu, rm.NrDokumentu, rm.IDKontrahenta, rm.IDUzytkownika, rm.WartoscDokumentu, k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon
-FROM dbo.RuchMagazynowy rm
-LEFT JOIN dbo.Kontrahent k ON (k.IDKontrahenta = rm.IDKontrahenta)
-WHERE NrDokumentu = '" .  $validatedData['NrDokumentu'] . "'");
+        $docsWZk = DB::table('RuchMagazynowy as rm')
+            ->leftJoin('Kontrahent as k', 'k.IDKontrahenta', '=', 'rm.IDKontrahenta')
+            ->select(
+                'rm.IDRuchuMagazynowego',
+                'rm.Data',
+                DB::raw("FORMAT(rm.Data, 'yyyy/MM/dd HH:mm') as Data"),
+                'rm.Uwagi',
+                'rm.IDMagazynu',
+                'rm.NrDokumentu',
+                'rm.IDKontrahenta',
+                'rm.IDUzytkownika',
+                'rm.WartoscDokumentu',
+                'k.Nazwa',
+                'k.UlicaLokal',
+                'k.KodPocztowy',
+                'k.Miejscowosc',
+                'k.Telefon'
+            )
+            ->where('NrDokumentu', $validatedData['NrDokumentu'])
+            ->first();
+        $data = [
+            'title' => 'Informacja dotycząca zwrotu zamówienia nr' . $docsWZk->NrDokumentu . ' ' . $docsWZk->Data,
+        ];
 
-        foreach ($docsWZk as $key => $docWZk) {
-            $forpdf = [];
-            if ($docWZk->IDUzytkownika != 1) {
-                $forpdf['my'] = DB::selectOne("SELECT  k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.Kontrahent k WHERE k.IDKontrahenta = " . $docWZk->IDUzytkownika);
-            } else {
-                $forpdf['my'] = $my;
-            }
-            $forpdf['docWZk'] = $docWZk;
-            $forpdf['Magazyn'] = DB::selectOne("SELECT Nazwa FROM dbo.Magazyn WHERE IDMagazynu = " . $docWZk->IDMagazynu);
-            $email = DB::selectOne("SELECT eMailAddress FROM dbo.EMailMagazyn WHERE IDMagazyn = " . $docWZk->IDMagazynu);
-            $forpdf['products'] = DB::select("SELECT t.Nazwa, t.KodKreskowy, erm.Uwagi, erm.Ilosc, erm.CenaJednostkowa, jm.Nazwa ed FROM ElementRuchuMagazynowego erm LEFT JOIN dbo.Towar t ON (erm.IDTowaru = t.IDTowaru) left JOIN JednostkaMiary jm ON (t.IDJednostkiMiary =  jm.IDJednostkiMiary) WHERE IDRuchuMagazynowego = " . $docWZk->IDRuchuMagazynowego);
-            //generating pdf with user data
-            $pdf = Pdf::loadView('mail', $forpdf);
+        $IDWZ = DB::table('DocumentRelations')
+            ->where('ID1', $docsWZk->IDRuchuMagazynowego)
+            ->where('IDType2', 2)
+            ->where('IDType1', 4)
+            ->value('ID2');
 
-            $magazin[$forpdf['Magazyn']->Nazwa]['pdfs'][] = $pdf;
-            $magazin[$forpdf['Magazyn']->Nazwa]['ndoc'][] = $docWZk->NrDokumentu;
-            $magazin[$forpdf['Magazyn']->Nazwa]['email'] = $email;
+        $WZ = DB::table('RuchMagazynowy')
+            ->where('IDRuchuMagazynowego', $IDWZ)
+            ->select('NrDokumentu', DB::raw("FORMAT(Data, 'yyyy/MM/dd HH:mm') as Data"),)
+            ->first();
 
-            //for log email
-            $email_log = [
-                'IDMagazynu' => $docWZk->IDMagazynu,
-                'NrDokumentu' => $docWZk->NrDokumentu,
-                'Status' => 2,
-                'IDRuchuMagazynowego' => $docWZk->IDRuchuMagazynowego
-            ];
-
-            DB::table('dbo.EMailLog')->insert($email_log);
-            //sleep(10);
+        $forpdf = [];
+        if ($docsWZk->IDUzytkownika != 1) {
+            $forpdf['my'] = DB::table('Kontrahent')
+                ->select('Nazwa', 'UlicaLokal', 'KodPocztowy', 'Miejscowosc', 'Telefon')
+                ->where('IDKontrahenta', $docsWZk->IDUzytkownika)
+                ->first();
+        } else {
+            $forpdf['my'] = $my;
         }
-        foreach ($magazin as $key => $mag) {
-            //send mail to user
-            $emails = explode(',', $mag['email']->eMailAddress);
+        $forpdf['docWZk'] = $docsWZk;
+        $forpdf['Magazyn'] = DB::selectOne("SELECT Nazwa FROM dbo.Magazyn WHERE IDMagazynu = " . $docsWZk->IDMagazynu);
+        $email = DB::table('dbo.EMailMagazyn')
+            ->where('IDMagazyn', $docsWZk->IDMagazynu)
+            ->value('eMailAddress');
+        $forpdf['products'] = DB::table('ElementRuchuMagazynowego as erm')
+            ->leftJoin('Towar as t', 'erm.IDTowaru', '=', 't.IDTowaru')
+            ->leftJoin('JednostkaMiary as jm', 't.IDJednostkiMiary', '=', 'jm.IDJednostkiMiary')
+            ->leftJoin('WarehouseLocations as wl', 'erm.IDWarehouseLocation', '=', 'wl.IDWarehouseLocation')
+            ->where('erm.IDRuchuMagazynowego', $docsWZk->IDRuchuMagazynowego)
+            ->select('t._TowarTempString1 as SKU', 't.Nazwa', 't.KodKreskowy', 'erm.Uwagi', 'erm.Ilosc', DB::raw("CASE WHEN LOWER(LEFT(wl.LocationCode, 5)) = 'zwrot' THEN 'ok' ELSE wl.LocationCode END as status"), 'erm.CenaJednostkowa', 'jm.Nazwa as ed')
+            ->get();
 
-            if ($mag['email']) {
-                Mail::send('message', $data, function ($message) use ($mag, $data, $emails, $validatedData, $folder_name) {
-                    $message->from(env('MAIL_FROM_ADDRESS'));
-                    $message->to($emails);
-                    $message->subject($data['title']);
-                    foreach ($mag['pdfs'] as $n => $pdf) {
-                        $message->attachData($pdf->output(), $mag['ndoc'][$n] . '.pdf'); //attached pdf file
-                    }
-                    $path =  $validatedData['IDRuchuMagazynowego'] . '/' . $folder_name . '/';
+        //generating pdf with user data
+        $pdf = Pdf::loadView('mail', $forpdf);
 
-                    // Get all files from the directory
-                    $files = Storage::disk('public')->allFiles($path);
+        $magazin[$forpdf['Magazyn']->Nazwa]['pdfs'][] = $pdf;
+        $magazin[$forpdf['Magazyn']->Nazwa]['ndoc'][] = $docsWZk->NrDokumentu;
+        $magazin[$forpdf['Magazyn']->Nazwa]['email'] = $email;
 
-                    foreach ($files as $file) {
-                        $message->attachData(Storage::disk('public')->get($file), basename($file));
-                    }
-                });
-            }
+        //for log email
+        $email_log = [
+            'IDMagazynu' => $docsWZk->IDMagazynu,
+            'NrDokumentu' => $docsWZk->NrDokumentu,
+            'Status' => 2,
+            'IDRuchuMagazynowego' => $docsWZk->IDRuchuMagazynowego
+        ];
+
+        DB::table('dbo.EMailLog')->insert($email_log);
+
+
+        //send mail to user
+        $emails = explode(',', $email);
+
+        if ($email) {
+            $data['WZ'] = $WZ;
+            $data['WZk'] = $docsWZk;
+            $data['products'] = $forpdf['products'];
+
+            Mail::send('emailWZk', $data, function ($message) use ($pdf, $docsWZk, $data, $emails, $validatedData, $folder_name) {
+                $message->from(env('MAIL_FROM_ADDRESS'));
+                $message->to($emails);
+                // $message->html($body);
+                $message->subject($data['title']);
+
+                $message->attachData($pdf->output(), $docsWZk->NrDokumentu . '.pdf'); //attached pdf file
+                $path =  $validatedData['IDRuchuMagazynowego'] . '/' . $folder_name . '/';
+
+                // Get all files from the directory
+                $files = Storage::disk('public')->allFiles($path);
+
+                foreach ($files as $file) {
+                    $message->attachData(Storage::disk('public')->get($file), basename($file));
+                }
+            });
         }
+
         return response("Photo Zwrot wysłane: ", '200');
     }
 
