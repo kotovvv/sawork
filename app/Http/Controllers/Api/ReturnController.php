@@ -433,38 +433,33 @@ class ReturnController extends Controller
             ->where('e.IDWarehouseLocation', $WarehouseLocations->$location)
             ->where('t.Usluga', 0)
             ->select(
-                't.IDTowaru',
+                'r.NrDokumentu',
+                'r.Data',
                 't.Nazwa',
+                't._TowarTempString1',
                 't.KodKreskowy',
+                'e.Uwagi',
+                'e.IDElementuRuchuMagazynowego',
                 DB::raw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) as ilosc')
             )
-            ->groupBy('t.IDTowaru', 't.Nazwa', 't.KodKreskowy')
+            ->groupBy('r.NrDokumentu', 'r.Data', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy', 'e.Uwagi', 'e.IDElementuRuchuMagazynowego')
             ->havingRaw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) > 0');
 
-        $details = DB::table('ElementRuchuMagazynowego as e')
-            ->joinSub($subQuery, 'Q', function ($join) {
-                $join->on('Q.IDTowaru', '=', 'e.IDTowaru');
-            })
-            ->join('Towar as t', 't.IDTowaru', '=', 'e.IDTowaru')
-            ->join('RuchMagazynowy as r', 'e.IDRuchuMagazynowego', '=', 'r.IDRuchuMagazynowego')
+        // Основной запрос для получения деталей товаров
+        $details = DB::table(DB::raw("({$subQuery->toSql()}) as Q"))
+            ->mergeBindings($subQuery)
+            ->leftJoin('dbo.WarehouseLocations as w', 'w.IDWarehouseLocation', '=', DB::raw($WarehouseLocations->$location))
             ->select(
-                'e.IDElementuRuchuMagazynowego',
-                'e.Uwagi',
-                'r.Data',
-                'r.NrDokumentu',
-                't.KodKreskowy',
-                't.Nazwa',
-                't._TowarTempString1 as SKU'
+                'Q.NrDokumentu',
+                'Q.Data',
+                'Q.Nazwa',
+                'Q._TowarTempString1 as SKU',
+                'Q.KodKreskowy',
+                'Q.Uwagi',
+                'Q.IDElementuRuchuMagazynowego',
+                DB::raw('SUM(Q.ilosc) as ilosc')
             )
-            ->where('e.IDWarehouseLocation', $WarehouseLocations->$location)
-            ->where('r.Data', '<', $date)
-            ->where('r.Data', '>=', function ($query) use ($date) {
-                $query->select('MinDate')
-                    ->from(DB::raw('dbo.MostRecentOBDate(?) as BO'))
-                    ->whereColumn('BO.IDMagazynu', 't.IDMagazynu')
-                    ->addBinding($date);
-            })
-            ->where('r.Operator', '>', 0)
+            ->groupBy('Q.NrDokumentu', 'Q.Data', 'Q.Nazwa', 'Q._TowarTempString1', 'Q.KodKreskowy', 'Q.Uwagi', 'Q.IDElementuRuchuMagazynowego', 'w.LocationCode')
             ->get();
 
         return $details;
