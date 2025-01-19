@@ -49,6 +49,7 @@ export default {
         { title: "Data", key: "Data" },
         { title: "NrDokumentu", key: "NrDokumentu" },
         { title: "Nazwa", key: "Nazwa", nowrap: true },
+        { title: "Ilość", key: "ilosc" },
       ],
     };
   },
