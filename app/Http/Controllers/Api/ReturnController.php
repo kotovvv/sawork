@@ -457,7 +457,7 @@ class ReturnController extends Controller
                 'Q.KodKreskowy',
                 'Q.Uwagi',
                 'Q.IDElementuRuchuMagazynowego',
-                DB::raw('SUM(Q.ilosc) as ilosc')
+                DB::raw('CAST(SUM(Q.ilosc) AS INT) as ilosc')
             )
             ->groupBy('Q.NrDokumentu', 'Q.Data', 'Q.Nazwa', 'Q._TowarTempString1', 'Q.KodKreskowy', 'Q.Uwagi', 'Q.IDElementuRuchuMagazynowego', 'w.LocationCode')
             ->get();
