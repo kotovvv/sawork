@@ -68,6 +68,9 @@ export default {
         .then((res) => {
           if (res.status == 200) {
             vm.productsInlocation = res.data;
+            vm.productsInlocation.forEach((element) => {
+              element.ilosc = parseInt(element.ilosc);
+            });
           }
           vm.loading = false;
         })
