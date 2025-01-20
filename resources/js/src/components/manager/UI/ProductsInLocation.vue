@@ -19,6 +19,17 @@
           select-strategy="single"
           return-object
         >
+          <template v-slot:top="{}">
+            <v-row class="align-center">
+              <v-ico></v-ico>
+              <v-btn
+                v-if="productsInlocation.length"
+                @click="prepareXLSX()"
+                size="x-large"
+                ><v-icon icon="mdi-file-download"></v-icon
+              ></v-btn>
+            </v-row>
+          </template>
         </v-data-table> </v-col
     ></v-row>
   </v-container>
@@ -26,6 +37,8 @@
 
 <script>
 import axios from "axios";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 export default {
   name: "ProductsInLocation",
   props: {
@@ -59,6 +72,17 @@ export default {
   mounted() {},
   watch: {},
   methods: {
+    prepareXLSX() {
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(this.productsInlocation);
+      XLSX.utils.book_append_sheet(wb, ws, "");
+
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(
+        new Blob([wbout], { type: "application/octet-stream" }),
+        this.location + " " + this.IDWarehouse + ".xlsx"
+      );
+    },
     getProductsInLocation(location) {
       const vm = this;
       vm.productsInlocation = [];
@@ -70,6 +94,7 @@ export default {
             vm.productsInlocation = res.data;
             vm.productsInlocation.forEach((element) => {
               element.ilosc = parseInt(element.ilosc);
+              element.KodKreskowy = parseInt(element.KodKreskowy);
             });
           }
           vm.loading = false;

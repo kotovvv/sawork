@@ -35,15 +35,15 @@ class LocationController extends Controller
         // Обновление таблицы TowarLocationTipTab
         $updateSql = "
             UPDATE tlt
-            SET tlt.IloscZa5dni = ISNULL(s.SumIlosci, 0)
+            SET tlt.IloscZa5dni = ISNULL(CAST(CASE WHEN s.SumIlosci > 9999999999999.9999 THEN 9999999999999.9999 ELSE s.SumIlosci END AS decimal(38, 4)), 0)
             FROM TowarLocationTipTab tlt
             JOIN Towar t ON tlt.IDTowaru = t.IDTowaru
             CROSS APPLY (
-            SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, ?, ?, ?) AS SumIlosci
+            SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, '$dataMin', '$dataMax', $idMag) AS SumIlosci
             ) AS s
         ";
 
-        DB::unprepared($updateSql, [$dataMin, $dataMax, $idMag]);
+        DB::statement($updateSql);
 
         // Создание временной таблицы и выполнение SELECT-запроса
         $results = DB::table('TowarLocationTipTab')
@@ -64,7 +64,7 @@ class LocationController extends Controller
                 ->where('IDTowaru', $result->IDTowaru)
                 ->where('KodKreskowy', $result->KodKreskowy)
                 ->where('TypLocations', 2)
-                ->update(['peremestit' => $result->peremestit]);
+                ->update(['peremestit' => (int) $result->peremestit]);
         }
 
         unset($tempResults);
@@ -128,6 +128,25 @@ class LocationController extends Controller
         return  $results;
     }
 
+    public function lastNumber($doc, $symbol)
+    {
+        $year = Carbon::now()->format('y');
+        $pattern =  $doc . '%/' . $year . ' - ' . $symbol;
+        $patternIndex = strlen($doc);
+        $patternToEndLen = strlen($symbol) + 6; // 6 символов: " - " + год (2 символа) + "/"
+
+        $res = DB::table('RuchMagazynowy')
+            ->select(DB::raw('MAX(CAST(SUBSTRING(NrDokumentu, ' . ($patternIndex + 1) . ', LEN(NrDokumentu) - ' . ($patternToEndLen + $patternIndex) . ') AS INT)) as max_number'))
+            ->whereRaw('RTRIM(NrDokumentu) LIKE ?', [$pattern])
+            ->whereRaw('ISNUMERIC(SUBSTRING(NrDokumentu, ' . ($patternIndex + 1) . ', LEN(NrDokumentu) - ' . ($patternToEndLen + $patternIndex) . ')) <> 0')
+            ->value('max_number');
+
+        if ($res === null) {
+            return str_replace('%', '1', $pattern);
+        }
+        return str_replace('%', $res + 1, $pattern);
+    }
+
     public function doRelokacja(Request $request)
     {
         $data = $request->all();
@@ -143,10 +162,10 @@ class LocationController extends Controller
         // 1. chech if doc cteated
         if (!$createdDoc) {
 
-            $ndoc = DB::selectOne("SELECT TOP 1 NrDokumentu n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '27' AND IDMagazynu = " . $selectedWarehause['IDMagazynu'] . " AND year( Utworzono ) = " . date('Y') . " ORDER BY Data DESC");
-            preg_match('/^ZL(.*)\/.*/', $ndoc->n, $a_ndoc);
-            $NrDokumentu = 'ZL' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $selectedWarehause["Symbol"];
-
+            // $ndoc = DB::selectOne("SELECT TOP 1 NrDokumentu n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '27' AND IDMagazynu = " . $selectedWarehause['IDMagazynu'] . " AND year( Utworzono ) = " . date('Y') . " ORDER BY Data DESC");
+            // preg_match('/^ZL(.*)\/.*/', $ndoc->n, $a_ndoc);
+            // $NrDokumentu = 'ZL' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $selectedWarehause["Symbol"];
+            $NrDokumentu = $this->lastNumber('ZL', $selectedWarehause["Symbol"]);
             $creat_zl = [];
 
             $creat_zl['IDRodzajuRuchuMagazynowego'] = 27;
@@ -240,19 +259,6 @@ class LocationController extends Controller
             ->first();
         $loc_name = array_flip($loc_name);
 
-        // get all WZk products locations
-        // $res['allLocations'] = DB::table('InfoComming')
-        //     ->select('IDRuchuMagazynowego', 'locations')
-        //     ->whereNotNull('locations')
-        //     ->whereIn('IDRuchuMagazynowego', $res['allWZk'])
-        //     ->get();
-
-        // delete all locations
-        // DB::table('InfoComming')
-        //             ->whereNotNull('locations')
-        //             ->whereIn('IDRuchuMagazynowego', $res['allWZk'])
-        //             ->delete();
-
         // get locations of products each WZK
         foreach ($res['allWZk'] as $key => $IDRuchuMagazynowego) {
             $locations = [];
@@ -270,5 +276,13 @@ class LocationController extends Controller
 
 
         return $res;
+    }
+
+    public function getLocationTowar($idTowaru)
+    {
+        $IDTowaru = intval($idTowaru);
+        $date = Carbon::now()->setTime(00, 00, 00)->format('m.d.Y H:i:s');
+        $sql = "SELECT r.IDRuchuMagazynowego, r.Data, l.LocationCode, SUM((e.ilosc - ISNULL(e.Wydano, 0)) * r.Operator) AS ilosc FROM dbo.ElementRuchuMagazynowego e INNER JOIN dbo.RuchMagazynowy r ON r.IDRuchuMagazynowego = e.IDRuchuMagazynowego INNER JOIN Towar t ON t.IDTowaru = e.IDTowaru INNER JOIN dbo.WarehouseLocations l ON l.IDWarehouseLocation = e.IDWarehouseLocation INNER JOIN dbo.MostRecentOBDate(" . $date . ") BO ON t.IDMagazynu = BO.IDMagazynu WHERE e.ilosc * r.Operator > 0 AND r.Data >= BO.MinDate AND e.IDTowaru = " . $IDTowaru . " AND (e.ilosc - ISNULL(e.Wydano, 0)) > 0 AND LEN(l.LocationCode) > 0 GROUP BY l.LocationCode,r.IDRuchuMagazynowego, r.Data";
+        return DB::select($sql);
     }
 }

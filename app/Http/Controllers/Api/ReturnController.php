@@ -403,7 +403,7 @@ class ReturnController extends Controller
     {
         $location = htmlspecialchars($location, ENT_QUOTES, 'UTF-8');
         $IDWarehouse = htmlspecialchars($IDWarehouse, ENT_QUOTES, 'UTF-8');
-        $date = Carbon::now()->format('Y/m/d');
+        $date = Carbon::now()->format('Y/m/d H:i:s');
         $WarehouseLocations = DB::table('dbo.EMailMagazyn')
             ->select('IDLokalizaciiZwrot', 'Zniszczony', 'Naprawa')
             ->where('IDMagazyn', $IDWarehouse)
