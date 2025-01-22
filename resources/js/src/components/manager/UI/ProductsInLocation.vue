@@ -28,6 +28,11 @@
                 size="x-large"
                 ><v-icon icon="mdi-file-download"></v-icon
               ></v-btn>
+              <ToLocation
+                :products="productsInlocation"
+                :location="location"
+                :IDWarehouse="IDWarehouse"
+              />
             </v-row>
           </template>
         </v-data-table> </v-col
@@ -39,8 +44,12 @@
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import ToLocation from "./ToLocation.vue";
 export default {
   name: "ProductsInLocation",
+  components: {
+    ToLocation,
+  },
   props: {
     location: {
       type: String,
