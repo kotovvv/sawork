@@ -292,12 +292,6 @@ export default {
         let from_loc = this.warehouseLocations.find((f) => {
           return f.LocationCode == this.imputCod;
         });
-        console.log(
-          "from_loc",
-          from_loc,
-          this.warehouseLocations,
-          this.imputCod
-        );
         if (from_loc) {
           this.fromLocation = from_loc;
           this.step = 1;
@@ -316,6 +310,9 @@ export default {
             this.product.qty = 1;
             // in whitch location is this product
             this.getProductLocations();
+            if (this.product.qty == this.product.ilosc) {
+              this.message = "Zeskanuj kod lokalizacji";
+            }
             return;
           } else {
             this.message = "Brak produktu!!!";
@@ -325,6 +322,9 @@ export default {
         }
         if (this.product.KodKreskowy == this.imputCod) {
           this.changeCounter(this.product, 1);
+          if (this.product.qty == this.product.ilosc) {
+            this.message = "Zeskanuj kod lokalizacji";
+          }
         } else {
           if (/[a-zA-Z]+/.test(this.imputCod)) {
             this.message = "Błąd lokalizacji (";
@@ -332,14 +332,13 @@ export default {
             this.message = "Błąd kodu kreskowego!!!";
           }
         }
-        if (product.qty == product.ilosc) {
-          this.message = "Zeskanuj kod lokalizacji";
-        }
+
         let to_loc = this.warehouseLocations.find((f) => {
           return f.LocationCode == this.imputCod;
         });
         if (to_loc && this.product.qty > 0) {
           this.step = 3;
+          this.message = "";
           this.toLocation = to_loc;
           return;
         }
@@ -348,6 +347,7 @@ export default {
     doRelokacja() {
       const vm = this;
       let data = {};
+      let products = [];
       vm.loading = true;
       vm.message = "";
       data.IDTowaru = vm.product.IDTowaru;
@@ -356,6 +356,20 @@ export default {
       data.toLocation = vm.toLocation;
       data.selectedWarehause = vm.$props.IDWarehouse;
       data.createdDoc = vm.createdDoc;
+
+      if (vm.product.qty == vm.product.ilosc) {
+        products = vm.$props.products.filter(
+          (f) => f.IDTowaru != data.IDTowaru
+        );
+      } else if (vm.product.qty < vm.product.ilosc) {
+        vm.product.ilosc -= vm.product.qty;
+        products = vm.$props.products.map((f) => {
+          if (f.IDTowaru == vm.product.IDTowaru) {
+            f.ilosc = vm.product.ilosc;
+          }
+          return f;
+        });
+      }
       axios
         .post("/api/doRelokacja", data)
         .then((res) => {
@@ -363,6 +377,7 @@ export default {
             vm.createdDoc = res.data.createdDoc;
             vm.message = `Dokumenty przeniesienia zostały utworzone. ${vm.createdDoc.idmin} ${vm.createdDoc.idpls}`;
             vm.snackbar = true;
+            vm.$emit("update:products", products);
           }
         })
         .catch((error) => console.log(error));

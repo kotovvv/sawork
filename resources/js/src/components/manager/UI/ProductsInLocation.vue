@@ -31,6 +31,7 @@
                 :location="location"
                 :startStep="1"
                 :IDWarehouse="IDWarehouse"
+                @update:products="updateProductsInLocation"
               />
             </v-row>
           </template>
@@ -109,6 +110,9 @@ export default {
           vm.loading = false;
         })
         .catch((error) => console.log(error));
+    },
+    updateProductsInLocation(updatedProducts) {
+      this.productsInlocation = updatedProducts;
     },
   },
 };

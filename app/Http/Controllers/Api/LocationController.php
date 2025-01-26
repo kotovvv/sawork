@@ -155,9 +155,11 @@ class LocationController extends Controller
         $qty = $data['qty'];
         $LocationCode = $data['fromLocation'];
         $toLocation = $data['toLocation'];
-        $selectedWarehause = $data['selectedWarehause'];
+        $idWarehause = $data['selectedWarehause'];
         $createdDoc = $data['createdDoc'];
         $pz = [];
+
+        $symbol = DB::table('Magazyn')->where('IDMagazynu', $idWarehause)->value('Symbol');
 
         // 1. chech if doc cteated
         if (!$createdDoc) {
@@ -165,12 +167,12 @@ class LocationController extends Controller
             // $ndoc = DB::selectOne("SELECT TOP 1 NrDokumentu n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '27' AND IDMagazynu = " . $selectedWarehause['IDMagazynu'] . " AND year( Utworzono ) = " . date('Y') . " ORDER BY Data DESC");
             // preg_match('/^ZL(.*)\/.*/', $ndoc->n, $a_ndoc);
             // $NrDokumentu = 'ZL' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $selectedWarehause["Symbol"];
-            $NrDokumentu = $this->lastNumber('ZL', $selectedWarehause["Symbol"]);
+            $NrDokumentu = $this->lastNumber('ZL', $symbol);
             $creat_zl = [];
 
             $creat_zl['IDRodzajuRuchuMagazynowego'] = 27;
             $creat_zl['Data'] = Date('m-d-Y H:i:s');
-            $creat_zl['IDMagazynu'] = $selectedWarehause['IDMagazynu'];
+            $creat_zl['IDMagazynu'] = $idWarehause;
             $creat_zl['NrDokumentu'] = $NrDokumentu;
             $creat_zl['Operator'] = 1;
             $creat_zl['IDCompany'] = 1;
