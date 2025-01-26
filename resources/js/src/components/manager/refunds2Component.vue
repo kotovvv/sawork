@@ -1047,7 +1047,7 @@ export default {
       vm.locations = [
         {
           title: "Zwrot",
-          value: a_locations[0].IDLokalizaciiZwrot,
+          value: a_locations[0].Zwrot,
         },
         { title: "Zniszczony", value: a_locations[0].Zniszczony },
         { title: "Naprawa", value: a_locations[0].Naprawa },

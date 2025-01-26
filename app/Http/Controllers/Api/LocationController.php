@@ -278,11 +278,32 @@ class LocationController extends Controller
         return $res;
     }
 
-    public function getLocationTowar($idTowaru)
+    public function getProductLocations($id)
     {
-        $IDTowaru = intval($idTowaru);
-        $date = Carbon::now()->setTime(00, 00, 00)->format('m.d.Y H:i:s');
-        $sql = "SELECT r.IDRuchuMagazynowego, r.Data, l.LocationCode, SUM((e.ilosc - ISNULL(e.Wydano, 0)) * r.Operator) AS ilosc FROM dbo.ElementRuchuMagazynowego e INNER JOIN dbo.RuchMagazynowy r ON r.IDRuchuMagazynowego = e.IDRuchuMagazynowego INNER JOIN Towar t ON t.IDTowaru = e.IDTowaru INNER JOIN dbo.WarehouseLocations l ON l.IDWarehouseLocation = e.IDWarehouseLocation INNER JOIN dbo.MostRecentOBDate(" . $date . ") BO ON t.IDMagazynu = BO.IDMagazynu WHERE e.ilosc * r.Operator > 0 AND r.Data >= BO.MinDate AND e.IDTowaru = " . $IDTowaru . " AND (e.ilosc - ISNULL(e.Wydano, 0)) > 0 AND LEN(l.LocationCode) > 0 GROUP BY l.LocationCode,r.IDRuchuMagazynowego, r.Data";
-        return DB::select($sql);
+        $IDTowaru = intval($id);
+        $date = Carbon::now()->setTime(23, 59, 59)->format('Y/m/d H:i:s');
+        $results = DB::table('ElementRuchuMagazynowego as e')
+            ->join('RuchMagazynowy as r', 'r.IDRuchuMagazynowego', '=', 'e.IDRuchuMagazynowego')
+            ->join('Towar as t', 't.IDTowaru', '=', 'e.IDTowaru')
+            ->join('WarehouseLocations as l', 'l.IDWarehouseLocation', '=', 'e.IDWarehouseLocation')
+            ->join(DB::raw('dbo.MostRecentOBDate(?) as BO'), function ($join) use ($date) {
+                $join->on('t.IDMagazynu', '=', 'BO.IDMagazynu')
+                    ->addBinding($date);
+            })
+            ->whereRaw('e.ilosc * r.Operator > 0')
+            ->where('r.Data', '>=', DB::raw('BO.MinDate'))
+            ->where('e.IDTowaru', $IDTowaru)
+            ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
+            ->whereRaw('LEN(l.LocationCode) > 0')
+            ->groupBy('l.LocationCode', 'r.IDRuchuMagazynowego', 'r.Data', 't.IDTowaru')
+            ->select(
+                't.IDTowaru',
+                'r.IDRuchuMagazynowego',
+                'r.Data',
+                'l.LocationCode',
+                DB::raw('SUM((e.ilosc - ISNULL(e.Wydano, 0)) * r.Operator) AS ilosc')
+            )
+            ->get();
+        return $results;
     }
 }

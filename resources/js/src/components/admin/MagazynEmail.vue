@@ -71,8 +71,8 @@
                 </v-col>
                 <v-col cols="4">
                   <v-text-field
-                    v-model="editedItem.IDLokalizaciiZwrot"
-                    label="IDLokalizaciiZwrot"
+                    v-model="editedItem.Zwrot"
+                    label="Zwrot"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="4">
@@ -140,7 +140,7 @@ export default {
       magazyns: [],
       name_headers: [
         { title: "IDMagazyn", value: "IDMagazynu" },
-        { title: "IDLokalizaciiZwrot", value: "IDLokalizaciiZwrot" },
+        { title: "Zwrot", value: "Zwrot" },
         { title: "Zniszczony", value: "Zniszczony" },
         { title: "Naprawa", value: "Naprawa" },
         { title: "Magazyn", value: "Nazwa" },
@@ -211,7 +211,7 @@ export default {
       data.IDMagazynu = item.IDMagazynu;
       data.eMailAddress = item.eMailAddress;
       data.cod = item.cod;
-      data.IDLokalizaciiZwrot = item.IDLokalizaciiZwrot;
+      data.Zwrot = item.Zwrot;
       data.Zniszczony = item.Zniszczony;
       data.Naprawa = item.Naprawa;
       data.IDKontrahenta = item.IDKontrahenta;

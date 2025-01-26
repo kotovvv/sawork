@@ -30,7 +30,7 @@ class ReturnController extends Controller
             $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
 
             return DB::table('Magazyn')
-                ->select('IDMagazynu', 'Nazwa', 'Symbol', 'IDLokalizaciiZwrot', 'Zniszczony', 'Naprawa')
+                ->select('IDMagazynu', 'Nazwa', 'Symbol', 'IDLokalizaciiZwrot as Zwrot', 'Zniszczony', 'Naprawa')
                 ->leftJoin('EMailMagazyn', 'Magazyn.IDMagazynu', '=', 'EMailMagazyn.IDMagazyn')
                 ->whereIn('IDMagazynu', $a_mag)
                 ->get();
@@ -368,12 +368,12 @@ class ReturnController extends Controller
             ->get();
 
         $WarehouseLocations = DB::table('dbo.EMailMagazyn')
-            ->select('IDLokalizaciiZwrot', 'Zniszczony', 'Naprawa')
+            ->select('IDLokalizaciiZwrot as Zwrot', 'Zniszczony', 'Naprawa')
             ->where('IDMagazyn', $IDWarehouse)
             ->where('IDLokalizaciiZwrot', '>', 0)
             ->first();
 
-        $res['Zwrot'] = count($this->arrayProductsInLocation($WarehouseLocations->IDLokalizaciiZwrot));
+        $res['Zwrot'] = count($this->arrayProductsInLocation($WarehouseLocations->Zwrot));
         $res['Zniszczony'] = count($this->arrayProductsInLocation($WarehouseLocations->Zniszczony));
         $res['Naprawa'] = count($this->arrayProductsInLocation($WarehouseLocations->Naprawa));
         return response($res);
@@ -405,7 +405,7 @@ class ReturnController extends Controller
         $IDWarehouse = htmlspecialchars($IDWarehouse, ENT_QUOTES, 'UTF-8');
         $date = Carbon::now()->format('Y/m/d H:i:s');
         $WarehouseLocations = DB::table('dbo.EMailMagazyn')
-            ->select('IDLokalizaciiZwrot', 'Zniszczony', 'Naprawa')
+            ->select('IDLokalizaciiZwrot as Zwrot', 'Zniszczony', 'Naprawa')
             ->where('IDMagazyn', $IDWarehouse)
             ->where('IDLokalizaciiZwrot', '>', 0)
             ->first();
@@ -433,6 +433,7 @@ class ReturnController extends Controller
             ->where('e.IDWarehouseLocation', $WarehouseLocations->$location)
             ->where('t.Usluga', 0)
             ->select(
+                't.IDTowaru',
                 'r.NrDokumentu',
                 'r.Data',
                 't.Nazwa',
@@ -442,7 +443,7 @@ class ReturnController extends Controller
                 'e.IDElementuRuchuMagazynowego',
                 DB::raw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) as ilosc')
             )
-            ->groupBy('r.NrDokumentu', 'r.Data', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy', 'e.Uwagi', 'e.IDElementuRuchuMagazynowego')
+            ->groupBy('t.IDTowaru', 'r.NrDokumentu', 'r.Data', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy', 'e.Uwagi', 'e.IDElementuRuchuMagazynowego')
             ->havingRaw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) > 0');
 
         // Основной запрос для получения деталей товаров
@@ -450,6 +451,7 @@ class ReturnController extends Controller
             ->mergeBindings($subQuery)
             ->leftJoin('dbo.WarehouseLocations as w', 'w.IDWarehouseLocation', '=', DB::raw($WarehouseLocations->$location))
             ->select(
+                'Q.IDTowaru',
                 'Q.NrDokumentu',
                 'Q.Data',
                 'Q.Nazwa',
@@ -459,7 +461,7 @@ class ReturnController extends Controller
                 'Q.IDElementuRuchuMagazynowego',
                 DB::raw('CAST(SUM(Q.ilosc) AS INT) as ilosc')
             )
-            ->groupBy('Q.NrDokumentu', 'Q.Data', 'Q.Nazwa', 'Q._TowarTempString1', 'Q.KodKreskowy', 'Q.Uwagi', 'Q.IDElementuRuchuMagazynowego', 'w.LocationCode')
+            ->groupBy('Q.IDTowaru', 'Q.NrDokumentu', 'Q.Data', 'Q.Nazwa', 'Q._TowarTempString1', 'Q.KodKreskowy', 'Q.Uwagi', 'Q.IDElementuRuchuMagazynowego', 'w.LocationCode')
             ->get();
 
         return $details;

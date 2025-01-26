@@ -13,7 +13,7 @@ class MagazynController extends Controller
 {
     public function loadMagEmail()
     {
-        return DB::select('SELECT [ID],[IDMagazynu] ,[Nazwa] ,[Symbol] ,em.eMailAddress ,em.cod,em.IDLokalizaciiZwrot,em.IDKontrahenta, em.Zniszczony, em.Naprawa, em.noklient FROM [dbo].[Magazyn] RIGHT JOIN dbo.EMailMagazyn em ON em.IDMagazyn = IDMagazynu');
+        return DB::select('SELECT [ID],[IDMagazynu] ,[Nazwa] ,[Symbol] ,em.eMailAddress ,em.cod,em.IDLokalizaciiZwrot as Zwrot,em.IDKontrahenta, em.Zniszczony, em.Naprawa, em.noklient FROM [dbo].[Magazyn] RIGHT JOIN dbo.EMailMagazyn em ON em.IDMagazyn = IDMagazynu');
     }
 
 
@@ -32,7 +32,7 @@ class MagazynController extends Controller
             $cod = '';
         }
         $IDKontrahenta = $data['IDKontrahenta'];
-        $IDLokalizaciiZwrot = $data['IDLokalizaciiZwrot'];
+        $IDLokalizaciiZwrot = $data['Zwrot'];
         $Zniszczony = $data['Zniszczony'];
         $Naprawa = $data['Naprawa'];
         $noklient = $data['noklient'];

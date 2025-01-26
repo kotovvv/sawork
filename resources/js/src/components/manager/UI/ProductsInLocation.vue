@@ -20,17 +20,16 @@
           return-object
         >
           <template v-slot:top="{}">
-            <v-row class="align-center">
-              <v-ico></v-ico>
+            <v-row class="align-center d-flex gap-3 ma-3">
               <v-btn
                 v-if="productsInlocation.length"
                 @click="prepareXLSX()"
-                size="x-large"
-                ><v-icon icon="mdi-file-download"></v-icon
+                icon="mdi-file-download"
               ></v-btn>
               <ToLocation
                 :products="productsInlocation"
                 :location="location"
+                :startStep="1"
                 :IDWarehouse="IDWarehouse"
               />
             </v-row>
@@ -56,7 +55,7 @@ export default {
       required: true,
     },
     IDWarehouse: {
-      type: Number,
+      type: String,
       required: true,
     },
   },
@@ -64,6 +63,7 @@ export default {
     return {
       loading: false,
       productsInlocation: [],
+      searchInTable: "",
       headers: [
         { title: "SKU", key: "SKU" },
         { title: "KodKreskowy", key: "KodKreskowy" },
