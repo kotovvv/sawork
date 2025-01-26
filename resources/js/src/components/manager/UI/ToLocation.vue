@@ -234,6 +234,7 @@ export default {
       this.message = result.data;
       this.imputCod = result.data;
       // Handle the result data here
+      this.steps();
     },
     getWarehouseLocations() {
       const vm = this;
@@ -331,6 +332,9 @@ export default {
             this.message = "Błąd kodu kreskowego!!!";
           }
         }
+        if (product.qty == product.ilosc) {
+          this.message = "Zeskanuj kod lokalizacji";
+        }
         let to_loc = this.warehouseLocations.find((f) => {
           return f.LocationCode == this.imputCod;
         });
@@ -340,15 +344,6 @@ export default {
           return;
         }
       }
-      //   if (this.step == 3) {
-      //     let to_loc = this.warehouseLocations.find((f) => {
-      //       return f.LocationCode == this.imputCod;
-      //     });
-      //     if (to_loc && this.product.qty > 0) {
-      //       this.toLocation = to_loc;
-      //       return;
-      //     }
-      //   }
     },
     doRelokacja() {
       const vm = this;
@@ -361,17 +356,16 @@ export default {
       data.toLocation = vm.toLocation;
       data.selectedWarehause = vm.$props.IDWarehouse;
       data.createdDoc = vm.createdDoc;
-      //   axios
-      //     .post("/api/doRelokacja", data)
-      //     .then((res) => {
-      //       if (res.status == 200) {
-      //         vm.createdDoc = res.data.createdDoc;
-      //         vm.loading = false;
-      //         vm.message = `Dokumenty przeniesienia zostały utworzone. ${vm.createdDoc.idmin} ${vm.createdDoc.idpls}`;
-      //         vm.snackbar = true;
-      //       }
-      //     })
-      //     .catch((error) => console.log(error));
+      axios
+        .post("/api/doRelokacja", data)
+        .then((res) => {
+          if (res.status == 200) {
+            vm.createdDoc = res.data.createdDoc;
+            vm.message = `Dokumenty przeniesienia zostały utworzone. ${vm.createdDoc.idmin} ${vm.createdDoc.idpls}`;
+            vm.snackbar = true;
+          }
+        })
+        .catch((error) => console.log(error));
       vm.loading = false;
       vm.clear();
     },
