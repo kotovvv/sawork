@@ -104,7 +104,9 @@
               <v-col cols="12">
                 <b
                   >Do lokalizacji:
-                  <span v-if="toLocation.LocationCode ?? 0" class="px-2"
+                  <span
+                    v-if="toLocation && toLocation.LocationCode"
+                    class="px-2"
                     >{{ toLocation.LocationCode }}
 
                     <v-icon
@@ -113,8 +115,46 @@
                       color="green"
                     ></v-icon></span
                 ></b>
-
-                <v-table density="compact" style="width: 300px">
+                <v-btn
+                  v-if="step == 3"
+                  :disabled="
+                    !toLocation || Object.keys(toLocation).length === 0
+                  "
+                  class="btn primary mb-5"
+                  variant="tonal"
+                  @click.once="doRelokacja"
+                  >Relokacja</v-btn
+                >
+              </v-col>
+              <v-col cols="12" md="6">
+                <v-btn
+                  icon="mdi-form-dropdown"
+                  v-if="!selectLocation"
+                  @click="selectLocation = !selectLocation"
+                ></v-btn>
+                <v-autocomplete
+                  v-if="selectLocation"
+                  label="Locations"
+                  :items="warehouseLocations"
+                  item-title="LocationCode"
+                  item-value="LocationCode"
+                  return-object
+                  v-model="toLocation"
+                  @update:modelValue="
+                    selectLocation = false;
+                    step = 3;
+                  "
+                ></v-autocomplete>
+              </v-col>
+              <v-col
+                cols="12"
+                md="6"
+                v-if="
+                  productLocations.filter((f) => f.LocationCode != fromLocation)
+                    .length > 0
+                "
+              >
+                <v-table density="compact" style="width: 300px" height="300px">
                   <thead>
                     <tr>
                       <th class="text-left">LocationCode</th>
@@ -138,15 +178,8 @@
                   </tbody>
                 </v-table>
               </v-col>
-              <v-col>
-                <v-btn
-                  v-if="step == 3"
-                  class="btn primary mb-5"
-                  variant="tonal"
-                  @click.once="doRelokacja"
-                  >Relokacja</v-btn
-                >
-              </v-col>
+
+              <v-col cols="12"> </v-col>
             </v-row>
           </template>
           <v-progress-linear
@@ -194,7 +227,7 @@ export default {
       dialogLocation: false,
       product: null,
       fromLocation: this.$props.location,
-      toLocation: {},
+      toLocation: { LocationCode: "" },
       step: this.$props.startStep,
       loading: false,
       message: "",
@@ -204,6 +237,7 @@ export default {
       productLocations: [],
       selectedWarehause: null,
       createdDoc: {},
+      selectLocation: false,
     };
   },
 
@@ -325,22 +359,21 @@ export default {
           if (this.product.qty == this.product.ilosc) {
             this.message = "Zeskanuj kod lokalizacji";
           }
-        } else {
-          if (/[a-zA-Z]+/.test(this.imputCod)) {
-            this.message = "Błąd lokalizacji (";
-          } else {
-            this.message = "Błąd kodu kreskowego!!!";
-          }
         }
-
-        let to_loc = this.warehouseLocations.find((f) => {
-          return f.LocationCode == this.imputCod;
-        });
-        if (to_loc && this.product.qty > 0) {
-          this.step = 3;
-          this.message = "";
-          this.toLocation = to_loc;
-          return;
+      }
+      let to_loc = this.warehouseLocations.find((f) => {
+        return f.LocationCode == this.imputCod;
+      });
+      if (to_loc && this.product.qty > 0) {
+        this.step = 3;
+        this.message = "";
+        this.toLocation = to_loc;
+        return;
+      } else {
+        if (/[a-zA-Z]+/.test(this.imputCod)) {
+          this.message = "Błąd lokalizacji (";
+        } else {
+          this.message = "Błąd kodu kreskowego!!!";
         }
       }
     },

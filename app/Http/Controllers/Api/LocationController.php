@@ -297,7 +297,7 @@ class LocationController extends Controller
             ->where('e.IDTowaru', $IDTowaru)
             ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
             ->whereRaw('LEN(l.LocationCode) > 0')
-            ->groupBy('l.LocationCode', 'r.IDRuchuMagazynowego', 'r.Data', 't.IDTowaru')
+            ->groupBy('l.LocationCode', 't.IDTowaru', 'r.IDRuchuMagazynowego', 'r.Data')
             ->select(
                 't.IDTowaru',
                 'r.IDRuchuMagazynowego',
@@ -306,6 +306,14 @@ class LocationController extends Controller
                 DB::raw('SUM((e.ilosc - ISNULL(e.Wydano, 0)) * r.Operator) AS ilosc')
             )
             ->get();
+
+        $results = $results->groupBy('LocationCode')->map(function ($row) {
+            return [
+                'LocationCode' => $row->first()->LocationCode,
+                'ilosc' => $row->sum('ilosc')
+            ];
+        })->values();
+
         return $results;
     }
 }
