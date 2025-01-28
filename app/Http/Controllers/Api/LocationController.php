@@ -96,7 +96,7 @@ class LocationController extends Controller
         )->get();
     }
 
-    private function getPZ($IDTowaru, $LocationCode)
+    private function getPZ($IDTowaru, $IDWarehouseLocation)
     {
         $date = Carbon::now()->format('Ymd');
 
@@ -111,7 +111,7 @@ class LocationController extends Controller
             ->whereRaw('e.ilosc * r.Operator > 0')
             ->where('r.Data', '>=', DB::raw('BO.MinDate'))
             ->where('e.IDTowaru', $IDTowaru)
-            ->where('l.LocationCode', $LocationCode)
+            ->where('l.IDWarehouseLocation', $IDWarehouseLocation)
             ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
             ->select(
                 'e.IDElementuRuchuMagazynowego',
@@ -153,7 +153,7 @@ class LocationController extends Controller
         $response = [];
         $IDTowaru = $data['IDTowaru'];
         $qty = $data['qty'];
-        $LocationCode = $data['fromLocation'];
+        $fromLocation = $data['fromLocation'];
         $toLocation = $data['toLocation'];
         $idWarehause = $data['selectedWarehause'];
         $createdDoc = $data['createdDoc'];
@@ -190,7 +190,7 @@ class LocationController extends Controller
         }
 
         //2. ElementRuchuMagazynowego
-        $pz = $this->getPZ($IDTowaru, $LocationCode);
+        $pz = $this->getPZ($IDTowaru, $fromLocation['IDWarehouseLocation']);
         $el = [];
         $el['IDTowaru'] = $IDTowaru;
         $k = $qty;

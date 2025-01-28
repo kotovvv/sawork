@@ -29,7 +29,7 @@
             <v-row>
               <v-col>
                 <b
-                  >Z lokalizacji: {{ fromLocation }}
+                  >Z lokalizacji: {{ fromLocation.LocationCode }}
                   <span v-if="step >= 1"
                     ><v-icon
                       icon="mdi-checkbox-marked-circle-outline"
@@ -56,7 +56,7 @@
               <v-spacer></v-spacer>
               <GetQrCode @result="handleResult" />
             </v-row>
-            <h5 class="text-red" v-if="message">{{ message }}</h5>
+            <h5 class="text-red" v-if="message_error">{{ message_error }}</h5>
             <!-- step 1 -->
             <h3 class="text-red" v-if="step == 0">Potwierdź lokalizację!</h3>
             <h3 class="text-red" v-if="step == 1 && product == null">
@@ -150,8 +150,9 @@
                 cols="12"
                 md="6"
                 v-if="
-                  productLocations.filter((f) => f.LocationCode != fromLocation)
-                    .length > 0
+                  productLocations.filter(
+                    (f) => f.LocationCode != fromLocation.LocationCode
+                  ).length > 0
                 "
               >
                 <v-table density="compact" style="width: 300px" height="300px">
@@ -164,7 +165,7 @@
                   <tbody>
                     <tr
                       v-for="l in productLocations.filter(
-                        (f) => f.LocationCode != fromLocation
+                        (f) => f.LocationCode != fromLocation.LocationCode
                       )"
                       :key="l.idLocationCode"
                       :class="{
@@ -208,8 +209,9 @@ export default {
       type: Object,
       required: true,
     },
-    IDWarehouse: {
-      type: String,
+
+    warehouse: {
+      type: Object,
       required: true,
     },
     startStep: {
@@ -226,11 +228,12 @@ export default {
       snackbar: false,
       dialogLocation: false,
       product: null,
-      fromLocation: this.$props.location,
+      fromLocation: { LocationCode: "" },
       toLocation: { LocationCode: "" },
       step: this.$props.startStep,
       loading: false,
       message: "",
+      message_error: "",
       test: "",
       imputCod: "",
       warehouseLocations: [],
@@ -274,10 +277,15 @@ export default {
       const vm = this;
       vm.warehouseLocations = [];
       axios
-        .get("/api/getWarehouseLocations/" + vm.$props.IDWarehouse)
+        .get("/api/getWarehouseLocations/" + vm.$props.warehouse.IDMagazynu)
         .then((res) => {
           if (res.status == 200) {
             vm.warehouseLocations = res.data;
+            vm.fromLocation = vm.warehouseLocations.find((w) => {
+              return (
+                w.IDWarehouseLocation == vm.$props.warehouse[vm.$props.location]
+              );
+            });
           }
         })
         .catch((error) => console.log(error));
@@ -290,6 +298,7 @@ export default {
       this.product = null;
       //   this.fromLocation = {};
       this.message = "";
+      message_error: "";
       this.toLocation = {};
     },
     handleKeypress(event) {
@@ -310,6 +319,7 @@ export default {
       if (item.qty < 0) item.qty = 0;
       if (item.qty > item.ilosc) {
         this.message = "Za dużo!!!";
+        this.message_error = "Za dużo!!!";
         this.snackbar = true;
         item.qty = item.ilosc;
       }
@@ -330,7 +340,7 @@ export default {
           this.fromLocation = from_loc;
           this.step = 1;
         } else {
-          this.message = "Błąd lokalizacji (";
+          this.message_error = "Błąd lokalizacji (";
         }
       }
       if (this.step == 1) {
@@ -346,11 +356,12 @@ export default {
             this.getProductLocations();
             if (this.product.qty == this.product.ilosc) {
               this.message = "Zeskanuj kod lokalizacji";
+              this.snackbar = true;
             }
             return;
           } else {
-            this.message = "Brak produktu!!!";
-            this.snackbar = true;
+            this.message_error = "Brak produktu!!!";
+
             return;
           }
         }
@@ -358,6 +369,7 @@ export default {
           this.changeCounter(this.product, 1);
           if (this.product.qty == this.product.ilosc) {
             this.message = "Zeskanuj kod lokalizacji";
+            this.snackbar = true;
           }
         }
       }
@@ -371,9 +383,9 @@ export default {
         return;
       } else {
         if (/[a-zA-Z]+/.test(this.imputCod)) {
-          this.message = "Błąd lokalizacji (";
+          this.message_error = "Błąd lokalizacji (";
         } else {
-          this.message = "Błąd kodu kreskowego!!!";
+          this.message_error = "Błąd kodu kreskowego!!!";
         }
       }
     },
@@ -382,12 +394,12 @@ export default {
       let data = {};
       let products = [];
       vm.loading = true;
-      vm.message = "";
+      vm.message_error = "";
       data.IDTowaru = vm.product.IDTowaru;
       data.qty = vm.product.qty;
       data.fromLocation = vm.fromLocation;
       data.toLocation = vm.toLocation;
-      data.selectedWarehause = vm.$props.IDWarehouse;
+      data.selectedWarehause = vm.$props.warehouse.IDMagazynu;
       data.createdDoc = vm.createdDoc;
 
       if (vm.product.qty == vm.product.ilosc) {

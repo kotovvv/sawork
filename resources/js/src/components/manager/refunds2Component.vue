@@ -320,7 +320,8 @@
     <v-row>
       <v-col>
         <WzkTable
-          :IDWarehouse="IDWarehouse"
+          v-if="currentWarehause"
+          :warehouse="currentWarehause"
           :user="$attrs.user"
           :key="IDWarehouse"
           @item-selected="handleItemSelected"
@@ -601,6 +602,7 @@ export default {
       wz: {},
       warehouses: [],
       IDWarehouse: null,
+      currentWarehause: null,
       products: [],
       changeProducts: [],
       edit: {
@@ -645,7 +647,7 @@ export default {
       message: "",
     };
   },
-
+  created() {},
   mounted() {
     this.getWarehouse();
   },
@@ -677,7 +679,13 @@ export default {
       // uploadFiles,
     };
   },
+  computed: {},
   methods: {
+    getCurrentWarehouse() {
+      this.currentWarehause = this.warehouses.find(
+        (w) => w.IDMagazynu === this.IDWarehouse
+      );
+    },
     copyToClipboard(text) {
       if (navigator.clipboard) {
         navigator.clipboard
@@ -1064,6 +1072,7 @@ export default {
             if (vm.warehouses.length > 0) {
               vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
               vm.setLocations();
+              vm.getCurrentWarehouse();
             }
           }
         })

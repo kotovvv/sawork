@@ -30,7 +30,7 @@
                 :products="productsInlocation"
                 :location="location"
                 :startStep="1"
-                :IDWarehouse="IDWarehouse"
+                :warehouse="warehouse"
                 @update:products="updateProductsInLocation"
               />
             </v-row>
@@ -55,8 +55,9 @@ export default {
       type: String,
       required: true,
     },
-    IDWarehouse: {
-      type: String,
+
+    warehouse: {
+      type: Object,
       required: true,
     },
   },
@@ -90,7 +91,7 @@ export default {
       const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       saveAs(
         new Blob([wbout], { type: "application/octet-stream" }),
-        this.location + " " + this.IDWarehouse + ".xlsx"
+        this.location + " " + this.$props.warehouse.IDMagazynu + ".xlsx"
       );
     },
     getProductsInLocation(location) {
@@ -98,7 +99,12 @@ export default {
       vm.productsInlocation = [];
       vm.loading = true;
       axios
-        .get("/api/getProductsInLocation/" + vm.IDWarehouse + "/" + location)
+        .get(
+          "/api/getProductsInLocation/" +
+            vm.$props.warehouse.IDMagazynu +
+            "/" +
+            location
+        )
         .then((res) => {
           if (res.status == 200) {
             vm.productsInlocation = res.data;

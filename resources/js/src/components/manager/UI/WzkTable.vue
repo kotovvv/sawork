@@ -86,7 +86,7 @@
           </v-col>
         </v-card-title>
         <v-card-text>
-          <ProductsInLocation :location="location" :IDWarehouse="IDWarehouse" />
+          <ProductsInLocation :location="location" :warehouse="warehouse" />
         </v-card-text>
         <v-card-actions> </v-card-actions>
       </v-card>
@@ -104,7 +104,7 @@ import ProductsInLocation from "./ProductsInLocation.vue";
 export default {
   name: "WZkTable",
   components: { Datepicker, ProductsInLocation },
-  props: ["IDWarehouse", "user"],
+  props: ["user", "warehouse"],
   data: () => ({
     dialogProductsInLocation: false,
     dateMin: moment().subtract(2, "months").format("YYYY-MM-DD"),
@@ -144,7 +144,7 @@ export default {
       vm.loading = true;
       axios
         .post("/api/refreshLocations", {
-          IDWarehouse: vm.IDWarehouse,
+          IDWarehouse: vm.$props.warehouse.IDMagazynu,
           dateMin: vm.dateMin,
           dateMax: vm.dateMax,
         })
@@ -171,12 +171,12 @@ export default {
     getDocsWZk() {
       const vm = this;
 
-      if (vm.IDWarehouse == null) return;
+      if (vm.$props.warehouse.IDMagazynu == null) return;
       vm.docsWZk = [];
       vm.loading = true;
       axios
         .post("/api/getDocsWZk", {
-          IDWarehouse: vm.IDWarehouse,
+          IDWarehouse: vm.$props.warehouse.IDMagazynu,
           dateMin: vm.dateMin,
           dateMax: vm.dateMax,
         })
