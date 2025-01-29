@@ -1060,6 +1060,7 @@ export default {
         { title: "Zniszczony", value: a_locations[0].Zniszczony },
         { title: "Naprawa", value: a_locations[0].Naprawa },
       ];
+      vm.getCurrentWarehouse();
     },
     getWarehouse() {
       const vm = this;
