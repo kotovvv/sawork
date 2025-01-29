@@ -424,6 +424,11 @@ export default {
             vm.snackbar = true;
             vm.$emit("update:products", products);
           }
+          if (res.status == 400) {
+            vm.message_error = res.data.message;
+            vm.message = res.data.message;
+            vm.snackbar = true;
+          }
         })
         .catch((error) => console.log(error));
       vm.loading = false;

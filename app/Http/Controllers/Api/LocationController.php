@@ -147,6 +147,16 @@ class LocationController extends Controller
         return str_replace('%', $res + 1, $pattern);
     }
 
+    public function errorLocation($user, $what, $ip = 0)
+    {
+        $myLogInfo = date('Y-m-d H:i:s') . ', ' . $ip . ', ' . $user->NazwaUzytkownika . ', ' . $what;
+        file_put_contents(
+            storage_path() . '/logs/errorLocation.log',
+            $myLogInfo . PHP_EOL,
+            FILE_APPEND | LOCK_EX
+        );
+    }
+
     public function doRelokacja(Request $request)
     {
         $data = $request->all();
@@ -194,6 +204,11 @@ class LocationController extends Controller
         $el = [];
         $el['IDTowaru'] = $IDTowaru;
         $k = $qty;
+
+        if (empty($pz)) {
+            $this->errorLocation($request->user, 'No towar ID:' . $IDTowaru . ' found from location: ' . $fromLocation['LocationCode'] . ' to location: ' . $toLocation['LocationCode'], $request->ip());
+            return response()->json(['message' => 'Uwaga! Uwaga! Uwaga! Nie znaleziono identyfikatora towaru ID:' . $IDTowaru . '  z lokalizacji: ' . $fromLocation['LocationCode'] . ' do lokalizacji:' . $toLocation['LocationCode']], 400);
+        }
 
         foreach ($pz as $key => $value) {
             $CenaJednostkowa = DB::table('ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $pz[$key]->IDElementuRuchuMagazynowego)->take(1)->value('CenaJednostkowa');;
