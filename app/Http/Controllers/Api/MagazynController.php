@@ -13,7 +13,7 @@ class MagazynController extends Controller
 {
     public function loadMagEmail()
     {
-        return DB::select('SELECT [ID],[IDMagazynu] ,[Nazwa] ,[Symbol] ,em.eMailAddress ,em.cod,em.IDLokalizaciiZwrot as Zwrot,em.IDKontrahenta, em.Zniszczony, em.Naprawa, em.noklient FROM [dbo].[Magazyn] RIGHT JOIN dbo.EMailMagazyn em ON em.IDMagazyn = IDMagazynu');
+        return DB::select('SELECT [ID],[IDMagazynu] ,[Nazwa] ,[Symbol],koef, em.eMailAddress ,em.cod,em.IDLokalizaciiZwrot as Zwrot,em.IDKontrahenta, em.Zniszczony, em.Naprawa, em.noklient FROM [dbo].[Magazyn] RIGHT JOIN dbo.EMailMagazyn em ON em.IDMagazyn = IDMagazynu');
     }
 
 
@@ -31,6 +31,11 @@ class MagazynController extends Controller
         } else {
             $cod = '';
         }
+        if (isset($data['koef'])) {
+            $koef = $data['koef'];
+        } else {
+            $koef = '';
+        }
         $IDKontrahenta = $data['IDKontrahenta'];
         $IDLokalizaciiZwrot = $data['Zwrot'];
         $Zniszczony = $data['Zniszczony'];
@@ -47,6 +52,7 @@ class MagazynController extends Controller
                     'Naprawa' => $Naprawa,
                     'Zniszczony' => $Zniszczony,
                     'cod' => $cod,
+                    'koef' => $koef,
                     'IDLokalizaciiZwrot' => $IDLokalizaciiZwrot,
                     'noklient' => json_encode($noklient)
                 ]);
@@ -56,7 +62,7 @@ class MagazynController extends Controller
                 return response('Not updated', '404');
             }
         } else {
-            $res =  DB::statement('INSERT INTO dbo.EMailMagazyn (IDMagazyn,eMailAddress,cod,IDLokalizaciiZwrot,IDKontrahenta) VALUES (' . $IDMagazyn . ',\'' . $eMailAddress . '\',\'' . $cod . '\',\'' . $IDLokalizaciiZwrot . '\',\'' . $IDKontrahenta . '\')');
+            $res =  DB::statement('INSERT INTO dbo.EMailMagazyn (IDMagazyn,eMailAddress,cod,koef,IDLokalizaciiZwrot,IDKontrahenta) VALUES (' . $IDMagazyn . ',\'' . $eMailAddress . '\',\'' . $cod . '\',\'' . $koef . '\',\'' . $IDLokalizaciiZwrot . '\',\'' . $IDKontrahenta . '\')');
             if ($res) {
                 return DB::getPdo()->lastInsertId();
             } else {

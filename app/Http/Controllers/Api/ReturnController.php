@@ -30,7 +30,7 @@ class ReturnController extends Controller
             $a_mag = collect(DB::table('UprawnieniaDoMagazynow')->where('IDUzytkownika', $user->IDUzytkownika)->where('Uprawniony', 1)->pluck('IDMagazynu'))->toArray();
 
             return DB::table('Magazyn')
-                ->select('IDMagazynu', 'Nazwa', 'Symbol', 'IDLokalizaciiZwrot as Zwrot', 'Zniszczony', 'Naprawa')
+                ->select('IDMagazynu', 'Nazwa', 'Symbol', 'IDLokalizaciiZwrot as Zwrot', 'Zniszczony', 'Naprawa', 'koef')
                 ->leftJoin('EMailMagazyn', 'Magazyn.IDMagazynu', '=', 'EMailMagazyn.IDMagazyn')
                 ->whereIn('IDMagazynu', $a_mag)
                 ->get();

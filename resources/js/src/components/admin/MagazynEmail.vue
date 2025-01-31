@@ -60,7 +60,7 @@
                   ></v-text-field>
                 </v-col>
 
-                <v-col cols="12">
+                <v-col cols="6">
                   <v-select
                     v-model="editedItem.cod"
                     :items="cod"
@@ -68,6 +68,12 @@
                     persistent-hint
                     single-line
                   ></v-select>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model="editedItem.koef"
+                    label="Koefficient"
+                  ></v-text-field>
                 </v-col>
                 <v-col cols="4">
                   <v-text-field
@@ -144,6 +150,7 @@ export default {
         { title: "Zniszczony", value: "Zniszczony" },
         { title: "Naprawa", value: "Naprawa" },
         { title: "Magazyn", value: "Nazwa" },
+        { title: "Koefficient", value: "koef", align: "end" },
         { title: "Details", value: "eMailAddress" },
         { title: "IDKontrahenta", value: "IDKontrahenta" },
         { title: "Dokument Cod", value: "cod", name: "cod", width: "180" },
@@ -211,6 +218,7 @@ export default {
       data.IDMagazynu = item.IDMagazynu;
       data.eMailAddress = item.eMailAddress;
       data.cod = item.cod;
+      data.koef = item.koef;
       data.Zwrot = item.Zwrot;
       data.Zniszczony = item.Zniszczony;
       data.Naprawa = item.Naprawa;
