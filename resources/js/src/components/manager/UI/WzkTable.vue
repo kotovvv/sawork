@@ -49,7 +49,7 @@
             </v-tooltip>
           </v-btn>
 
-          <v-col v-if="$props.user.IDRoli != 4">
+          <v-col>
             <div class="d-flex ga-5 flex-wrap">
               <v-btn v-if="locations.Zwrot" @click="openDialog('Zwrot')"
                 >Ilość w zwrot: {{ locations.Zwrot }}</v-btn
@@ -86,7 +86,11 @@
           </v-col>
         </v-card-title>
         <v-card-text>
-          <ProductsInLocation :location="location" :warehouse="warehouse" />
+          <ProductsInLocation
+            :location="location"
+            :warehouse="warehouse"
+            :user="user"
+          />
         </v-card-text>
         <v-card-actions> </v-card-actions>
       </v-card>

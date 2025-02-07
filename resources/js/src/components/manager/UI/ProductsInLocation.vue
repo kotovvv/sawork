@@ -27,6 +27,7 @@
                 icon="mdi-file-download"
               ></v-btn>
               <ToLocation
+                v-if="user.IDRoli != 4"
                 :products="productsInlocation"
                 :location="location"
                 :startStep="1"
@@ -55,7 +56,10 @@ export default {
       type: String,
       required: true,
     },
-
+    user: {
+      type: Object,
+      required: true,
+    },
     warehouse: {
       type: Object,
       required: true,
