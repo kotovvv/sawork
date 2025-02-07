@@ -51,7 +51,9 @@
 
           <v-col>
             <div class="d-flex ga-5 flex-wrap">
-              <v-btn v-if="locations.Zwrot" @click="openDialog('Zwrot')"
+              <v-btn
+                v-if="locations.Zwrot && $props.user.IDRoli != 4"
+                @click="openDialog('Zwrot')"
                 >Ilość w zwrot: {{ locations.Zwrot }}</v-btn
               >
               <v-btn v-if="locations.Naprawa" @click="openDialog('Naprawa')"
