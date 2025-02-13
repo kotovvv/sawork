@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\AuthUserController;
 use App\Http\Controllers\Api\LogController;
 use App\Http\Controllers\Api\ComingController;
 use App\Http\Controllers\Api\FileController;
+use App\Http\Controllers\Api\CollectController;
 
 /*
 |--------------------------------------------------------------------------
@@ -78,4 +79,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::get('getFiles/{IDRuchuMagazynowego}/{folder_name}', [FileController::class, 'getFiles']);
     Route::get('dowloadFile/{filename}', [FileController::class, 'dowloadFile']);
     Route::post('deleteFile', [FileController::class, 'deleteFile']);
+
+    Route::get('getAllOrders', [CollectController::class, 'getAllOrders']);
+    Route::post('getOrderProducts', [CollectController::class, 'getOrderProducts']);
 });

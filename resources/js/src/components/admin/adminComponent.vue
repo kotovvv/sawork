@@ -78,6 +78,7 @@ export default {
       { text: "Dostawa do magazynu", name: "coming", icon: "mdi-van-utility" },
       { text: "Zwroty", name: "zwroty", icon: "mdi-database-plus" },
       { text: "ZO->WZ", name: "zo2wz", icon: "mdi-arrange-bring-forward" },
+      { text: "Collect", name: "collect", icon: "mdi-package-variant-plus" },
     ],
   }),
   computed: {
@@ -99,6 +100,10 @@ export default {
       if (this.theMenu == "zo2wz")
         return defineAsyncComponent(() =>
           import("../client/zo2wzComponent.vue")
+        );
+      if (this.theMenu == "collect")
+        return defineAsyncComponent(() =>
+          import("../manager/collectProducts.vue")
         );
     },
   },
