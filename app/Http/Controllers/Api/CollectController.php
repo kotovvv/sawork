@@ -31,14 +31,112 @@ class CollectController extends Controller
 
     public function getOrderProducts(Request $request)
     {
-        $products = DB::table('dbo.OrderLines as ol')
-            ->join('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
-            ->select('ol.IDItem', DB::raw('SUM(ol.Quantity) as total_quantity'), 't.Nazwa', 't.KodKreskowy', 't._TowarTempString1 as sku')
+        $maxProducts = $request->maxProducts ?? 30;
+        $maxWeight = $request->maxWeight ?? 30;
+        $maxM3 = $request->maxM3 ?? 0.2;
+
+        $sharedItems = DB::table('dbo.OrderLines as ol')
+            ->select('ol.IDItem', DB::raw('SUM(ol.Quantity) as TotalQuantity'), DB::raw('STRING_AGG(ol.IDOrder, \',\') as Orders'))
+            ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
             ->where('t.Usluga', '!=', 1)
             ->whereIn('ol.IDOrder', $request->IDsOrder)
-            ->groupBy('ol.IDItem', 't.Nazwa', 't.KodKreskowy', 't._TowarTempString1')
+            ->groupBy('ol.IDItem')
+            ->havingRaw('COUNT(DISTINCT ol.IDOrder) > 1')
+            ->orderByDesc('TotalQuantity')
             ->get();
 
-        return response()->json($products);
+        $orders = [];
+        $sharedItems->each(function ($item) use (&$orders) {
+            $orders = array_merge($orders, explode(',', $item->Orders));
+        });
+
+        $orders = array_unique($orders);
+
+        $ordersData = collect();
+        if (count($orders) > 0) {
+
+            $ordersData = DB::table('dbo.OrderLines as ol')
+                ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
+                ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+                ->select(
+                    'o.IDOrder',
+                    'o.IDWarehouse',
+                    DB::raw('SUM(ol.Quantity) as TotalQuantity'),
+                    DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
+                    DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
+                )
+                ->where('t.Usluga', '!=', 1)
+                ->whereIn('ol.IDOrder', $orders)
+                ->groupBy('o.IDOrder', 'o.IDWarehouse')
+                ->orderBy(DB::raw("CASE " . implode(" ", array_map(function ($id, $index) {
+                    return "WHEN o.IDOrder = $id THEN $index";
+                }, $orders, array_keys($orders))) . " END"))
+                ->get();
+        }
+
+        $nextOrdersData =  DB::table('dbo.OrderLines as ol')
+            ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
+            ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+            ->select(
+                'o.IDOrder',
+                'o.IDWarehouse',
+                DB::raw('SUM(ol.Quantity) as TotalQuantity'),
+                DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
+                DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
+            )
+            ->where('t.Usluga', '!=', 1)
+            ->whereIn('ol.IDOrder', array_diff($request->IDsOrder, $orders))
+            ->groupBy('o.IDOrder', 'o.IDWarehouse')
+            ->orderByDesc('TotalQuantity')
+            ->get();
+        $ordersData = $ordersData->merge($nextOrdersData);
+
+
+
+        $selectedOrders = collect();
+        $currentProducts = 0;
+        $currentWeight = 0;
+        $currentM3 = 0;
+
+        // Берём первый заказ с наибольшим количеством товаров
+        $firstOrder = $ordersData->shift();
+        if ($firstOrder) {
+            $selectedOrders->push($firstOrder);
+            $currentProducts = $firstOrder->TotalQuantity;
+            $currentWeight = $firstOrder->TotalWeight;
+            $currentM3 = $firstOrder->TotalM3;
+        }
+
+        // Перебираем оставшиеся заказы, пока не превысим ограничения
+        foreach ($ordersData as $order) {
+            if (
+                ($currentProducts + $order->TotalQuantity <= $maxProducts) &&
+                ($currentWeight + $order->TotalWeight <= $maxWeight) &&
+                ($currentM3 + $order->TotalM3 <= $maxM3)
+            ) {
+                $selectedOrders->push($order);
+                $currentProducts += $order->TotalQuantity;
+                $currentWeight += $order->TotalWeight;
+                $currentM3 += $order->TotalM3;
+            }
+        }
+        $selectedOrdersIDs = $selectedOrders->pluck('IDOrder');
+        $listProducts = DB::table('dbo.OrderLines as ol')
+            ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
+            ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+            ->select('ol.IDItem', 'ol.IDOrder', 'o.IDWarehouse', 'ol.Quantity', 't.Nazwa', 't.KodKreskowy', 't._TowarTempString1 as sku', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
+            ->where('t.Usluga', '!=', 1)
+            ->whereIn('ol.IDOrder', $selectedOrdersIDs)
+            ->get();
+
+        // Выбранные заказы
+        // return $selectedOrders;
+        return response()->json([
+            'listProducts' => $listProducts,
+            'selectedOrders' => $selectedOrdersIDs,
+            'sharedItems' => $sharedItems,
+            'endParamas' => ['maxProducts' => $currentProducts, 'maxWeight' =>  $currentWeight, 'maxM3' => $currentM3],
+
+        ]);
     }
 }
