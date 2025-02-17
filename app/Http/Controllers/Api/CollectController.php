@@ -13,7 +13,7 @@ class CollectController extends Controller
 
     public function getAllOrders(Request $request)
     {
-        $orders = DB::table('dbo.Orders as o')
+        $allOrders = DB::table('dbo.Orders as o')
             ->leftJoin('dbo.RodzajTransportu as rt', 'rt.IDRodzajuTransportu', '=', 'o.IDTransport')
             ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport', 'rt.Nazwa as transport_name')
             ->where('o.IDOrderType', 15)
@@ -26,11 +26,39 @@ class CollectController extends Controller
             })
             ->get();
 
-        return response()->json($orders);
+        $waiteOrders = $this->waitOrders($request->user);
+
+        return response()->json(['allOrders' => $allOrders, 'waiteOrders' => $waiteOrders]);
+    }
+
+    private function waitOrders($user)
+    {
+        $waiteOrders = DB::table('collect')->where([
+            'IDUzytkownika' => $user->IDUzytkownika,
+            'status' => 0,
+        ])->pluck('IDOrder');
+
+        return $waiteOrders;
+    }
+
+    private function freeOrdersFromCollect($orders, $user)
+    {
+        $ordersInCollect = DB::table('collect as col')
+            ->whereIn('col.IDOrder', $orders)
+            ->pluck('IDOrder');
+        $freeOrders = array_diff($orders, $ordersInCollect->toArray());
+
+        // $waiteOrders = $this->waitOrders($user);
+        // $freeOrders = array_merge($freeOrders, $waiteOrders->toArray());
+
+        return $freeOrders;
     }
 
     public function getOrderProducts(Request $request)
     {
+
+        $freeOrders = $this->freeOrdersFromCollect($request->IDsOrder, $request->user);
+
         $maxProducts = $request->maxProducts ?? 30;
         $maxWeight = $request->maxWeight ?? 30;
         $maxM3 = $request->maxM3 ?? 0.2;
@@ -39,7 +67,7 @@ class CollectController extends Controller
             ->select('ol.IDItem', DB::raw('SUM(ol.Quantity) as TotalQuantity'), DB::raw('STRING_AGG(ol.IDOrder, \',\') as Orders'))
             ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
             ->where('t.Usluga', '!=', 1)
-            ->whereIn('ol.IDOrder', $request->IDsOrder)
+            ->whereIn('ol.IDOrder', $freeOrders)
             ->groupBy('ol.IDItem')
             ->havingRaw('COUNT(DISTINCT ol.IDOrder) > 1')
             ->orderByDesc('TotalQuantity')
@@ -61,13 +89,14 @@ class CollectController extends Controller
                 ->select(
                     'o.IDOrder',
                     'o.IDWarehouse',
+                    'o._OrdersTempDecimal2 as NumberBL',
                     DB::raw('SUM(ol.Quantity) as TotalQuantity'),
                     DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
                     DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
                 )
                 ->where('t.Usluga', '!=', 1)
                 ->whereIn('ol.IDOrder', $orders)
-                ->groupBy('o.IDOrder', 'o.IDWarehouse')
+                ->groupBy('o.IDOrder', 'o._OrdersTempDecimal2', 'o.IDWarehouse')
                 ->orderBy(DB::raw("CASE " . implode(" ", array_map(function ($id, $index) {
                     return "WHEN o.IDOrder = $id THEN $index";
                 }, $orders, array_keys($orders))) . " END"))
@@ -80,25 +109,24 @@ class CollectController extends Controller
             ->select(
                 'o.IDOrder',
                 'o.IDWarehouse',
+                'o._OrdersTempDecimal2 as NumberBL',
                 DB::raw('SUM(ol.Quantity) as TotalQuantity'),
                 DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
                 DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
             )
             ->where('t.Usluga', '!=', 1)
-            ->whereIn('ol.IDOrder', array_diff($request->IDsOrder, $orders))
-            ->groupBy('o.IDOrder', 'o.IDWarehouse')
+            ->whereIn('ol.IDOrder', array_diff($freeOrders, $orders))
+            ->groupBy('o.IDOrder', 'o._OrdersTempDecimal2', 'o.IDWarehouse')
             ->orderByDesc('TotalQuantity')
             ->get();
         $ordersData = $ordersData->merge($nextOrdersData);
-
-
+        $ordersData = $ordersData->sortByDesc('IDWarehouse');
 
         $selectedOrders = collect();
         $currentProducts = 0;
         $currentWeight = 0;
         $currentM3 = 0;
 
-        // Берём первый заказ с наибольшим количеством товаров
         $firstOrder = $ordersData->shift();
         if ($firstOrder) {
             $selectedOrders->push($firstOrder);
@@ -107,7 +135,7 @@ class CollectController extends Controller
             $currentM3 = $firstOrder->TotalM3;
         }
 
-        // Перебираем оставшиеся заказы, пока не превысим ограничения
+        // Going through the remaining orders until we exceed the limits
         foreach ($ordersData as $order) {
             if (
                 ($currentProducts + $order->TotalQuantity <= $maxProducts) &&
@@ -124,19 +152,65 @@ class CollectController extends Controller
         $listProducts = DB::table('dbo.OrderLines as ol')
             ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
             ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
-            ->select('ol.IDItem', 'ol.IDOrder', 'o.IDWarehouse', 'ol.Quantity', 't.Nazwa', 't.KodKreskowy', 't._TowarTempString1 as sku', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
+            ->select('ol.IDItem', 'ol.IDOrder', 'o.IDWarehouse', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 't.Nazwa', 't.KodKreskowy', 't._TowarTempString1 as sku', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
             ->where('t.Usluga', '!=', 1)
             ->whereIn('ol.IDOrder', $selectedOrdersIDs)
+            ->orderByDesc('o.IDWarehouse', 'ol.IDOrder', 'ol.IDItem')
             ->get();
 
-        // Выбранные заказы
-        // return $selectedOrders;
+        // Selected orders
         return response()->json([
             'listProducts' => $listProducts,
             'selectedOrders' => $selectedOrdersIDs,
             'sharedItems' => $sharedItems,
             'endParamas' => ['maxProducts' => $currentProducts, 'maxWeight' =>  $currentWeight, 'maxM3' => $currentM3],
 
+        ]);
+    }
+
+    public function collectOrders(Request $request)
+    {
+
+        $freeOrders = $this->freeOrdersFromCollect($request->selectedOrders, $request->user);
+
+        $makeOrders = [];
+        foreach ($freeOrders as $IDOrder) {
+
+            try {
+                DB::table('collect')->insert([
+                    'IDUzytkownika' => $request->user->IDUzytkownika,
+                    'Date' => Carbon::now(),
+                    'IDOrder' => $IDOrder,
+                    'status' => 0,
+                ]);
+
+                $makeOrders[] = $IDOrder;
+            } catch (\Throwable $th) {
+                throw $th;
+            }
+        }
+
+        if (count($request->selectedOrders) > count($freeOrders)) {
+            $message = "Niektóre (" . (count($request->selectedOrders) - count($freeOrders)) . ") zamówienia zostały już dodane do zbioru";
+        } else {
+            $message = "Zamówienia zostały dodane do zbioru";
+        }
+
+        return response()->json([
+            'message' => $message,
+            'makeOrders' => $makeOrders
+        ]);
+    }
+
+    public function deleteSelectedMakeOrders(Request $request)
+    {
+        $deletedOrders = DB::table('collect')
+            ->whereIn('IDOrder', $request->selectedOrders)
+            ->delete();
+
+        return response()->json([
+            'message' => 'Zamówienia zostały usunięte z zbioru',
+            'makeOrders' => $this->waitOrders($request->user)
         ]);
     }
 }

@@ -82,4 +82,6 @@ Route::middleware(['jwt.verify'])->group(function () {
 
     Route::get('getAllOrders', [CollectController::class, 'getAllOrders']);
     Route::post('getOrderProducts', [CollectController::class, 'getOrderProducts']);
+    Route::post('collectOrders', [CollectController::class, 'collectOrders']);
+    Route::post('deleteSelectedMakeOrders', [CollectController::class, 'deleteSelectedMakeOrders']);
 });
