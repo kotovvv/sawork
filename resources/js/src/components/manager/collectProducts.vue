@@ -81,9 +81,53 @@
           ></v-text-field>
         </div>
       </v-col>
+      <v-col v-if="makeOrders && makeOrders.length > 0" cols="12" md="2">
+        <v-select
+          label="Wybrane zamówienia"
+          v-model="selectedMakeOrders"
+          :items="makeOrders"
+          :item-title="
+            (item) => {
+              const order = allOrders.find((el) => el.IDOrder == item);
+              return order ? order.Number : 'Unknown Order';
+            }
+          "
+          :item-value="(item) => item"
+          hide-details="auto"
+          multiple
+          clearable
+        >
+          <template v-slot:prepend-item>
+            <v-btn @click="checkAll" icon="mdi-check-all" class="ma-1"></v-btn>
+            <v-btn
+              @click="deleteSelectedMakeOrders"
+              icon="mdi-delete"
+              class="ma-1"
+            ></v-btn>
+          </template>
+          <template v-slot:selection="{ item, index }">
+            <v-chip v-if="index < 2">
+              <span>{{ item.title }}</span>
+            </v-chip>
+            <span
+              v-if="index === 2"
+              class="text-grey text-caption align-self-center"
+            >
+              (+{{ selectedMakeOrders.length - 2 }} inni)
+            </span>
+          </template>
+        </v-select>
+      </v-col>
     </v-row>
-    <v-row>
-      <v-col v-if="ordersPropucts.length">
+    <v-row v-if="ordersPropucts.length">
+      <v-col>
+        <v-btn @click="collectOrders" v-if="ordersPropucts.length"
+          >Zbierać</v-btn
+        >
+      </v-col>
+    </v-row>
+    <v-row v-if="ordersPropucts.length">
+      <v-col>
         <p>
           Orders ({{
             allOrders.filter((item) => selectedOrders.includes(item.IDOrder))
@@ -104,6 +148,9 @@
       </v-col>
     </v-row>
     <v-row v-if="ordersPropucts.length">
+      <v-col cols="12">
+        <v-btn @click="prepareXLSX()" size="x-large">pobieranie XLSX</v-btn>
+      </v-col>
       <v-col>
         <v-data-table id="ordersPropucts" :items="ordersPropucts">
         </v-data-table>
@@ -115,9 +162,11 @@
 <script>
 import axios from "axios";
 import _ from "lodash";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 export default {
-  name: "FulstorCollectProducts",
+  name: "FulstorcollectOrders",
 
   data() {
     return {
@@ -139,6 +188,8 @@ export default {
       maxM3: 0.2,
       selectedOrders: [],
       endParamas: [],
+      makeOrders: [],
+      selectedMakeOrders: [],
     };
   },
 
@@ -148,8 +199,54 @@ export default {
   },
 
   methods: {
+    deleteSelectedMakeOrders() {
+      const vm = this;
+      axios
+        .post("/api/deleteSelectedMakeOrders", {
+          selectedOrders: vm.selectedMakeOrders,
+        })
+        .then((res) => {
+          if (res.status == 200) {
+            vm.snackbar = true;
+            vm.message = res.data.message;
+            vm.makeOrders = res.data.makeOrders;
+            vm.loading = false;
+          }
+        })
+        .catch((error) => console.log(error));
+    },
+    checkAll() {
+      if (this.selectedMakeOrders.length == this.makeOrders.length) {
+        this.selectedMakeOrders = [];
+      } else {
+        this.selectedMakeOrders = this.makeOrders.map((item) => item);
+      }
+    },
+    collectOrders() {
+      const vm = this;
+      vm.loading = true;
+      axios
+        .post("/api/collectOrders", {
+          selectedOrders: vm.selectedOrders,
+        })
+        .then((res) => {
+          if (res.status == 200) {
+            vm.snackbar = true;
+            vm.message = res.data.message;
+            vm.makeOrders = res.data.makeOrders;
+            vm.loading = false;
+          }
+        })
+        .catch((error) => console.log(error));
+    },
     getOrderProducts() {
       const vm = this;
+      vm.ordersPropucts = [];
+      vm.selectedOrders = [];
+      vm.endParamas = [];
+      if (vm.IDsTransCompany.length == 0 || vm.IDsWarehouses.length == 0) {
+        return;
+      }
       let IDsOrder = vm.ordersTransCompany
         .filter((item) => vm.IDsTransCompany.includes(item.IDTransport))
         .map((item) => item.IDOrder);
@@ -160,6 +257,7 @@ export default {
           maxProducts: vm.maxProducts,
           maxWeight: vm.maxWeight,
           maxM3: vm.maxM3,
+          IDsWarehouses: vm.IDsWarehouses,
         })
         .then((res) => {
           if (res.status == 200) {
@@ -196,7 +294,8 @@ export default {
         .get("/api/getAllOrders")
         .then((res) => {
           if (res.status == 200) {
-            vm.allOrders = res.data;
+            vm.allOrders = res.data.allOrders;
+            vm.makeOrders = res.data.waiteOrders;
             vm.groupOrdersByWarehouse();
             vm.loading = false;
           }
@@ -217,6 +316,17 @@ export default {
     groupOrdersByWarehouse() {
       this.groupsOrdersWarehauses = _.groupBy(this.allOrders, "IDWarehouse");
       this.ordersWarehauses = Object.keys(this.groupsOrdersWarehauses);
+    },
+    prepareXLSX() {
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(this.ordersPropucts);
+      XLSX.utils.book_append_sheet(wb, ws, "");
+
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(
+        new Blob([wbout], { type: "application/octet-stream" }),
+        "collect" + ".xlsx"
+      );
     },
   },
 };
