@@ -13,11 +13,18 @@ class CollectController extends Controller
 
     public function getAllOrders(Request $request)
     {
+        //get collected orders
+        $waiteOrders = $this->waitOrders($request->user);
+
+        //get free orders
         $allOrders = DB::table('dbo.Orders as o')
             ->leftJoin('dbo.RodzajTransportu as rt', 'rt.IDRodzajuTransportu', '=', 'o.IDTransport')
             ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport', 'rt.Nazwa as transport_name')
             ->where('o.IDOrderType', 15)
             ->where('o.IDOrderStatus', 23)
+            ->when($waiteOrders, function ($query, $waiteOrders) {
+                return $query->whereNotIn('o.IDOrder', $waiteOrders);
+            })
             ->whereNotIn('o.IDOrder', function ($query) {
                 $query->select('ID2')
                     ->from('dbo.DocumentRelations')
@@ -25,9 +32,6 @@ class CollectController extends Controller
                     ->where('IDType2', 15);
             })
             ->get();
-
-        $waiteOrders = $this->waitOrders($request->user);
-
         return response()->json(['allOrders' => $allOrders, 'waiteOrders' => $waiteOrders]);
     }
 
@@ -62,28 +66,56 @@ class CollectController extends Controller
         $maxProducts = $request->maxProducts ?? 30;
         $maxWeight = $request->maxWeight ?? 30;
         $maxM3 = $request->maxM3 ?? 0.2;
+        $selectedOrders = collect();
+        $currentProducts = 0;
+        $currentWeight = 0;
+        $currentM3 = 0;
+        foreach ($request->IDsWarehouses as  $warehouse) {
 
-        $sharedItems = DB::table('dbo.OrderLines as ol')
-            ->select('ol.IDItem', DB::raw('SUM(ol.Quantity) as TotalQuantity'), DB::raw('STRING_AGG(ol.IDOrder, \',\') as Orders'))
-            ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
-            ->where('t.Usluga', '!=', 1)
-            ->whereIn('ol.IDOrder', $freeOrders)
-            ->groupBy('ol.IDItem')
-            ->havingRaw('COUNT(DISTINCT ol.IDOrder) > 1')
-            ->orderByDesc('TotalQuantity')
-            ->get();
+            $sharedItems = DB::table('dbo.OrderLines as ol')
+                ->select('ol.IDItem', DB::raw('SUM(ol.Quantity) as TotalQuantity'), DB::raw('STRING_AGG(ol.IDOrder, \',\') as Orders'))
+                ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
+                ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+                ->where('o.IDWarehouse', $warehouse)
+                ->where('t.Usluga', '!=', 1)
+                ->whereIn('ol.IDOrder', $freeOrders)
+                ->groupBy('ol.IDItem')
+                ->havingRaw('COUNT(DISTINCT ol.IDOrder) > 1')
+                ->orderByDesc('TotalQuantity')
+                ->get();
 
-        $orders = [];
-        $sharedItems->each(function ($item) use (&$orders) {
-            $orders = array_merge($orders, explode(',', $item->Orders));
-        });
+            $orders = [];
+            $sharedItems->each(function ($item) use (&$orders) {
+                $orders = array_merge($orders, explode(',', $item->Orders));
+            });
 
-        $orders = array_unique($orders);
+            $orders = array_unique($orders);
 
-        $ordersData = collect();
-        if (count($orders) > 0) {
+            $ordersData = collect();
+            if (count($orders) > 0) {
 
-            $ordersData = DB::table('dbo.OrderLines as ol')
+                $ordersData = DB::table('dbo.OrderLines as ol')
+                    ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
+                    ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+                    ->select(
+                        'o.IDOrder',
+                        'o.IDWarehouse',
+                        'o._OrdersTempDecimal2 as NumberBL',
+                        DB::raw('SUM(ol.Quantity) as TotalQuantity'),
+                        DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
+                        DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
+                    )
+                    ->where('o.IDWarehouse', $warehouse)
+                    ->where('t.Usluga', '!=', 1)
+                    ->whereIn('ol.IDOrder', $orders)
+                    ->groupBy('o.IDOrder', 'o._OrdersTempDecimal2', 'o.IDWarehouse')
+                    ->orderBy(DB::raw("CASE " . implode(" ", array_map(function ($id, $index) {
+                        return "WHEN o.IDOrder = $id THEN $index";
+                    }, $orders, array_keys($orders))) . " END"))
+                    ->get();
+            }
+
+            $nextOrdersData =  DB::table('dbo.OrderLines as ol')
                 ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
                 ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
                 ->select(
@@ -94,68 +126,50 @@ class CollectController extends Controller
                     DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
                     DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
                 )
+                ->where('o.IDWarehouse', $warehouse)
                 ->where('t.Usluga', '!=', 1)
-                ->whereIn('ol.IDOrder', $orders)
+                ->whereIn('ol.IDOrder', array_diff($freeOrders, $orders))
                 ->groupBy('o.IDOrder', 'o._OrdersTempDecimal2', 'o.IDWarehouse')
-                ->orderBy(DB::raw("CASE " . implode(" ", array_map(function ($id, $index) {
-                    return "WHEN o.IDOrder = $id THEN $index";
-                }, $orders, array_keys($orders))) . " END"))
+                ->orderByDesc('TotalQuantity')
                 ->get();
-        }
+            $ordersData = $ordersData->merge($nextOrdersData);
+            $ordersData = $ordersData->sortByDesc('IDWarehouse');
 
-        $nextOrdersData =  DB::table('dbo.OrderLines as ol')
-            ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
-            ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
-            ->select(
-                'o.IDOrder',
-                'o.IDWarehouse',
-                'o._OrdersTempDecimal2 as NumberBL',
-                DB::raw('SUM(ol.Quantity) as TotalQuantity'),
-                DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
-                DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
-            )
-            ->where('t.Usluga', '!=', 1)
-            ->whereIn('ol.IDOrder', array_diff($freeOrders, $orders))
-            ->groupBy('o.IDOrder', 'o._OrdersTempDecimal2', 'o.IDWarehouse')
-            ->orderByDesc('TotalQuantity')
-            ->get();
-        $ordersData = $ordersData->merge($nextOrdersData);
-        $ordersData = $ordersData->sortByDesc('IDWarehouse');
 
-        $selectedOrders = collect();
-        $currentProducts = 0;
-        $currentWeight = 0;
-        $currentM3 = 0;
 
-        $firstOrder = $ordersData->shift();
-        if ($firstOrder) {
-            $selectedOrders->push($firstOrder);
-            $currentProducts = $firstOrder->TotalQuantity;
-            $currentWeight = $firstOrder->TotalWeight;
-            $currentM3 = $firstOrder->TotalM3;
-        }
+            $firstOrder = $ordersData->shift();
+            if ($firstOrder) {
+                $selectedOrders->push($firstOrder);
+                $currentProducts = $firstOrder->TotalQuantity;
+                $currentWeight = $firstOrder->TotalWeight;
+                $currentM3 = $firstOrder->TotalM3;
+            }
 
-        // Going through the remaining orders until we exceed the limits
-        foreach ($ordersData as $order) {
-            if (
-                ($currentProducts + $order->TotalQuantity <= $maxProducts) &&
-                ($currentWeight + $order->TotalWeight <= $maxWeight) &&
-                ($currentM3 + $order->TotalM3 <= $maxM3)
-            ) {
-                $selectedOrders->push($order);
-                $currentProducts += $order->TotalQuantity;
-                $currentWeight += $order->TotalWeight;
-                $currentM3 += $order->TotalM3;
+            // Going through the remaining orders until we exceed the limits
+            foreach ($ordersData as $order) {
+                if (
+                    ($currentProducts + $order->TotalQuantity <= $maxProducts) &&
+                    ($currentWeight + $order->TotalWeight <= $maxWeight) &&
+                    ($currentM3 + $order->TotalM3 <= $maxM3)
+                ) {
+                    $selectedOrders->push($order);
+                    $currentProducts += $order->TotalQuantity;
+                    $currentWeight += $order->TotalWeight;
+                    $currentM3 += $order->TotalM3;
+                }
             }
         }
+
         $selectedOrdersIDs = $selectedOrders->pluck('IDOrder');
         $listProducts = DB::table('dbo.OrderLines as ol')
             ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
             ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
-            ->select('ol.IDItem', 'ol.IDOrder', 'o.IDWarehouse', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 't.Nazwa', 't.KodKreskowy', 't._TowarTempString1 as sku', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
+            ->select('ol.IDItem', DB::raw('CAST(ol.Quantity AS INT) as Quantity'),  'ol.IDOrder', 'o.IDWarehouse', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 't.Nazwa', 't.KodKreskowy', 't._TowarTempString1 as sku', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
             ->where('t.Usluga', '!=', 1)
             ->whereIn('ol.IDOrder', $selectedOrdersIDs)
-            ->orderByDesc('o.IDWarehouse', 'ol.IDOrder', 'ol.IDItem')
+            ->orderByDesc('o.IDWarehouse')
+            // ->orderByDesc('ol.IDItem')
+            ->orderByDesc('ol.IDOrder')
             ->get();
 
         // Selected orders

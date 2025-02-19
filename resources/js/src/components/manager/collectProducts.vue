@@ -148,6 +148,9 @@
       </v-col>
     </v-row>
     <v-row v-if="ordersPropucts.length">
+      <v-col cols="12">
+        <v-btn @click="prepareXLSX()" size="x-large">pobieranie XLSX</v-btn>
+      </v-col>
       <v-col>
         <v-data-table id="ordersPropucts" :items="ordersPropucts">
         </v-data-table>
@@ -159,6 +162,8 @@
 <script>
 import axios from "axios";
 import _ from "lodash";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 export default {
   name: "FulstorcollectOrders",
@@ -236,6 +241,12 @@ export default {
     },
     getOrderProducts() {
       const vm = this;
+      vm.ordersPropucts = [];
+      vm.selectedOrders = [];
+      vm.endParamas = [];
+      if (vm.IDsTransCompany.length == 0 || vm.IDsWarehouses.length == 0) {
+        return;
+      }
       let IDsOrder = vm.ordersTransCompany
         .filter((item) => vm.IDsTransCompany.includes(item.IDTransport))
         .map((item) => item.IDOrder);
@@ -246,6 +257,7 @@ export default {
           maxProducts: vm.maxProducts,
           maxWeight: vm.maxWeight,
           maxM3: vm.maxM3,
+          IDsWarehouses: vm.IDsWarehouses,
         })
         .then((res) => {
           if (res.status == 200) {
@@ -304,6 +316,17 @@ export default {
     groupOrdersByWarehouse() {
       this.groupsOrdersWarehauses = _.groupBy(this.allOrders, "IDWarehouse");
       this.ordersWarehauses = Object.keys(this.groupsOrdersWarehauses);
+    },
+    prepareXLSX() {
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(this.ordersPropucts);
+      XLSX.utils.book_append_sheet(wb, ws, "");
+
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(
+        new Blob([wbout], { type: "application/octet-stream" }),
+        "collect" + ".xlsx"
+      );
     },
   },
 };
