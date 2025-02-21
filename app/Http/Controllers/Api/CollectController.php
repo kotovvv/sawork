@@ -172,6 +172,10 @@ class CollectController extends Controller
             ->orderByDesc('ol.IDOrder')
             ->get();
 
+        $listProducts->each(function ($product) {
+            $product->locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem)->pluck('LocationCode')->implode(',');
+        });
+
         // Selected orders
         return response()->json([
             'listProducts' => $listProducts,
