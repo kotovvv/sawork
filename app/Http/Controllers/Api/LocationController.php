@@ -295,7 +295,7 @@ class LocationController extends Controller
         return $res;
     }
 
-    public function getProductLocations($id)
+    public function getProductLocations($id, $allLocations = 0)
     {
         $IDTowaru = intval($id);
         $date = Carbon::now()->setTime(23, 59, 59)->format('Y/m/d H:i:s');
@@ -310,21 +310,30 @@ class LocationController extends Controller
             ->whereRaw('e.ilosc * r.Operator > 0')
             ->where('r.Data', '>=', DB::raw('BO.MinDate'))
             ->where('e.IDTowaru', $IDTowaru)
+            ->when(!$allLocations, function ($query) {
+                return $query->where('l.IsArchive', 0);
+            })
+            ->where('l.IsArchive',  $allLocations)
             ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
             ->whereRaw('LEN(l.LocationCode) > 0')
-            ->groupBy('l.LocationCode', 't.IDTowaru', 'r.IDRuchuMagazynowego', 'r.Data')
+            ->groupBy('l.LocationCode', 'l.IDWarehouseLocation', 't.IDTowaru', 'r.IDRuchuMagazynowego', 'r.Data')
             ->select(
                 't.IDTowaru',
                 'r.IDRuchuMagazynowego',
                 'r.Data',
                 'l.LocationCode',
+                'l.IDWarehouseLocation',
                 DB::raw('SUM((e.ilosc - ISNULL(e.Wydano, 0)) * r.Operator) AS ilosc')
             )
+            ->orderBy('r.Data', 'asc')
             ->get();
 
         $results = $results->groupBy('LocationCode')->map(function ($row) {
             return [
+                'IDWarehouseLocation' => $row->first()->IDWarehouseLocation,
                 'LocationCode' => $row->first()->LocationCode,
+                'IDRuchuMagazynowego' => $row->first()->IDRuchuMagazynowego,
+                'Data'  => $row->first()->Data,
                 'ilosc' => $row->sum('ilosc')
             ];
         })->values();

@@ -66,15 +66,15 @@
             type="number"
           ></v-text-field>
           <v-text-field
-            label="Max waga"
-            v-model="maxWeight"
+            label="Max m3"
+            v-model="maxM3"
             hide-details="auto"
             max-width="150"
             type="number"
           ></v-text-field>
           <v-text-field
-            label="Max m3"
-            v-model="maxM3"
+            label="Max waga"
+            v-model="maxWeight"
             hide-details="auto"
             max-width="150"
             type="number"

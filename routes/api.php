@@ -65,7 +65,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::get('getWarehouseLocations/{id}', [LocationController::class, 'getWarehouseLocations']);
     Route::post('doRelokacja', [LocationController::class, 'doRelokacja']);
     Route::post('refreshLocations', [LocationController::class, 'refreshLocations']);
-    Route::get('getProductLocations/{id}', [LocationController::class, 'getProductLocations']);
+    Route::get('getProductLocations/{id}/{?getArchive}', [LocationController::class, 'getProductLocations']);
 
     Route::get('/logs/useReport', [LogController::class, 'getUseReportLog']);
     Route::get('/logs/users', [LogController::class, 'getUsersLog']);

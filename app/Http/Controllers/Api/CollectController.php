@@ -136,15 +136,15 @@ class CollectController extends Controller
             $ordersData = $ordersData->sortByDesc('IDWarehouse');
 
 
-
-            $firstOrder = $ordersData->shift();
-            if ($firstOrder) {
-                $selectedOrders->push($firstOrder);
-                $currentProducts = $firstOrder->TotalQuantity;
-                $currentWeight = $firstOrder->TotalWeight;
-                $currentM3 = $firstOrder->TotalM3;
+            if (count($selectedOrders) == 0) {
+                $firstOrder = $ordersData->shift();
+                if ($firstOrder) {
+                    $selectedOrders->push($firstOrder);
+                    $currentProducts = $firstOrder->TotalQuantity;
+                    $currentWeight = $firstOrder->TotalWeight;
+                    $currentM3 = $firstOrder->TotalM3;
+                }
             }
-
             // Going through the remaining orders until we exceed the limits
             foreach ($ordersData as $order) {
                 if (
@@ -169,11 +169,13 @@ class CollectController extends Controller
             ->whereIn('ol.IDOrder', $selectedOrdersIDs)
             ->orderByDesc('o.IDWarehouse')
             // ->orderByDesc('ol.IDItem')
-            ->orderByDesc('ol.IDOrder')
+            ->orderBy('o.Date', 'asc')
             ->get();
 
         $listProducts->each(function ($product) {
-            $product->locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem)->pluck('LocationCode')->implode(',');
+            $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
+            $product->locations = $locations->pluck('LocationCode')->implode(',');
+            $product->locationsData = $locations;
         });
 
         // Selected orders

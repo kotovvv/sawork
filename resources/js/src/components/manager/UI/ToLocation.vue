@@ -251,9 +251,12 @@ export default {
   methods: {
     getProductLocations() {
       const vm = this;
+      const allLocations = 1;
       vm.productLocations = [];
       axios
-        .get("/api/getProductLocations/" + vm.product.IDTowaru)
+        .get(
+          "/api/getProductLocations/" + vm.product.IDTowaru + "/" + allLocations
+        )
         .then((res) => {
           if (res.status == 200) {
             vm.productLocations = res.data;
