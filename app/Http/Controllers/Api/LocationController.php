@@ -159,41 +159,55 @@ class LocationController extends Controller
 
     public function doRelokacja(Request $request)
     {
+        $resnonse = [];
         $data = $request->all();
-        $response = [];
         $IDTowaru = $data['IDTowaru'];
         $qty = $data['qty'];
         $fromLocation = $data['fromLocation'];
         $toLocation = $data['toLocation'];
         $idWarehause = $data['selectedWarehause'];
         $createdDoc = $data['createdDoc'];
+        if (isset($data['Uwagi'])) {
+            $Uwagi = $data['Uwagi'];
+        } else {
+            $Uwagi = '';
+        }
+        if (isset($data['IDUzytkownika'])) {
+            $IDUzytkownika = $data['IDUzytkownika'];
+        } else {
+            $IDUzytkownika = 1;
+        }
         $pz = [];
 
         $symbol = DB::table('Magazyn')->where('IDMagazynu', $idWarehause)->value('Symbol');
-
         // 1. chech if doc cteated
-        if (!$createdDoc) {
+        if ($createdDoc == null) {
 
-            // $ndoc = DB::selectOne("SELECT TOP 1 NrDokumentu n FROM dbo.[RuchMagazynowy] WHERE [IDRodzajuRuchuMagazynowego] = '27' AND IDMagazynu = " . $selectedWarehause['IDMagazynu'] . " AND year( Utworzono ) = " . date('Y') . " ORDER BY Data DESC");
-            // preg_match('/^ZL(.*)\/.*/', $ndoc->n, $a_ndoc);
-            // $NrDokumentu = 'ZL' . (int) $a_ndoc[1] + 1 . '/' . date('y') . ' - ' . $selectedWarehause["Symbol"];
+
             $NrDokumentu = $this->lastNumber('ZL', $symbol);
+
             $creat_zl = [];
 
             $creat_zl['IDRodzajuRuchuMagazynowego'] = 27;
             $creat_zl['Data'] = Date('m-d-Y H:i:s');
             $creat_zl['IDMagazynu'] = $idWarehause;
             $creat_zl['NrDokumentu'] = $NrDokumentu;
+            $creat_zl['Uwagi'] = $Uwagi;
             $creat_zl['Operator'] = 1;
             $creat_zl['IDCompany'] = 1;
-            $creat_zl['IDUzytkownika'] = 1;
+            $creat_zl['IDUzytkownika'] = $IDUzytkownika;
             // $creat_zl['WartoscDokumentu'] = 0; // - в строке в которой отнимаем указываем сумму товаров
 
             // create doc
+            DB::table('dbo.RuchMagazynowy')->insertGetId($creat_zl);
+            $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->value('IDRuchuMagazynowego');
+            DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $resnonse['createdDoc']['idmin'])->update(['Uwagi' => $resnonse['createdDoc']['idmin'] . '||']);
+
             DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
-            $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
-            DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
-            $resnonse['createdDoc']['idpls'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
+            $resnonse['createdDoc']['idpls'] =
+                DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->value('IDRuchuMagazynowego');
+            DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $resnonse['createdDoc']['idpls'])->update(['Uwagi' => $resnonse['createdDoc']['idpls'] . '||']);
+
             DB::table('PrzesunieciaMM')->insert(['IDRuchuMagazynowegoZ' => $resnonse['createdDoc']['idmin'], 'IDRuchuMagazynowegoDo' => $resnonse['createdDoc']['idpls']]);
         } else {
             $resnonse['createdDoc'] = $createdDoc;
@@ -207,13 +221,14 @@ class LocationController extends Controller
 
         if (empty($pz)) {
             $this->errorLocation($request->user, 'Document ' . $createdDoc . ' No towar ID:' . $IDTowaru . ' qty=' . $qty . ' found from location: ' . $fromLocation['LocationCode'] . ' to location: ' . $toLocation['LocationCode'], $request->ip());
-            return response()->json(['message' => 'Uwaga! Uwaga! Uwaga! Nie znaleziono identyfikatora towaru ID:' . $IDTowaru . '  z lokalizacji: ' . $fromLocation['LocationCode'] . ' do lokalizacji:' . $toLocation['LocationCode'] . ' qty' . $qty], 400);
+            return \response()->json(['message' => 'Uwaga! Uwaga! Uwaga! Nie znaleziono identyfikatora towaru ID:' . $IDTowaru . '  z lokalizacji: ' . $fromLocation['LocationCode'] . ' do lokalizacji:' . $toLocation['LocationCode'] . ' qty' . $qty], 400);
         }
 
         foreach ($pz as $key => $value) {
             $CenaJednostkowa = DB::table('ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $pz[$key]->IDElementuRuchuMagazynowego)->take(1)->value('CenaJednostkowa');;
             $debt = $k > $pz[$key]->qty ?  $pz[$key]->qty : $k;
             $el['Ilosc'] = -$debt;
+            $el['Uwagi'] = $resnonse['createdDoc']['idmin'] . '||' . $Uwagi;
             $el['IDRodzic'] = null;
             $el['IDWarehouseLocation'] = null;
             $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idmin'];
@@ -221,6 +236,7 @@ class LocationController extends Controller
             DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
             $ndocidmin = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
             $el['Ilosc'] = $debt;
+            $el['Uwagi'] = $resnonse['createdDoc']['idpls'] . '||' . $Uwagi;
             $el['IDRodzic'] = $ndocidmin;
             $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idpls'];
             $el['IDWarehouseLocation'] = $toLocation['IDWarehouseLocation'];

@@ -15,15 +15,15 @@ class CollectController extends Controller
     {
         //get collected orders
         $waiteOrders = $this->waitOrders($request->user);
-
+        $IDsWaiteOrders = $waiteOrders->pluck('IDOrder');
         //get free orders
         $allOrders = DB::table('dbo.Orders as o')
             ->leftJoin('dbo.RodzajTransportu as rt', 'rt.IDRodzajuTransportu', '=', 'o.IDTransport')
-            ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport', 'rt.Nazwa as transport_name')
+            ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport', 'rt.Nazwa as transport_name')
             ->where('o.IDOrderType', 15)
             ->where('o.IDOrderStatus', 23)
-            ->when($waiteOrders, function ($query, $waiteOrders) {
-                return $query->whereNotIn('o.IDOrder', $waiteOrders);
+            ->when($IDsWaiteOrders, function ($query, $IDsWaiteOrders) {
+                return $query->whereNotIn('o.IDOrder', $IDsWaiteOrders);
             })
             ->whereNotIn('o.IDOrder', function ($query) {
                 $query->select('ID2')
@@ -37,10 +37,14 @@ class CollectController extends Controller
 
     private function waitOrders($user)
     {
-        $waiteOrders = DB::table('collect')->where([
-            'IDUzytkownika' => $user->IDUzytkownika,
-            'status' => 0,
-        ])->pluck('IDOrder');
+        $waiteOrders = DB::table('collect')
+            ->leftJoin('Orders as o', 'o.IDOrder', '=', 'collect.IDOrder')
+            ->where([
+                'IDUzytkownika' => $user->IDUzytkownika,
+                'status' => 0,
+            ])
+            ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport')
+            ->get();
 
         return $waiteOrders;
     }
@@ -100,7 +104,7 @@ class CollectController extends Controller
                     ->select(
                         'o.IDOrder',
                         'o.IDWarehouse',
-                        'o._OrdersTempDecimal2 as NumberBL',
+                        DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'),
                         DB::raw('SUM(ol.Quantity) as TotalQuantity'),
                         DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
                         DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
@@ -121,7 +125,7 @@ class CollectController extends Controller
                 ->select(
                     'o.IDOrder',
                     'o.IDWarehouse',
-                    'o._OrdersTempDecimal2 as NumberBL',
+                    DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'),
                     DB::raw('SUM(ol.Quantity) as TotalQuantity'),
                     DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
                     DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
@@ -161,16 +165,7 @@ class CollectController extends Controller
         }
 
         $selectedOrdersIDs = $selectedOrders->pluck('IDOrder');
-        $listProducts = DB::table('dbo.OrderLines as ol')
-            ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
-            ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
-            ->select('ol.IDItem', DB::raw('CAST(ol.Quantity AS INT) as Quantity'),  'ol.IDOrder', 'o.IDWarehouse', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 't.Nazwa', 't.KodKreskowy', 't._TowarTempString1 as sku', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
-            ->where('t.Usluga', '!=', 1)
-            ->whereIn('ol.IDOrder', $selectedOrdersIDs)
-            ->orderByDesc('o.IDWarehouse')
-            // ->orderByDesc('ol.IDItem')
-            ->orderBy('o.Date', 'asc')
-            ->get();
+        $listProducts = $this->getListProducts($selectedOrdersIDs);
 
         $listProducts->each(function ($product) {
             $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
@@ -186,6 +181,20 @@ class CollectController extends Controller
             'endParamas' => ['maxProducts' => $currentProducts, 'maxWeight' =>  $currentWeight, 'maxM3' => $currentM3],
 
         ]);
+    }
+
+    private function getListProducts($idsOrder)
+    {
+        return DB::table('dbo.OrderLines as ol')
+            ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
+            ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+            ->select('ol.IDItem', DB::raw('CAST(ol.Quantity AS INT) as Quantity'),  'ol.IDOrder', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 't.Nazwa', 't.KodKreskowy', 't._TowarTempString1 as sku', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
+            ->where('t.Usluga', '!=', 1)
+            ->whereIn('ol.IDOrder', $idsOrder)
+            ->orderByDesc('o.IDWarehouse')
+            // ->orderByDesc('ol.IDItem')
+            ->orderBy('o.Date', 'asc')
+            ->get();
     }
 
     public function collectOrders(Request $request)
@@ -231,6 +240,155 @@ class CollectController extends Controller
         return response()->json([
             'message' => 'Zamówienia zostały usunięte z zbioru',
             'makeOrders' => $this->waitOrders($request->user)
+        ]);
+    }
+
+    public function getUserLocation($IDMagazynu, $IDUzytkownika)
+    {
+        $IDWarehouseLocation = DB::table('WarehouseLocations')
+            ->where('IDMagazynu', $IDMagazynu)
+            ->where('LocationCode', 'User' . $IDUzytkownika)
+            ->value('IDWarehouseLocation');
+        if (!$IDWarehouseLocation) {
+            DB::table('WarehouseLocations')->insert([
+                'IDMagazynu' => $IDMagazynu,
+                'LocationCode' => 'User' . $IDUzytkownika,
+            ]);
+            $IDWarehouseLocation = DB::table('WarehouseLocations')
+                ->where('IDMagazynu', $IDMagazynu)
+                ->where('LocationCode', 'User' . $IDUzytkownika)
+                ->value('IDWarehouseLocation');
+        }
+        return $IDWarehouseLocation;
+    }
+
+    private function changeProductsLocation($product, $toLocation, $IDUzytkownika, $createdDoc = null, $Uwagi = '')
+    {
+
+        $request = new Request([
+            'IDTowaru' => $product['IDItem'],
+            'qty' => $product['qty'],
+            'fromLocation' => $product['fromLocaton'],
+            'toLocation' => $toLocation,
+            'selectedWarehause' => $product['IDMagazynu'],
+            'createdDoc' => $createdDoc,
+            'Uwagi' => $Uwagi,
+            'IDUzytkownika' => $IDUzytkownika,
+        ]);
+        $response = app('App\Http\Controllers\Api\LocationController')->doRelokacja($request);
+
+        if (isset($response['createdDoc'])) {
+            return $response['createdDoc'];
+        } else {
+            return $response;
+        }
+    }
+
+    public function prepareDoc(Request $request)
+    {
+        $messages = [];
+        $productsERROR = [];
+        $listProductsOK = [];
+        $orderERROR = [];
+        $IDsOrderERROR = [];
+        $listOrders = [];
+        $createdDoc = [];
+        $Uwagi = 'User' . $request->user->IDUzytkownika . ' ' . date('Y-m-d H:i:s');
+        // Пока склад
+        foreach ($request->IDsWarehouses as  $IDMagazynu) {
+            $createdDoc[$IDMagazynu] = null;
+            // Локация пользователя
+            $toLocation['IDWarehouseLocation'] = $this->getUserLocation($IDMagazynu, $request->user->IDUzytkownika);
+            // Пока Заказы по складу
+            foreach ($request->orders as $order) {
+                // есл заказ не этого склада берём следующий
+                if ($order['IDWarehouse'] != $IDMagazynu) {
+                    continue;
+                }
+                $productsOK = [];
+                $orderOK = true;
+                $products = $this->getListProducts([$order['IDOrder']]);
+                // Пока Товар
+                foreach ($products as $product) {
+                    $needqty = $product->Quantity;
+                    // Локации товара
+                    $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
+
+                    if ($locations) {
+                        foreach ($locations as $location) {
+                            //с каждой локации забираем нужное количество товара
+                            $location_ilosc = $location['ilosc'];
+                            if ($needqty >= $location_ilosc) {
+                                $needqty = $needqty - $location_ilosc;
+                                // код локации товара
+                                // номер заказа в БЛ
+                                $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $location_ilosc, 'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode']];
+                            } else {
+                                $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $needqty, 'fromLocaton' =>  ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode']];
+                                $needqty = 0;
+                            }
+                            if ($needqty == 0) {
+                                break;
+                            }
+                        }
+                    }
+                    if ($needqty > 0) {
+                        //  "оповестить о нехватке товара ,
+                        // занести штрих код товара в уваги документа"
+                        $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'not enough products'];
+                        $orderERROR[] = $order;
+                        $IDsOrderERROR[] = $order['IDOrder'];
+                        break;
+                    }
+                } //product
+                //если имеются все товары заказа
+                if (!in_array($order['IDOrder'], $IDsOrderERROR)) {
+                    // товары заказа можно перемещать в локацию пользователя
+                    foreach ($productsOK as $product) {
+                        $res =  $this->changeProductsLocation($product, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
+                        if (isset($res['idmin'])) {
+                            $listProductsOK[] = $product;
+                            $createdDoc[$IDMagazynu] = $res;
+                        } else {
+                            $orderOK = false;
+                            $orderERROR[] = $order;
+                            $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product['IDItem'], 'qty' => $product['Quantity'], 'Uwagi' => $res->message];
+                            $messages[] = $res->message;
+                            break;
+                        }
+                    }
+                }
+                if ($orderOK) {
+                    $listOrders[] = $order;
+                    $values = array_merge(array_column($createdDoc[$IDMagazynu], 'idmin'), array_column($createdDoc[$IDMagazynu], 'idpls'));
+                    $comma_separated_values = implode(',', $values);
+                    DB::table('collect')->insert([
+                        'IDUzytkownika' => $request->user->IDUzytkownika,
+                        'Date' => Carbon::now(),
+                        'IDOrder' => $order['IDOrder'],
+                        'status' => 0,
+                        'created_doc' => $comma_separated_values,
+                    ]);
+                    // Изменить статус заказа на "Ожидает сборки"
+                    // DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                    //     'IDOrderStatus' => 42,
+                    // ]);
+                } else {
+                    // Изменить статус заказа на "Не хватает товаров"
+                    // предусмотреть возможность отмены смены локаций
+                    // DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                    //     'IDOrderStatus' => 37,
+                    // ]);
+                }
+            } //order
+        } //warehouse
+        return response()->json([
+            'messages' => $messages,
+            'createdDoc' => $createdDoc,
+            'productsERROR' => $productsERROR,
+            'orderERROR' => $orderERROR,
+            'listProductsOK' => $listProductsOK,
+            'listOrdersBL' => $listOrders,
         ]);
     }
 }

@@ -53,7 +53,10 @@
           multiple
           clearable
           append-icon="mdi-refresh"
-          @click:append="getOrderProducts"
+          @click:append="
+            getOrderProducts();
+            getAllOrders();
+          "
         ></v-select>
       </v-col>
       <v-col v-if="IDsWarehouses.length">
@@ -86,13 +89,8 @@
           label="Wybrane zamówienia"
           v-model="selectedMakeOrders"
           :items="makeOrders"
-          :item-title="
-            (item) => {
-              const order = allOrders.find((el) => el.IDOrder == item);
-              return order ? order.Number : 'Unknown Order';
-            }
-          "
-          :item-value="(item) => item"
+          item-title="NumberBL"
+          item-value="IDOrder"
           hide-details="auto"
           multiple
           clearable
@@ -119,11 +117,81 @@
         </v-select>
       </v-col>
     </v-row>
+    <!-- ERROR -->
+    <v-row v-if="messages.length">
+      <v-col class="red">
+        <h4>ERROR</h4>
+        <v-table>
+          <thead>
+            <tr>
+              <th>Message</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(item, ix) in messages" :key="ix">
+              <td>{{ item }}</td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-col>
+    </v-row>
+
+    <v-row v-if="productsERROR.length">
+      <v-col class="red">
+        <h4>ERROR</h4>
+        <v-table>
+          <thead>
+            <tr>
+              <th>Number</th>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Weight</th>
+              <th>Volume</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in productsERROR" :key="item.IDProduct">
+              <td>{{ item.Number }}</td>
+              <td>{{ item.Product }}</td>
+              <td>{{ item.Quantity }}</td>
+              <td>{{ item.Weight }}</td>
+              <td>{{ item.Volume }}</td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-col>
+    </v-row>
+    <v-row v-if="orderERROR.length">
+      <v-col class="red">
+        <h4>ERROR</h4>
+        <v-table>
+          <thead>
+            <tr>
+              <th>IDMagazynu</th>
+              <th>IDOrder</th>
+              <th>NumberBL</th>
+              <th>IDItem</th>
+              <th>qty</th>
+              <th>Uwagi</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in orderERROR" :key="item.IDProduct">
+              <td>{{ item.IDMagazynu }}</td>
+              <td>{{ item.IDOrder }}</td>
+              <td>{{ item.NumberBL }}</td>
+              <td>{{ item.IDItem }}</td>
+              <td>{{ item.qty }}</td>
+              <td>{{ item.Uwagi }}</td>
+            </tr>
+          </tbody>
+        </v-table>
+      </v-col>
+    </v-row>
+
     <v-row v-if="ordersPropucts.length">
       <v-col>
-        <v-btn @click="collectOrders" v-if="ordersPropucts.length"
-          >Zbierać</v-btn
-        >
+        <v-btn @click="prepareDoc" v-if="ordersPropucts.length">Zbierać</v-btn>
       </v-col>
     </v-row>
     <v-row v-if="ordersPropucts.length">
@@ -190,6 +258,10 @@ export default {
       endParamas: [],
       makeOrders: [],
       selectedMakeOrders: [],
+      messages: [],
+      createdDoc: [],
+      productsERROR: [],
+      orderERROR: [],
     };
   },
 
@@ -219,22 +291,34 @@ export default {
       if (this.selectedMakeOrders.length == this.makeOrders.length) {
         this.selectedMakeOrders = [];
       } else {
-        this.selectedMakeOrders = this.makeOrders.map((item) => item);
+        this.selectedMakeOrders = this.makeOrders.map((item) => item.IDOrder);
       }
     },
-    collectOrders() {
+    prepareDoc() {
       const vm = this;
       vm.loading = true;
       axios
-        .post("/api/collectOrders", {
-          selectedOrders: vm.selectedOrders,
+        .post("/api/prepareDoc", {
+          IDsWarehouses: vm.IDsWarehouses,
+          orders: vm.ordersTransCompany.filter((o) => {
+            return vm.selectedOrders.includes(o.IDOrder);
+          }),
         })
         .then((res) => {
           if (res.status == 200) {
             vm.snackbar = true;
-            vm.message = res.data.message;
-            vm.makeOrders = res.data.makeOrders;
+            vm.message = "Dokumenty przygotowane";
+
+            vm.makeOrders = res.data.listOrders;
+            vm.ordersPropucts = res.data.listProductsOK;
             vm.loading = false;
+            vm.messages = res.data.messages;
+            vm.createdDoc = res.data.createdDoc;
+            vm.productsERROR = res.data.productsERROR;
+            vm.orderERROR = res.data.orderERROR;
+            vm.getAllOrders();
+            vm.selectedMakeOrders = [];
+            vm.setTransComany();
           }
         })
         .catch((error) => console.log(error));
