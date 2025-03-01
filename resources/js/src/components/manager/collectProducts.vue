@@ -54,8 +54,9 @@
           clearable
           append-icon="mdi-refresh"
           @click:append="
-            getOrderProducts();
             getAllOrders();
+            getOrderProducts();
+            clear();
           "
         ></v-select>
       </v-col>
@@ -271,6 +272,13 @@ export default {
   },
 
   methods: {
+    clear() {
+      this.selectedOrders = [];
+      this.ordersPropucts = [];
+      this.messages = [];
+      this.orderERROR = [];
+      this.productsERROR = [];
+    },
     deleteSelectedMakeOrders() {
       const vm = this;
       axios

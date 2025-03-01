@@ -360,14 +360,15 @@ class CollectController extends Controller
                 }
                 if ($orderOK) {
                     $listOrders[] = $order;
-                    $values = array_merge(array_column($createdDoc[$IDMagazynu], 'idmin'), array_column($createdDoc[$IDMagazynu], 'idpls'));
-                    $comma_separated_values = implode(',', $values);
+
+                    $values = $createdDoc[$IDMagazynu]['idmin'] . ',' . $createdDoc[$IDMagazynu]['idpls'];
+
                     DB::table('collect')->insert([
                         'IDUzytkownika' => $request->user->IDUzytkownika,
                         'Date' => Carbon::now(),
                         'IDOrder' => $order['IDOrder'],
                         'status' => 0,
-                        'created_doc' => $comma_separated_values,
+                        'created_doc' => $values,
                     ]);
                     // Изменить статус заказа на "Ожидает сборки"
                     // DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
