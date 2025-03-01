@@ -56,6 +56,7 @@
           @click:append="
             getAllOrders();
             getOrderProducts();
+            setTransComany();
             clear();
           "
         ></v-select>
@@ -278,6 +279,7 @@ export default {
       this.messages = [];
       this.orderERROR = [];
       this.productsERROR = [];
+      this.IDsTransCompany = [];
     },
     deleteSelectedMakeOrders() {
       const vm = this;
