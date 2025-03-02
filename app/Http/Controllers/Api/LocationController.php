@@ -243,13 +243,15 @@ class LocationController extends Controller
             DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
             $ndocidpls = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
 
+            $resnonse['IDsElementuRuchuMagazynowego']['min'] = $ndocidmin;
+            $resnonse['IDsElementuRuchuMagazynowego']['pls'] = $ndocidpls;
             DB::statement('EXEC dbo.UtworzZaleznoscPZWZ @IDElementuPZ = ?, @IDElementuWZ = ?, @Ilosc = ?', [
                 $pz[$key]->IDElementuRuchuMagazynowego,
                 $ndocidmin,
                 $debt
             ]);
 
-            // DB::table('ZaleznosciPZWZ')->insert(['IDElementuPZ'=> $pz[$key]->IDElementuRuchuMagazynowego, 'IDElementuWZ'=> $ndocidmin, 'Ilosc'=> $debt]);
+            DB::table('ZaleznosciPZWZ')->insert(['IDElementuPZ' => $pz[$key]->IDElementuRuchuMagazynowego, 'IDElementuWZ' => $ndocidmin, 'Ilosc' => $debt]);
             $k -=  $pz[$key]->qty;
             if ($k <= 0) break;
         }

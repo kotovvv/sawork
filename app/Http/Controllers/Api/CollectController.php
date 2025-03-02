@@ -278,7 +278,7 @@ class CollectController extends Controller
         $response = app('App\Http\Controllers\Api\LocationController')->doRelokacja($request);
 
         if (isset($response['createdDoc'])) {
-            return $response['createdDoc'];
+            return $response;
         } else {
             return $response;
         }
@@ -342,13 +342,16 @@ class CollectController extends Controller
                     }
                 } //product
                 //если имеются все товары заказа
+                $IDsElementuRuchuMagazynowego = [];
                 if (!in_array($order['IDOrder'], $IDsOrderERROR)) {
                     // товары заказа можно перемещать в локацию пользователя
                     foreach ($productsOK as $product) {
                         $res =  $this->changeProductsLocation($product, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
-                        if (isset($res['idmin'])) {
+                        if (isset($res['createdDoc']['idmin'])) {
                             $listProductsOK[] = $product;
-                            $createdDoc[$IDMagazynu] = $res;
+                            $createdDoc[$IDMagazynu] = $res['createdDoc'];
+                            $IDsElementuRuchuMagazynowego[$product['IDItem']]['min'] = $res['IDsElementuRuchuMagazynowego']['min'];
+                            $IDsElementuRuchuMagazynowego[$product['IDItem']]['pls'] = $res['IDsElementuRuchuMagazynowego']['pls'];
                         } else {
                             $orderOK = false;
                             $orderERROR[] = $order;
@@ -361,14 +364,13 @@ class CollectController extends Controller
                 if ($orderOK) {
                     $listOrders[] = $order;
 
-                    $values = $createdDoc[$IDMagazynu]['idmin'] . ',' . $createdDoc[$IDMagazynu]['idpls'];
-
                     DB::table('collect')->insert([
                         'IDUzytkownika' => $request->user->IDUzytkownika,
                         'Date' => Carbon::now(),
                         'IDOrder' => $order['IDOrder'],
                         'status' => 0,
-                        'created_doc' => $values,
+                        'created_doc' => json_encode($createdDoc[$IDMagazynu]),
+                        'IDsElementuRuchuMagazynowego' => json_encode($IDsElementuRuchuMagazynowego),
                     ]);
                     // Изменить статус заказа на "Ожидает сборки"
                     // DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
@@ -391,5 +393,280 @@ class CollectController extends Controller
             'listProductsOK' => $listProductsOK,
             'listOrdersBL' => $listOrders,
         ]);
+    }
+
+    public function generatePZfromOrder(Request $request)
+    {
+        $DocumentType = $request->DocumentType;
+        $UserID = $request->UserID;
+        $AmountFlag = $request->AmountFlag;
+        $ElementsGUID = $request->ElementsGUID;
+        $OrderID = $request->OrderID;
+
+        try {
+            DB::beginTransaction();
+
+            $order = DB::table('dbo.Orders')->where('IDOrder', $OrderID)->first();
+            if (!$order) {
+                throw new \Exception('SQL proc - GeneratePZfromOrder: no source document.');
+            }
+
+            $OrderType = $order->IDOrderType;
+            if (DB::table('dbo.GetBaseDocumentTypeID')->where('IDOrderType', $OrderType)->value('IDBaseDocumentType') != 15) {
+                throw new \Exception('SQL proc - [GenerateWZfromOrder]: wrong document type.');
+            }
+            if (DB::table('dbo.GetBaseDocumentTypeID')->where('IDOrderType', $DocumentType)->value('IDBaseDocumentType') != 2) {
+                throw new \Exception('SQL proc - [GenerateWZfromOrder]: wrong dst document type.');
+            }
+
+            $DocDate = Carbon::now();
+            $InvAlgGross = DB::table('Ustawienia')->where('Nazwa', 'InvoiceAlgorithm')->value('Wartosc') == 'Brutto' ? 1 : 0;
+            $PricesModeGross = DB::table('Ustawienia')->where('Nazwa', 'PricesMode')->value('Wartosc') == 'Brutto' ? 1 : 0;
+
+            $WarehouseID = $order->IDWarehouse;
+            $AccountID = $order->IDAccount;
+            $CostID = $order->IDCostType;
+            $TransportID = $order->IDTransport;
+            $TransportNr = $order->TransportNumber;
+            $Remarks = $order->Remarks;
+            $PaymentTypeID = $order->IDPaymentType;
+            $IDCompany = $order->IDCompany;
+            $CurrencyID = $order->IDCurrency;
+            $CurrencyRateID = $order->IDCurrencyRate;
+
+            if (DB::table('Ustawienia')->where('Nazwa', 'UseCurrenciesOnPZ')->value('Wartosc') != 1) {
+                $CurrencyID = null;
+                $CurrencyRateID = null;
+            }
+
+            $DocumentID = $request->DocumentID;
+            if (!DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $DocumentID)->exists()) {
+                $DocumentID = DB::table('dbo.RuchMagazynowy')->insertGetId([
+                    'Data' => $DocDate,
+                    'Uwagi' => $Remarks,
+                    'IDRodzajuRuchuMagazynowego' => $DocumentType,
+                    'IDMagazynu' => $WarehouseID,
+                    'NrDokumentu' => $request->DocumentNumber,
+                    'IDKontrahenta' => $AccountID,
+                    'IDUzytkownika' => $UserID,
+                    'IDGrupyKosztow' => $CostID,
+                    'IDRodzajuTransportu' => $TransportID,
+                    'TransportNumber' => $TransportNr,
+                    'IDPaymentType' => $PaymentTypeID,
+                    'IDCompany' => $IDCompany,
+                    'IDCurrency' => $CurrencyID,
+                    'IDCurrencyRate' => $CurrencyRateID,
+                ]);
+            } else {
+                $existingDocument = DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $DocumentID)->first();
+                if ($existingDocument->IDRodzajuRuchuMagazynowego != $DocumentType) {
+                    throw new \Exception('SQL proc - [GenerateWZfromOrder]: wrong existing dst document type.');
+                }
+                if ($existingDocument->IDMagazynu != $WarehouseID) {
+                    throw new \Exception('SQL proc - [GenerateWZfromOrder]: wrong existing dst document warehouse.');
+                }
+            }
+
+            $orderLines = DB::table('dbo.OrderLines as ol')
+                ->leftJoin('dbo.VatRates as v', 'v.IDVatRate', '=', 'ol.IDVat')
+                ->where('IDOrder', $OrderID)
+                ->when($ElementsGUID, function ($query, $ElementsGUID) {
+                    return $query->whereIn('IDOrderLine', function ($subQuery) use ($ElementsGUID) {
+                        $subQuery->select('IntParam')->from('dbo.Parameters')->where('GUID', $ElementsGUID);
+                    });
+                })
+                ->orderByRaw('COALESCE([DisplayIndex], [IDOrderLine])')
+                ->get();
+
+            foreach ($orderLines as $line) {
+                $IDItem = $line->IDItem;
+                $Amount = $line->Quantity;
+                $PriceNet = $line->PriceNet;
+                $PriceGross = $line->PriceGross;
+                $IDVat = $line->IDVat;
+                $Remarks = $line->Remarks;
+                $Discount = $line->Discount;
+                $FCPriceGross = $line->ForeignCurrencyPriceGross;
+                $FCPriceNet = $line->ForeignCurrencyPriceNet;
+
+                if ($IDItem === null) {
+                    continue;
+                }
+
+                $OnStock = DB::table('stanywdniu')->where('IDTowaru', $IDItem)->value('ilosc') ?? 0;
+
+                $VatRate = DB::table('dbo.VatRates')->where('IDVatRate', $IDVat)->value('Rate');
+                $CurrencyRateBaseToForeign = 1;
+                if ($FCPriceGross > 0 || $FCPriceNet > 0) {
+                    $CurrencyRateBaseToForeign = DB::table('dbo.Orders')->where('IDOrder', $OrderID)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 0)'));
+                }
+
+                if (DB::table('Ustawienia')->where('Nazwa', 'UseDiscounts')->value('Wartosc') == 'Nie') {
+                    $Discount = 0;
+                }
+                if ($FCPriceGross > 0 || $FCPriceNet > 0) {
+                    $Discount = $Discount * DB::table('dbo.Orders')->where('IDOrder', $OrderID)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 1)'));
+                }
+
+                if ($InvAlgGross != $PricesModeGross && $VatRate !== null) {
+                    if ($InvAlgGross == 1 && $PricesModeGross == 0) {
+                        $PriceNet = $PriceGross / (1 + $VatRate / 100) + $Discount;
+                    } else {
+                        $PriceGross = $PriceNet * (1 + $VatRate / 100) - $Discount;
+                    }
+                }
+
+                if (DB::table('Ustawienia')->where('Nazwa', 'PricesMode')->value('Wartosc') == 'Brutto') {
+                    if ($PriceGross != 0) {
+                        $Price = $PriceGross;
+                    } else {
+                        $Price = ($PriceNet - $Discount) * (1 + $VatRate / 100);
+                    }
+                } else {
+                    if ($PriceNet != 0) {
+                        $Price = ($PriceNet - $Discount);
+                    } else {
+                        $Price = $PriceGross / (1 + $VatRate / 100);
+                    }
+                }
+
+                if (($FCPriceGross > 0 || $FCPriceNet > 0) && DB::table('Ustawienia')->where('Nazwa', 'UseCurrenciesOnPZ')->value('Wartosc') == 1) {
+                    $FCPrice = $Price * DB::table('dbo.Orders')->where('IDOrder', $OrderID)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 0)'));
+                }
+
+                if ($AmountFlag == 1) {
+                    $ElementID = DB::table('dbo.ElementRuchuMagazynowego')->insertGetId([
+                        'Ilosc' => 0,
+                        'Uwagi' => $Remarks,
+                        'CenaJednostkowa' => $Price,
+                        'IDRuchuMagazynowego' => $DocumentID,
+                        'IDTowaru' => $IDItem,
+                        'Uzytkownik' => $UserID,
+                        'IDOrderLine' => $line->IDOrderLine,
+                        'CurrencyPrice' => $FCPrice ?? null,
+                    ]);
+                } else {
+                    $AmountRealized = DB::table('dbo.OrderLines')->where('IDOrderLine', $line->IDOrderLine)->value(DB::raw('dbo.OrderLineRealization(IDOrderLine)'));
+                    $Amount -= $AmountRealized;
+
+                    if (($OnStock < $Amount && DB::table('Towar')->where('IDTowaru', $IDItem)->value('Usluga') == 0) || $Amount <= 0) {
+                        if ($AmountFlag == 0) {
+                            continue;
+                        } else {
+                            $Amount = $OnStock;
+                        }
+                    }
+
+                    if (DB::table('Ustawienia')->where('Nazwa', 'SeparateLinesOnWZ')->value('Wartosc') == 'Tak' && DB::table('Towar')->where('IDTowaru', $IDItem)->value('Usluga') != 1) {
+                        $IleDoRozdania = $Amount;
+                        $Method = DB::table('Ustawienia')->where('Nazwa', 'MetodaLiczeniaWartosci')->value('Wartosc');
+
+                        $kursor = DB::table('StanySzczegolowo')->where('IDtowaru', $IDItem)->orderByRaw("
+                        CASE WHEN '$Method' = 'LIFO' THEN Datadokumentu END DESC,
+                        CASE WHEN '$Method' = 'FIFO' THEN Datadokumentu END ASC,
+                        CASE WHEN '$Method' = 'LOCPRIO' THEN LocationPriority END ASC,
+                        CASE WHEN '$Method' = 'EXPIRE' THEN ISNULL(DataWaznosci, 2345678) END ASC
+                    ")->get();
+
+                        foreach ($kursor as $row) {
+                            $PZElementID = $row->IDElementuPZ;
+                            $IleZostalo = $row->Ilosc;
+                            $Cena = $row->CenaJednostkowa;
+
+                            $RoznicaElementow = $IleDoRozdania - $IleZostalo;
+
+                            if ($RoznicaElementow > 0) {
+                                $ElementID = DB::table('dbo.ElementRuchuMagazynowego')->insertGetId([
+                                    'Ilosc' => $IleZostalo,
+                                    'Uwagi' => $Remarks,
+                                    'CenaJednostkowa' => $Price,
+                                    'IDRuchuMagazynowego' => $DocumentID,
+                                    'IDTowaru' => $IDItem,
+                                    'Uzytkownik' => $UserID,
+                                    'IDOrderLine' => $line->IDOrderLine,
+                                    'CurrencyPrice' => $FCPrice ?? null,
+                                ]);
+
+                                DB::statement('EXEC [dbo].[UtworzZaleznoscPZWZ] ?, ?, ?', [$PZElementID, $ElementID, $IleZostalo]);
+                                $IleDoRozdania -= $IleZostalo;
+                            } else {
+                                $ElementID = DB::table('dbo.ElementRuchuMagazynowego')->insertGetId([
+                                    'Ilosc' => $IleDoRozdania,
+                                    'Uwagi' => $Remarks,
+                                    'CenaJednostkowa' => $Price,
+                                    'IDRuchuMagazynowego' => $DocumentID,
+                                    'IDTowaru' => $IDItem,
+                                    'Uzytkownik' => $UserID,
+                                    'IDOrderLine' => $line->IDOrderLine,
+                                    'CurrencyPrice' => $FCPrice ?? null,
+                                ]);
+
+                                DB::statement('EXEC [dbo].[UtworzZaleznoscPZWZ] ?, ?, ?', [$PZElementID, $ElementID, $IleDoRozdania]);
+                                $IleDoRozdania = 0;
+                            }
+
+                            if (DB::table('Ustawienia')->where('Nazwa', 'SalesPricesEqualToPurchasePrices')->value('Wartosc') == 1) {
+                                DB::table('dbo.ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $ElementID)->update([
+                                    'CenaJednostkowa' => $Cena,
+                                    'CurrencyPrice' => $Cena * $CurrencyRateBaseToForeign,
+                                ]);
+                            }
+
+                            if ($IleDoRozdania <= 0) {
+                                break;
+                            }
+                        }
+
+                        if ($IleDoRozdania > 0) {
+                            $ArticleName = DB::table('Towar')->where('IDTowaru', $IDItem)->value('Nazwa');
+                            throw new \Exception('Brak wystarczającej ilości towaru "' . $ArticleName . '" do dokonania wydania');
+                        }
+                    } else {
+                        $ElementID = DB::table('dbo.ElementRuchuMagazynowego')->insertGetId([
+                            'Ilosc' => $Amount,
+                            'Uwagi' => $Remarks,
+                            'CenaJednostkowa' => $Price,
+                            'IDRuchuMagazynowego' => $DocumentID,
+                            'IDTowaru' => $IDItem,
+                            'Uzytkownik' => $UserID,
+                            'IDOrderLine' => $line->IDOrderLine,
+                            'CurrencyPrice' => $FCPrice ?? null,
+                        ]);
+
+                        DB::statement('EXEC [dbo].[UpdateDependencies] ?, ?, ?, ?, ?, ?, ?', [$ElementID, $IDItem, $Amount, $DocDate, null, null, $Price]);
+
+                        if (DB::table('Ustawienia')->where('Nazwa', 'SalesPricesEqualToPurchasePrices')->value('Wartosc') == 1) {
+                            DB::table('dbo.ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $ElementID)->update([
+                                'CenaJednostkowa' => $Price,
+                                'CurrencyPrice' => $Price * $CurrencyRateBaseToForeign,
+                            ]);
+                        }
+                    }
+                }
+
+                DB::statement('EXEC CopyDedicatedFields ?, ?, ?, ?, ?, ?', ['OrderLines', 'IDOrderLine', $line->IDOrderLine, 'ElementRuchuMagazynowego', 'IDElementuRuchuMagazynowego', $ElementID]);
+            }
+
+            DB::statement('EXEC CopyDedicatedFields ?, ?, ?, ?, ?, ?', ['Orders', 'IDOrder', $OrderID, 'RuchMagazynowy', 'IDRuchuMagazynowego', $DocumentID]);
+
+            if (!DB::table('dbo.DocsRels')->where([
+                ['ID1', '=', $DocumentID],
+                ['IDType1', '=', $DocumentType],
+                ['ID2', '=', $OrderID],
+                ['IDType2', '=', $OrderType],
+            ])->exists()) {
+                DB::table('dbo.DocumentRelations')->insert([
+                    'ID1' => $DocumentID,
+                    'IDType1' => $DocumentType,
+                    'ID2' => $OrderID,
+                    'IDType2' => $OrderType,
+                ]);
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 }
