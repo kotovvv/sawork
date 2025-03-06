@@ -272,7 +272,7 @@ class CollectController extends Controller
             'toLocation' => $toLocation,
             'selectedWarehause' => $product['IDMagazynu'],
             'createdDoc' => $createdDoc,
-            'Uwagi' => $Uwagi,
+            'Uwagi' => 'User' . $IDUzytkownika . '|| ' . $Uwagi,
             'IDUzytkownika' => $IDUzytkownika,
         ]);
         $response = app('App\Http\Controllers\Api\LocationController')->doRelokacja($request);

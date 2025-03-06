@@ -201,12 +201,12 @@ class LocationController extends Controller
             // create doc
             DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
             $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->value('IDRuchuMagazynowego');
-            DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $resnonse['createdDoc']['idmin'])->update(['Uwagi' => $resnonse['createdDoc']['idmin'] . '||']);
+            DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $resnonse['createdDoc']['idmin'])->update(['Uwagi' => 'User' . $IDUzytkownika . '|| ']);
 
             DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
             $resnonse['createdDoc']['idpls'] =
                 DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->value('IDRuchuMagazynowego');
-            DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $resnonse['createdDoc']['idpls'])->update(['Uwagi' => $resnonse['createdDoc']['idpls'] . '||']);
+            DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $resnonse['createdDoc']['idpls'])->update(['Uwagi' => 'User' . $IDUzytkownika . '||']);
 
             DB::table('PrzesunieciaMM')->insert(['IDRuchuMagazynowegoZ' => $resnonse['createdDoc']['idmin'], 'IDRuchuMagazynowegoDo' => $resnonse['createdDoc']['idpls']]);
         } else {
@@ -228,7 +228,7 @@ class LocationController extends Controller
             $CenaJednostkowa = DB::table('ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $pz[$key]->IDElementuRuchuMagazynowego)->take(1)->value('CenaJednostkowa');;
             $debt = $k > $pz[$key]->qty ?  $pz[$key]->qty : $k;
             $el['Ilosc'] = -$debt;
-            $el['Uwagi'] = $resnonse['createdDoc']['idmin'] . '||' . $Uwagi;
+            $el['Uwagi'] = 'User' . $IDUzytkownika . '||' . $Uwagi;
             $el['IDRodzic'] = null;
             $el['IDWarehouseLocation'] = null;
             $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idmin'];
@@ -236,7 +236,7 @@ class LocationController extends Controller
             DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
             $ndocidmin = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
             $el['Ilosc'] = $debt;
-            $el['Uwagi'] = $resnonse['createdDoc']['idpls'] . '||' . $Uwagi;
+            $el['Uwagi'] = 'User' . $IDUzytkownika . '||' . $Uwagi;
             $el['IDRodzic'] = $ndocidmin;
             $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idpls'];
             $el['IDWarehouseLocation'] = $toLocation['IDWarehouseLocation'];
