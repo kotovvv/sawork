@@ -199,7 +199,7 @@ class LocationController extends Controller
             // $creat_zl['WartoscDokumentu'] = 0; // - в строке в которой отнимаем указываем сумму товаров
 
             // create doc
-            DB::table('dbo.RuchMagazynowy')->insertGetId($creat_zl);
+            DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
             $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->value('IDRuchuMagazynowego');
             DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $resnonse['createdDoc']['idmin'])->update(['Uwagi' => $resnonse['createdDoc']['idmin'] . '||']);
 

@@ -395,7 +395,7 @@ class CollectController extends Controller
         ]);
     }
 
-    public function generatePZfromOrder(Request $request)
+    public function generatePZfromOrder__NOTUSE(Request $request)
     {
         $DocumentType = $request->DocumentType;
         $UserID = $request->UserID;
