@@ -145,19 +145,21 @@
           <thead>
             <tr>
               <th>Number</th>
-              <th>Product</th>
+              <th>IDOrder</th>
               <th>Quantity</th>
-              <th>Weight</th>
-              <th>Volume</th>
+              <th>NumberBL</th>
+              <th>IDMagazynu</th>
+              <th>Uwagi</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="item in productsERROR" :key="item.IDProduct">
-              <td>{{ item.Number }}</td>
-              <td>{{ item.Product }}</td>
-              <td>{{ item.Quantity }}</td>
-              <td>{{ item.Weight }}</td>
-              <td>{{ item.Volume }}</td>
+              <td>{{ item.IDItem }}</td>
+              <td>{{ item.IDOrder }}</td>
+              <td>{{ item.qty }}</td>
+              <td>{{ item.NumberBL }}</td>
+              <td>{{ item.IDMagazynu }}</td>
+              <td>{{ item.Uwagi }}</td>
             </tr>
           </tbody>
         </v-table>
@@ -169,22 +171,20 @@
         <v-table>
           <thead>
             <tr>
-              <th>IDMagazynu</th>
+              <th>IDWarehouse</th>
               <th>IDOrder</th>
               <th>NumberBL</th>
-              <th>IDItem</th>
-              <th>qty</th>
-              <th>Uwagi</th>
+              <th>Date</th>
+              <th>Remarks</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="item in orderERROR" :key="item.IDProduct">
-              <td>{{ item.IDMagazynu }}</td>
+              <td>{{ item.IDWarehouse }}</td>
               <td>{{ item.IDOrder }}</td>
               <td>{{ item.NumberBL }}</td>
-              <td>{{ item.IDItem }}</td>
-              <td>{{ item.qty }}</td>
-              <td>{{ item.Uwagi }}</td>
+              <td>{{ item.Date }}</td>
+              <td>{{ item.Remarks }}</td>
             </tr>
           </tbody>
         </v-table>

@@ -19,7 +19,7 @@ class CollectController extends Controller
         //get free orders
         $allOrders = DB::table('dbo.Orders as o')
             ->leftJoin('dbo.RodzajTransportu as rt', 'rt.IDRodzajuTransportu', '=', 'o.IDTransport')
-            ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport', 'rt.Nazwa as transport_name')
+            ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', 'o.Remarks', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport', 'rt.Nazwa as transport_name')
             ->where('o.IDOrderType', 15)
             ->where('o.IDOrderStatus', 23)
             ->when($IDsWaiteOrders, function ($query, $IDsWaiteOrders) {
@@ -43,7 +43,7 @@ class CollectController extends Controller
                 'IDUzytkownika' => $user->IDUzytkownika,
                 'status' => 0,
             ])
-            ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport')
+            ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', 'o.Remarks', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport')
             ->get();
 
         return $waiteOrders;
@@ -272,7 +272,7 @@ class CollectController extends Controller
             'toLocation' => $toLocation,
             'selectedWarehause' => $product['IDMagazynu'],
             'createdDoc' => $createdDoc,
-            'Uwagi' => 'User' . $IDUzytkownika . '|| ' . $Uwagi,
+            'Uwagi' =>  $Uwagi,
             'IDUzytkownika' => $IDUzytkownika,
         ]);
         $response = app('App\Http\Controllers\Api\LocationController')->doRelokacja($request);
@@ -293,7 +293,6 @@ class CollectController extends Controller
         $IDsOrderERROR = [];
         $listOrders = [];
         $createdDoc = [];
-        $Uwagi = 'User' . $request->user->IDUzytkownika . ' ' . date('Y-m-d H:i:s');
         // Пока склад
         foreach ($request->IDsWarehouses as  $IDMagazynu) {
             $createdDoc[$IDMagazynu] = null;
@@ -308,6 +307,7 @@ class CollectController extends Controller
                 $productsOK = [];
                 $orderOK = true;
                 $products = $this->getListProducts([$order['IDOrder']]);
+                $Uwagi = 'User' . $request->user->IDUzytkownika . ' || ' . $order['Remarks'];
                 // Пока Товар
                 foreach ($products as $product) {
                     $needqty = $product->Quantity;

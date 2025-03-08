@@ -927,7 +927,7 @@ class MagazynController extends Controller
 
             DB::table('dbo.RuchMagazynowy')->insert([
                 'Data' => $DocDate,
-                'Uwagi' => '',
+                'Uwagi' => 'User' . $UserID . '|| ' . $order->Remarks,
                 'IDRodzajuRuchuMagazynowego' => $DocumentType,
                 'IDMagazynu' => $order->IDWarehouse,
                 'NrDokumentu' => $documentNumber,
@@ -940,6 +940,13 @@ class MagazynController extends Controller
                 'IDCompany' => $order->IDCompany,
                 'IDCurrency' => $order->IDCurrency,
                 'IDCurrencyRate' => $order->IDCurrencyRate,
+                '_RuchMagazynowyTempDecimal1' => $order->_OrdersTempDecimal2, //N baseLinker
+                '_RuchMagazynowyTempString2'  => $order->_OrdersTempString1, // N Factury BL
+                '_RuchMagazynowyTempString1'  => $order->_OrdersTempString2, // N nadania BL
+                '_RuchMagazynowyTempString5'  => $order->_OrdersTempString5, //Product_chang
+                '_RuchMagazynowyTempString7'  => $order->_OrdersTempString7, //Zrodlo
+                '_RuchMagazynowyTempString8'  => $order->_OrdersTempString8, // External_id
+                '_RuchMagazynowyTempString9'  => $order->_OrdersTempString9, //Login_klienta
             ]);
 
             $DocumentID = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
@@ -1002,7 +1009,7 @@ class MagazynController extends Controller
 
                 DB::table('dbo.ElementRuchuMagazynowego')->insert([
                     'Ilosc' => $Element->Ilosc,
-                    'Uwagi' => $product->Remarks,
+                    'Uwagi' => 'User' . $UserID . '|| ' . $product->Remarks,
                     'CenaJednostkowa' => $Element->CenaJednostkowa,
                     'IDRuchuMagazynowego' => $DocumentID,
                     'IDTowaru' => $IDItem,
