@@ -14,6 +14,8 @@ class BaseLinkerController extends Controller
 
     public $statuses = [];
     public $ExtraFields = [];
+    public $status_id_Kompletowanie = '';
+    public $id_exfield_stan = '';
 
     public function __construct($token)
     {
@@ -36,21 +38,50 @@ class BaseLinkerController extends Controller
     public function getOrderStatusList()
     {
         $response = $this->sendRequest('getOrderStatusList');
-        \Log::info('getOrderStatusList response:', $response['statuses']);
+        foreach ($response['statuses'] as $statusItem) {
+            if ($statusItem['name'] == 'Kompletowanie') {
+                $this->status_id_Kompletowanie = $statusItem['id'];
+                break;
+            }
+        }
+        // \Log::info('getOrderStatusList response:', $response['statuses']);
         return $response['statuses'];
     }
     public function getOrderExtraFields()
     {
         $response = $this->sendRequest('getOrderExtraFields');
-        \Log::info('getOrderExtraFields response:', $response['extra_fields']);
+        foreach ($response['extra_fields'] as $exfield) {
+            if (strpos(strtolower($exfield['name']), 'stan') === 0) {
+                $this->id_exfield_stan = $exfield['id'];
+                break;
+            }
+        }
+        // \Log::info('getOrderExtraFields response:', $response['extra_fields']);
         return $response['extra_fields'];
     }
 
     public function getOrders($parameters)
     {
         $response = $this->sendRequest('getOrders', $parameters);
-        //        \Log::info('getOrders response:', $response);
+        //\Log::info('getOrders response:', $response);
         return $response;
+    }
+
+    public function inRealizacji($parameters)
+    {
+        $a_orders = $this->sendRequest('getOrders', $parameters);
+        $o_status_id = $a_orders['orders'][0];
+        $order_status_id = $o_status_id['order_status_id'];
+        // \Log::info('order_status_id:', ['order_status_id' => $order_status_id]);
+        $status = '';
+        foreach ($this->statuses as $statusItem) {
+            if ($statusItem['id'] == $order_status_id) {
+                $status = $statusItem['name'];
+                break;
+            }
+        }
+        //\Log::info('getOrders status:', ['status' => $status == 'W realizacji' ? 'true' : 'false']);
+        return $status == 'W realizacji' ? true : false; //W realizacji
     }
 
     public function setOrderStatus($parameters)
@@ -62,7 +93,7 @@ class BaseLinkerController extends Controller
     public function setOrderFields($parameters)
     {
         $response = $this->sendRequest('setOrderFields', $parameters);
-        \Log::info('getOrderExtraFields response:', $response);
+        // \Log::info('setOrderFields response:', $response);
         return $response;
     }
 }

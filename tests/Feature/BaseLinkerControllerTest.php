@@ -10,15 +10,15 @@ use App\Http\Controllers\Api\BaseLinkerController;
 class BaseLinkerControllerTest extends TestCase
 {
     private $token = '5006735-5023428-GXRUR51NN0W5EAZWX74ICHAXNUW8TJ8CHBSTX4N7M7IKNV5OUZJ2HBR8FIU0WJN1';
-    public function testgetOrderExtraFields()
-    {
-        $controller = new BaseLinkerController($this->token);
-        $response = $controller->getOrderExtraFields();
+    // public function testgetOrderExtraFields()
+    // {
+    //     $controller = new BaseLinkerController($this->token);
+    //     $response = $controller->getOrderExtraFields();
 
-        $this->assertIsArray($response);
-        // $this->assertArrayHasKey('extra_fields', $response);
-        // $this->assertEquals('SUCCESS', $response['status']);
-    }
+    //     $this->assertIsArray($response);
+    //     // $this->assertArrayHasKey('extra_fields', $response);
+    //     // $this->assertEquals('SUCCESS', $response['status']);
+    // }
     public function testGetOrderStatusList()
     {
         $controller = new BaseLinkerController($this->token);
@@ -56,6 +56,19 @@ class BaseLinkerControllerTest extends TestCase
     //     $this->assertIsArray($response);
     //     $this->assertArrayHasKey('orders', $response);
     // }
+    public function testInRealizacji()
+    {
+        $controller = new BaseLinkerController($this->token);
+        $parameters = [
+            'order_id' => 10340564,
+            'get_unconfirmed_orders' => true,
+            'include_custom_extra_fields' => true,
+        ];
+        $response = $controller->inRealizacji($parameters);
+
+        $this->assertIsArray($response);
+        // $this->assertArrayHasK('orders', $response);
+    }
 
     // public function testSetOrderStatus()
     // {

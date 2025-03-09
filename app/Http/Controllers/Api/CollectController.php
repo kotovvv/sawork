@@ -286,7 +286,7 @@ class CollectController extends Controller
 
     private function getUserToken($userId)
     {
-        return DB::table('Users')->where('id', $userId)->value('token');
+        return DB::table('Users')->where('id', $userId)->get();
     }
 
     public function prepareDoc(Request $request)
@@ -299,7 +299,18 @@ class CollectController extends Controller
         $listOrders = [];
         $createdDoc = [];
 
-        $token = $this->getUserToken($request->user->IDUzytkownika);;
+        $bl_user = $this->getUserToken($request->user->IDUzytkownika);
+        $token = $bl_user->token;
+        if ($token) {
+            $BL = new BaseLinkerController($token);
+            $BLStatusList = $BL->getOrderStatusList();
+            $BLExtraFields = $BL->getOrderExtraFields();
+        } else {
+            return response()->json([
+                'message' => 'User no token',
+            ]);
+        }
+
 
         // Пока склад
         foreach ($request->IDsWarehouses as  $IDMagazynu) {
@@ -312,13 +323,19 @@ class CollectController extends Controller
                 if ($order['IDWarehouse'] != $IDMagazynu) {
                     continue;
                 }
-
                 //!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 //базелинкер заказ статус - "W realizacji"?
+                $parameters = [
+                    'order_id' => $order['NumberBL'],
+                    'get_unconfirmed_orders' => true,
+                    'include_custom_extra_fields' => true,
+                ];
+                if (!$BL->inRealizacji($parameters)) {
+                    $messages[] = 'Order BL ' . $order['NumberBL'] . ' ne W realizacji';
+                    continue;
+                }
                 //иначе пропускаем
 
-                $BL = new BaseLinkerController($token);
-                $BLStatusList = $BL->getOrderStatusList();
 
                 $productsOK = [];
                 $orderOK = true;
@@ -388,10 +405,22 @@ class CollectController extends Controller
                         'IDsElementuRuchuMagazynowego' => json_encode($IDsElementuRuchuMagazynowego),
                     ]);
                     // Изменить статус заказа на "Kompletowanie"
-                    // Изменить статус в БЛ (найти id статуса в BL )
-                    // DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
-                    //     'IDOrderStatus' => 42, //Kompletowanie
-                    // ]);
+                    $parameters = [
+                        'order_id' => $order['NumberBL'],
+                        'status_id' => $BL->status_id_Kompletowanie,
+                    ];
+                    // Изменить статус в BL
+                    $response = $BL->setOrderStatus($parameters);
+                    // Изменить stan в BL
+                    $parameters = [
+                        'order_id' => $order['NumberBL'],
+                        'custom_extra_fields' => [$BL->id_exfield_stan => $bl_user->bl_id],
+                    ];
+                    $response = $BL->setOrderFields($parameters);
+                    // Изменить статус в базе lomag
+                    DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                        'IDOrderStatus' => 42, //Kompletowanie
+                    ]);
                 } else {
                     // Изменить статус заказа на "Не хватает товаров"
                     // предусмотреть возможность отмены смены локаций
