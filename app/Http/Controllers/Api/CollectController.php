@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
-
+use Illuminate\Support\Facades\Crypt;
 
 class CollectController extends Controller
 {
@@ -300,7 +300,7 @@ class CollectController extends Controller
         $createdDoc = [];
 
         $bl_user = $this->getUserToken($request->user->IDUzytkownika);
-        $token = $bl_user->token;
+        $token = Crypt::decryptString($bl_user->token);
         if ($token) {
             $BL = new BaseLinkerController($token);
             $BLStatusList = $BL->getOrderStatusList();

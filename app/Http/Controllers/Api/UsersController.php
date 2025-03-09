@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 
 class UsersController extends Controller
@@ -16,7 +16,11 @@ class UsersController extends Controller
 
     public function store(Request $request)
     {
-        DB::table('users')->insert($request->all());
+        $data = $request->all();
+        if (isset($data['token'])) {
+            $data['token'] = Crypt::encryptString($data['token']);
+        }
+        DB::table('users')->insert($data);
         $o_user = DB::table('users')->select('users.*', 'NazwaUzytkownika')->leftJoin('Uzytkownik', 'IDUzytkownika', '=', 'ID')->where('ID', $request->ID)->get();
         return $o_user;
     }
