@@ -10,13 +10,14 @@ use Illuminate\Support\Facades\Log;
 
 class BaseLinkerController extends Controller
 {
-    private $token = '5006735-5023428-GXRUR51NN0W5EAZWX74ICHAXNUW8TJ8CHBSTX4N7M7IKNV5OUZJ2HBR8FIU0WJN1';
+    private $token;
 
     public $statuses = [];
     public $ExtraFields = [];
 
-    public function __construct()
+    public function __construct($token)
     {
+        $this->token = $token;
         $this->statuses = $this->getOrderStatusList();
         $this->ExtraFields = $this->getOrderExtraFields();
     }

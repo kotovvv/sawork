@@ -9,9 +9,10 @@ use App\Http\Controllers\Api\BaseLinkerController;
 
 class BaseLinkerControllerTest extends TestCase
 {
+    private $token = '5006735-5023428-GXRUR51NN0W5EAZWX74ICHAXNUW8TJ8CHBSTX4N7M7IKNV5OUZJ2HBR8FIU0WJN1';
     public function testgetOrderExtraFields()
     {
-        $controller = new BaseLinkerController();
+        $controller = new BaseLinkerController($this->token);
         $response = $controller->getOrderExtraFields();
 
         $this->assertIsArray($response);
@@ -20,7 +21,7 @@ class BaseLinkerControllerTest extends TestCase
     }
     public function testGetOrderStatusList()
     {
-        $controller = new BaseLinkerController();
+        $controller = new BaseLinkerController($this->token);
         $response = $controller->getOrderStatusList();
 
         $this->assertIsArray($response);
@@ -30,7 +31,7 @@ class BaseLinkerControllerTest extends TestCase
 
     // public function testsetOrderFields()
     // {
-    //     $controller = new BaseLinkerController();
+    //     $controller = new BaseLinkerController($this->token);
     //     $parameters = [
     //         'order_id' => 10340564,
     //         'custom_extra_fields' => ['77321' => '4'],
@@ -44,7 +45,7 @@ class BaseLinkerControllerTest extends TestCase
     // }
     // public function testGetOrders()
     // {
-    //     $controller = new BaseLinkerController();
+    //     $controller = new BaseLinkerController($this->token);
     //     $parameters = [
     //         'order_id' => 10340564,
     //         'get_unconfirmed_orders' => true,
@@ -58,7 +59,7 @@ class BaseLinkerControllerTest extends TestCase
 
     // public function testSetOrderStatus()
     // {
-    //     $controller = new BaseLinkerController();
+    //     $controller = new BaseLinkerController($this->token);
     //     $parameters = [
     //         'order_id' => 10340564,
     //         'status_id' => 143145,

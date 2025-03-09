@@ -284,6 +284,11 @@ class CollectController extends Controller
         }
     }
 
+    private function getUserToken($userId)
+    {
+        return DB::table('Users')->where('id', $userId)->value('token');
+    }
+
     public function prepareDoc(Request $request)
     {
         $messages = [];
@@ -293,6 +298,9 @@ class CollectController extends Controller
         $IDsOrderERROR = [];
         $listOrders = [];
         $createdDoc = [];
+
+        $token = $this->getUserToken($request->user->IDUzytkownika);;
+
         // Пока склад
         foreach ($request->IDsWarehouses as  $IDMagazynu) {
             $createdDoc[$IDMagazynu] = null;
@@ -300,10 +308,18 @@ class CollectController extends Controller
             $toLocation['IDWarehouseLocation'] = $this->getUserLocation($IDMagazynu, $request->user->IDUzytkownika);
             // Пока Заказы по складу
             foreach ($request->orders as $order) {
-                // есл заказ не этого склада берём следующий
+                // если заказ не этого склада берём следующий
                 if ($order['IDWarehouse'] != $IDMagazynu) {
                     continue;
                 }
+
+                //!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                //базелинкер заказ статус - "W realizacji"?
+                //иначе пропускаем
+
+                $BL = new BaseLinkerController($token);
+                $BLStatusList = $BL->getOrderStatusList();
+
                 $productsOK = [];
                 $orderOK = true;
                 $products = $this->getListProducts([$order['IDOrder']]);
@@ -320,8 +336,7 @@ class CollectController extends Controller
                             $location_ilosc = $location['ilosc'];
                             if ($needqty >= $location_ilosc) {
                                 $needqty = $needqty - $location_ilosc;
-                                // код локации товара
-                                // номер заказа в БЛ
+
                                 $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $location_ilosc, 'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode']];
                             } else {
                                 $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $needqty, 'fromLocaton' =>  ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode']];
@@ -372,9 +387,10 @@ class CollectController extends Controller
                         'created_doc' => json_encode($createdDoc[$IDMagazynu]),
                         'IDsElementuRuchuMagazynowego' => json_encode($IDsElementuRuchuMagazynowego),
                     ]);
-                    // Изменить статус заказа на "Ожидает сборки"
+                    // Изменить статус заказа на "Kompletowanie"
+                    // Изменить статус в БЛ (найти id статуса в BL )
                     // DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
-                    //     'IDOrderStatus' => 42,
+                    //     'IDOrderStatus' => 42, //Kompletowanie
                     // ]);
                 } else {
                     // Изменить статус заказа на "Не хватает товаров"

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\LogController;
 use App\Http\Controllers\Api\ComingController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\CollectController;
+use App\Http\Controllers\Api\UsersController; // Add this line
 
 /*
 |--------------------------------------------------------------------------
@@ -85,4 +86,12 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('collectOrders', [CollectController::class, 'collectOrders']);
     Route::post('deleteSelectedMakeOrders', [CollectController::class, 'deleteSelectedMakeOrders']);
     Route::post('prepareDoc', [CollectController::class, 'prepareDoc']);
+
+    // Add routes for UsersController
+    Route::get('users', [UsersController::class, 'index']);
+    Route::post('users', [UsersController::class, 'store']);
+    Route::get('users/{id}', [UsersController::class, 'show']);
+    Route::put('users/{id}', [UsersController::class, 'update']);
+    Route::delete('users/{id}', [UsersController::class, 'destroy']);
+    Route::get('uzytkownicy', [UsersController::class, 'uzytkownicy']);
 });
