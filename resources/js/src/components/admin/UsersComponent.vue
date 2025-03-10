@@ -5,7 +5,6 @@
         <v-col>
           <v-data-table :headers="headers" :items="users" item-key="ID">
             <template v-slot:item.actions="{ item }">
-              <v-btn @click="editUser(item)" color="warning">Edit</v-btn>
               <v-btn @click="deleteUser(item.ID)" color="error">Delete</v-btn>
             </template>
           </v-data-table>
@@ -89,7 +88,7 @@ export default {
         { title: "ID", value: "ID" },
         { title: "User Name", value: "NazwaUzytkownika" },
         { title: "Token", value: "token" },
-        { title: "BL ID", value: "bl_id" },
+        { title: "Stan.", value: "bl_id" },
         { title: "Actions", value: "actions", sortable: false },
       ],
     };
