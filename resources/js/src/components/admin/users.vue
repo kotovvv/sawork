@@ -5,7 +5,7 @@
         <v-col>
           <v-data-table :headers="headers" :items="users" item-key="ID">
             <template v-slot:item.actions="{ item }">
-              <v-btn @click="editUser(item)" color="warning">Edit</v-btn>
+              <!-- <v-btn @click="editUser(item)" color="warning">Edit</v-btn> -->
               <v-btn @click="deleteUser(item.ID)" color="error">Delete</v-btn>
             </template>
           </v-data-table>
