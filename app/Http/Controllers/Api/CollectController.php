@@ -25,6 +25,10 @@ class CollectController extends Controller
             ->when($IDsWaiteOrders, function ($query, $IDsWaiteOrders) {
                 return $query->whereNotIn('o.IDOrder', $IDsWaiteOrders);
             })
+            ->whereNotNull('o._OrdersTempDecimal2') //Nr. Baselinker
+            ->whereNotNull('o._OrdersTempString1') //Nr. Faktury BL
+            ->whereNotNull('o._OrdersTempString7') //Źródło
+            ->whereNull('o._OrdersTempString5') //Product_Chang
             ->whereNotIn('o.IDOrder', function ($query) {
                 $query->select('ID2')
                     ->from('dbo.DocumentRelations')
@@ -323,110 +327,124 @@ class CollectController extends Controller
                 if ($order['IDWarehouse'] != $IDMagazynu) {
                     continue;
                 }
-                //!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                //базелинкер заказ статус - "W realizacji"?
-                $parameters = [
-                    'order_id' => $order['NumberBL'],
-                    'get_unconfirmed_orders' => true,
-                    'include_custom_extra_fields' => true,
-                ];
-                if (!$BL->inRealizacji($parameters)) {
-                    $messages[] = 'Order BL ' . $order['NumberBL'] . ' ne W realizacji';
-                    continue;
-                }
-                //иначе пропускаем
+
+                DB::transaction();
+                try {
+                    //!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                    //базелинкер заказ статус - "W realizacji"?
+                    $parameters = [
+                        'order_id' => $order['NumberBL'],
+                        'get_unconfirmed_orders' => true,
+                        'include_custom_extra_fields' => true,
+                    ];
+                    if (!$BL->inRealizacji($parameters)) {
+                        $messages[] = 'Order BL ' . $order['NumberBL'] . ' ne W realizacji';
+                        continue;
+                    }
+                    //иначе пропускаем
 
 
-                $productsOK = [];
-                $orderOK = true;
-                $products = $this->getListProducts([$order['IDOrder']]);
-                $Uwagi = 'User' . $request->user->IDUzytkownika . ' || ' . $order['Remarks'];
-                // Пока Товар
-                foreach ($products as $product) {
-                    $needqty = $product->Quantity;
-                    // Локации товара
-                    $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
+                    $productsOK = [];
+                    $orderOK = true;
+                    $products = $this->getListProducts([$order['IDOrder']]);
+                    $Uwagi = 'User' . $request->user->IDUzytkownika . ' || ' . $order['Remarks'];
+                    // Пока Товар
+                    foreach ($products as $product) {
+                        $needqty = $product->Quantity;
+                        // Локации товара
+                        $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
 
-                    if ($locations) {
-                        foreach ($locations as $location) {
-                            //с каждой локации забираем нужное количество товара
-                            $location_ilosc = $location['ilosc'];
-                            if ($needqty >= $location_ilosc) {
-                                $needqty = $needqty - $location_ilosc;
+                        if ($locations) {
+                            foreach ($locations as $location) {
+                                //с каждой локации забираем нужное количество товара
+                                $location_ilosc = $location['ilosc'];
+                                if ($needqty >= $location_ilosc) {
+                                    $needqty = $needqty - $location_ilosc;
 
-                                $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $location_ilosc, 'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode']];
-                            } else {
-                                $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $needqty, 'fromLocaton' =>  ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode']];
-                                $needqty = 0;
+                                    $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $location_ilosc, 'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode']];
+                                } else {
+                                    $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $needqty, 'fromLocaton' =>  ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode']];
+                                    $needqty = 0;
+                                }
+                                if ($needqty == 0) {
+                                    break;
+                                }
                             }
-                            if ($needqty == 0) {
+                        }
+                        if ($needqty > 0) {
+                            //  "оповестить о нехватке товара ,
+                            // занести штрих код товара в уваги документа"
+                            $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'not enough products'];
+                            $orderERROR[] = $order;
+                            $IDsOrderERROR[] = $order['IDOrder'];
+                            break;
+                        }
+                    } //product
+                    //если имеются все товары заказа
+                    $IDsElementuRuchuMagazynowego = [];
+                    if (!in_array($order['IDOrder'], $IDsOrderERROR)) {
+                        // товары заказа можно перемещать в локацию пользователя
+                        foreach ($productsOK as $product) {
+                            $res =  $this->changeProductsLocation($product, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
+                            if (isset($res['createdDoc']['idmin'])) {
+                                $listProductsOK[] = $product;
+                                $createdDoc[$IDMagazynu] = $res['createdDoc'];
+                                $IDsElementuRuchuMagazynowego[$product['IDItem']]['min'] = $res['IDsElementuRuchuMagazynowego']['min'];
+                                $IDsElementuRuchuMagazynowego[$product['IDItem']]['pls'] = $res['IDsElementuRuchuMagazynowego']['pls'];
+                            } else {
+                                $orderOK = false;
+                                $orderERROR[] = $order;
+                                $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product['IDItem'], 'qty' => $product['Quantity'], 'Uwagi' => $res->message];
+                                $messages[] = $res->message;
                                 break;
                             }
                         }
                     }
-                    if ($needqty > 0) {
-                        //  "оповестить о нехватке товара ,
-                        // занести штрих код товара в уваги документа"
-                        $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'not enough products'];
-                        $orderERROR[] = $order;
-                        $IDsOrderERROR[] = $order['IDOrder'];
-                        break;
-                    }
-                } //product
-                //если имеются все товары заказа
-                $IDsElementuRuchuMagazynowego = [];
-                if (!in_array($order['IDOrder'], $IDsOrderERROR)) {
-                    // товары заказа можно перемещать в локацию пользователя
-                    foreach ($productsOK as $product) {
-                        $res =  $this->changeProductsLocation($product, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
-                        if (isset($res['createdDoc']['idmin'])) {
-                            $listProductsOK[] = $product;
-                            $createdDoc[$IDMagazynu] = $res['createdDoc'];
-                            $IDsElementuRuchuMagazynowego[$product['IDItem']]['min'] = $res['IDsElementuRuchuMagazynowego']['min'];
-                            $IDsElementuRuchuMagazynowego[$product['IDItem']]['pls'] = $res['IDsElementuRuchuMagazynowego']['pls'];
-                        } else {
-                            $orderOK = false;
-                            $orderERROR[] = $order;
-                            $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product['IDItem'], 'qty' => $product['Quantity'], 'Uwagi' => $res->message];
-                            $messages[] = $res->message;
-                            break;
-                        }
-                    }
-                }
-                if ($orderOK) {
-                    $listOrders[] = $order;
+                    if ($orderOK) {
+                        $listOrders[] = $order;
 
-                    DB::table('collect')->insert([
-                        'IDUzytkownika' => $request->user->IDUzytkownika,
-                        'Date' => Carbon::now(),
-                        'IDOrder' => $order['IDOrder'],
-                        'status' => 0,
-                        'created_doc' => json_encode($createdDoc[$IDMagazynu]),
-                        'IDsElementuRuchuMagazynowego' => json_encode($IDsElementuRuchuMagazynowego),
-                    ]);
-                    // Изменить статус заказа на "Kompletowanie"
-                    $parameters = [
-                        'order_id' => $order['NumberBL'],
-                        'status_id' => $BL->status_id_Kompletowanie,
-                    ];
-                    // Изменить статус в BL
-                    $response = $BL->setOrderStatus($parameters);
-                    // Изменить stan в BL
-                    $parameters = [
-                        'order_id' => $order['NumberBL'],
-                        'custom_extra_fields' => [$BL->id_exfield_stan => $bl_user->bl_id],
-                    ];
-                    $response = $BL->setOrderFields($parameters);
-                    // Изменить статус в базе lomag
-                    DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
-                        'IDOrderStatus' => 42, //Kompletowanie
-                    ]);
-                } else {
-                    // Изменить статус заказа на "Не хватает товаров"
-                    // предусмотреть возможность отмены смены локаций
-                    // DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
-                    //     'IDOrderStatus' => 37,
-                    // ]);
+                        DB::table('collect')->insert([
+                            'IDUzytkownika' => $request->user->IDUzytkownika,
+                            'Date' => Carbon::now(),
+                            'IDOrder' => $order['IDOrder'],
+                            'status' => 0,
+                            'created_doc' => json_encode($createdDoc[$IDMagazynu]),
+                            'IDsElementuRuchuMagazynowego' => json_encode($IDsElementuRuchuMagazynowego),
+                        ]);
+                        // Изменить статус заказа на "Kompletowanie"
+                        $parameters = [
+                            'order_id' => $order['NumberBL'],
+                            'status_id' => $BL->status_id_Kompletowanie,
+                        ];
+                        // Изменить статус в BL
+                        $response = $BL->setOrderStatus($parameters);
+                        // Изменить stan в BL
+                        $parameters = [
+                            'order_id' => $order['NumberBL'],
+                            'custom_extra_fields' => [$BL->id_exfield_stan => $bl_user->bl_id],
+                        ];
+                        $response = $BL->setOrderFields($parameters);
+                        // Изменить статус в базе lomag
+                        DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                            'IDOrderStatus' => 42, //Kompletowanie
+                        ]);
+                        DB::commit();
+                    } else {
+                        // Изменить статус заказа на "Не хватает товаров" "Nie wysyłać"
+                        // предусмотреть возможность отмены смены локаций !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                        // $parameters = [
+                        //     'order_id' => $order['NumberBL'],
+                        //     'status_id' => $BL->status_id_Nie_wysylac,
+                        // ];
+                        // $response = $BL->setOrderStatus($parameters);
+                        // DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                        //     'IDOrderStatus' => 29,
+                        // ]);
+                    }
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    $messages[] = 'Error for order: ' . $order['NumberBL'] . $e->getMessage();
+                    throw $e;
                 }
             } //order
         } //warehouse

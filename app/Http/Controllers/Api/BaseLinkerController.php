@@ -15,6 +15,7 @@ class BaseLinkerController extends Controller
     public $statuses = [];
     public $ExtraFields = [];
     public $status_id_Kompletowanie = '';
+    public $status_id_Nie_wysylac = '';
     public $id_exfield_stan = '';
 
     public function __construct($token)
@@ -41,6 +42,10 @@ class BaseLinkerController extends Controller
         foreach ($response['statuses'] as $statusItem) {
             if ($statusItem['name'] == 'Kompletowanie') {
                 $this->status_id_Kompletowanie = $statusItem['id'];
+                break;
+            }
+            if ($statusItem['name'] == 'Nie wysyłać') {
+                $this->status_id_Nie_wysylac = $statusItem['id'];
                 break;
             }
         }
