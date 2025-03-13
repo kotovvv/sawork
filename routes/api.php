@@ -88,10 +88,10 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('prepareDoc', [CollectController::class, 'prepareDoc']);
 
     // Add routes for UsersController
-    Route::get('users', [UsersController::class, 'index']);
-    Route::post('users', [UsersController::class, 'store']);
-    Route::get('users/{id}', [UsersController::class, 'show']);
-    Route::put('users/{id}', [UsersController::class, 'update']);
-    Route::delete('users/{id}', [UsersController::class, 'destroy']);
+    Route::get('settings', [UsersController::class, 'index']);
+    Route::post('settings', [UsersController::class, 'store']);
+    Route::get('settings/{id}', [UsersController::class, 'show']);
+    Route::put('settings/{id}', [UsersController::class, 'update']);
+    Route::delete('settings/{id}', [UsersController::class, 'destroy']);
     Route::get('uzytkownicy', [UsersController::class, 'uzytkownicy']);
 });

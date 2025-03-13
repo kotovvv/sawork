@@ -2,17 +2,47 @@
   <div>
     <v-container>
       <v-row>
-        <v-col>
-          <v-data-table :headers="headers" :items="users" item-key="ID">
-            <template v-slot:item.actions="{ item }">
-              <v-btn @click="deleteUser(item.ID)" color="error">Delete</v-btn>
-            </template>
-          </v-data-table>
+        <v-col cols="12" md="3">
+          <v-select
+            v-model="selectedWarehouse"
+            :items="warehouses"
+            item-text="Nazwa"
+            item-value="IDMagazynu"
+            label="Select Warehouse"
+            @update:modelValue="filterUsers"
+          ></v-select>
+          <v-btn @click="showAddTokenDialog" color="primary">Add Token</v-btn>
         </v-col>
-      </v-row>
-      <v-row>
-        <v-col>
-          <v-btn @click="showCreateDialog" color="primary">Add User</v-btn>
+
+        <v-col cols="3" md="1">
+          <v-alert v-if="warehouseToken" type="success"> Token: ok </v-alert>
+          <v-alert v-else type="error"> No token</v-alert>
+        </v-col>
+
+        <v-col v-if="selectedWarehouse" cols="12" md="8">
+          <v-row>
+            <v-col>
+              <v-data-table
+                :headers="headers"
+                :items="filteredUsers"
+                item-key="ID"
+              >
+                <template v-slot:item.userName="{ item }">
+                  {{
+                    users.find((user) => user.IDUzytkownika === item.key).title
+                  }}
+                </template>
+                <template v-slot:item.actions="{ item }">
+                  <v-btn @click="editUser(item)" color="primary">Edit</v-btn>
+                  <v-btn @click="deleteUser(item.id)" color="error"
+                    >Delete</v-btn
+                  >
+                </template>
+              </v-data-table>
+
+              <v-btn @click="showCreateDialog" color="primary">Add User</v-btn>
+            </v-col>
+          </v-row>
         </v-col>
       </v-row>
       <v-dialog v-model="createDialog" persistent max-width="600px">
@@ -24,19 +54,15 @@
           <v-card-text>
             <v-form @submit.prevent="createUser">
               <v-select
-                v-model="newUser.ID"
-                :items="uzytkownicy"
-                item-text="NazwaUzytkownika"
+                v-model="newUser.key"
+                :items="users"
+                item-title="title"
                 item-value="IDUzytkownika"
                 label="Select User"
               ></v-select>
               <v-text-field
-                v-model="newUser.token"
-                label="Token"
-              ></v-text-field>
-              <v-text-field
-                v-model="newUser.bl_id"
-                label="BL ID"
+                v-model="newUser.value"
+                label="External ID"
               ></v-text-field>
               <v-btn type="submit" color="primary">Create User</v-btn>
             </v-form>
@@ -51,15 +77,32 @@
           <v-card-title>Edit User <v-spacer></v-spacer> </v-card-title>
           <v-card-text>
             <v-form @submit.prevent="updateUser">
+              <v-select
+                v-model="editingUser.key"
+                :items="users"
+                item-title="title"
+                item-value="IDUzytkownika"
+                label="Select User"
+              ></v-select>
               <v-text-field
-                v-model="editingUser.token"
-                label="Token"
-              ></v-text-field>
-              <v-text-field
-                v-model="editingUser.bl_id"
-                label="BL ID"
+                v-model="editingUser.value"
+                label="External ID"
               ></v-text-field>
               <v-btn type="submit" color="primary">Update User</v-btn>
+            </v-form>
+          </v-card-text>
+        </v-card>
+      </v-dialog>
+      <v-dialog v-model="addTokenDialog" persistent max-width="600px">
+        <v-btn icon @click="addTokenDialog = false" class="close-btn">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+        <v-card>
+          <v-card-title> Add Token </v-card-title>
+          <v-card-text>
+            <v-form @submit.prevent="addToken">
+              <v-text-field v-model="newToken" label="Token"></v-text-field>
+              <v-btn type="submit" color="primary">Add Token</v-btn>
             </v-form>
           </v-card-text>
         </v-card>
@@ -75,37 +118,65 @@ export default {
   data() {
     return {
       users: [],
-      uzytkownicy: [],
+      warehouses: [],
+      settings: [],
+      usersInWarehouse: [],
+      filteredUsers: [],
+      selectedWarehouse: null,
+      warehouseToken: null,
       newUser: {
-        ID: null,
-        token: "",
-        bl_id: null,
+        value: null,
+        key: "",
       },
       editingUser: null,
+      newToken: "",
       editUserDialog: false,
       createDialog: false,
+      addTokenDialog: false,
       headers: [
-        { title: "ID", value: "ID" },
-        { title: "User Name", value: "NazwaUzytkownika" },
-        { title: "Token", value: "token" },
-        { title: "Stan.", value: "bl_id" },
+        { title: "User ID", value: "key" },
+        { title: "Nazwa", value: "userName" },
+        { title: "Stan", value: "value" },
         { title: "Actions", value: "actions", sortable: false },
       ],
     };
   },
+
   methods: {
-    async fetchUsers() {
-      const response = await axios.get("/api/users");
-      this.users = response.data;
+    isToken() {
+      const warehouse = this.settings.find(
+        (wh) =>
+          wh.key === this.selectedWarehouse && wh.obj_name === "sklad_token"
+      );
+
+      this.warehouseToken = warehouse ? true : false;
     },
-    async fetchUzytkownicy() {
-      const response = await axios.get("/api/uzytkownicy");
-      this.uzytkownicy = response.data;
+    async fetchSettings() {
+      const response = await axios.get("/api/settings");
+      this.settings = response.data.settings;
+      this.warehouses = response.data.warehouses;
+      this.users = response.data.users;
+      this.isToken();
+    },
+    filterUsers() {
+      this.filteredUsers = this.settings.filter(
+        (user) =>
+          user.for_obj === this.selectedWarehouse && user.obj_name === "ext_id"
+      );
+      this.isToken();
     },
     async createUser() {
-      const response = await axios.post("/api/users", this.newUser);
-      this.users.push(response.data[0]);
-      this.newUser = { ID: null, token: "", bl_id: null };
+      const newUserSetting = {
+        obj_name: "ext_id",
+        for_obj: this.selectedWarehouse,
+        key: this.newUser.key,
+        value: this.newUser.value,
+      };
+      const response = await axios.post("/api/settings", newUserSetting);
+      console.log(response.data);
+      this.settings.push(response.data);
+      this.filterUsers();
+      this.newUser = { value: null, key: "" };
       this.createDialog = false;
     },
     editUser(user) {
@@ -113,27 +184,48 @@ export default {
       this.editUserDialog = true;
     },
     async updateUser() {
+      const updatedUserSetting = {
+        obj_name: "ext_id",
+        for_obj: this.selectedWarehouse,
+        key: this.editingUser.key,
+        value: this.editingUser.value,
+      };
       const response = await axios.put(
-        `/api/users/${this.editingUser.ID}`,
-        this.editingUser
+        `/api/settings/${this.editingUser.id}`,
+        updatedUserSetting
       );
-      const index = this.users.findIndex(
-        (user) => user.ID === response.data.ID
+      const index = this.settings.findIndex(
+        (setting) => setting.key === response.data.id
       );
-      this.users.splice(index, 1, response.data);
+      this.settings.splice(index, 1, response.data);
+      this.filterUsers();
       this.editUserDialog = false;
     },
     async deleteUser(id) {
-      await axios.delete(`/api/users/${id}`);
-      this.users = this.users.filter((user) => user.ID !== id);
+      await axios.delete(`/api/settings/${id}`);
+      this.settings = this.settings.filter((sett) => sett.id !== id);
+      this.filterUsers();
     },
     showCreateDialog() {
       this.createDialog = true;
     },
+    showAddTokenDialog() {
+      this.addTokenDialog = true;
+    },
+    async addToken() {
+      const newTokenSetting = {
+        obj_name: "sklad_token",
+        key: this.selectedWarehouse,
+        value: this.newToken,
+      };
+      await axios.post("/api/settings", newTokenSetting);
+      this.newToken = "";
+      this.addTokenDialog = false;
+      this.fetchSettings();
+    },
   },
   created() {
-    this.fetchUsers();
-    this.fetchUzytkownicy();
+    this.fetchSettings();
   },
 };
 </script>
