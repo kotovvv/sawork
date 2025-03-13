@@ -57,7 +57,7 @@ class BaseLinkerController extends Controller
         $response = $this->sendRequest('getOrderExtraFields');
         foreach ($response['extra_fields'] as $exfield) {
             if (strpos(strtolower($exfield['name']), 'stan') === 0) {
-                $this->id_exfield_stan = $exfield['id'];
+                $this->id_exfield_stan = $exfield['extra_field_id'];
                 break;
             }
         }
