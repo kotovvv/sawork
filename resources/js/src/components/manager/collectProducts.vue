@@ -451,8 +451,8 @@ export default {
           Nazwa: item.Nazwa,
           SKU: item.SKU,
           EAN: item.EAN,
-          Ilość: item.qty,
           locationCode: item.locationCode,
+          Ilość: item.qty,
         }));
         const ws = XLSXStyle.utils.json_to_sheet(filteredData);
       } else {
@@ -461,7 +461,7 @@ export default {
       // Apply conditional formatting
       const range = XLSXStyle.utils.decode_range(ws["!ref"]);
       for (let R = range.s.r; R <= range.e.r; ++R) {
-        const cellAddress = XLSXStyle.utils.encode_cell({ r: R, c: 3 }); // Column index for "Ilość"
+        const cellAddress = XLSXStyle.utils.encode_cell({ r: R, c: 4 }); // Column index for "Ilość"
         const cell = ws[cellAddress];
         if (cell && cell.v > 1) {
           cell.s = {
