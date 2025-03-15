@@ -28,7 +28,10 @@ class CollectController extends Controller
             ->whereNotNull('o._OrdersTempDecimal2') //Nr. Baselinker
             ->whereNotNull('o._OrdersTempString1') //Nr. Faktury BL
             ->whereNotNull('o._OrdersTempString7') //Źródło
-            ->whereNull('o._OrdersTempString5') //Product_Chang
+            ->where(function ($query) {
+                $query->where('o._OrdersTempString5', '')
+                    ->orWhereNull('o._OrdersTempString5');
+            }) //Product_Chang
             ->whereNotIn('o.IDOrder', function ($query) {
                 $query->select('ID2')
                     ->from('dbo.DocumentRelations')
@@ -441,6 +444,10 @@ class CollectController extends Controller
                             $messages[] = 'Error for order: ' . $order['NumberBL'];
                             throw new \Exception('Error setting order fields in BL');
                         }
+                        DB::table('collect')->where('IDOrder', $order['IDOrder'])->update([
+                            'status' => 1,
+                        ]); //1 - kompletowanie
+
                         // Изменить статус в базе lomag
                         $updateted = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
                             'IDOrderStatus' => 42, //Kompletowanie
@@ -469,6 +476,18 @@ class CollectController extends Controller
                 });
             } //order
         } //warehouse
+        collect($listProductsOK)->each(function ($product) {
+            $towar = DB::table('Towar')
+                ->select('Nazwa', 'KodKreskowy as EAN', '_TowarTempString1 as SKU')
+                ->where('IDTowaru', $product['IDItem'])
+                ->first();
+
+            if ($towar) {
+                $product['Nazwa'] = $towar->Nazwa;
+                $product['EAN'] = $towar->EAN;
+                $product['SKU'] = $towar->SKU;
+            }
+        });
         return response()->json([
             'messages' => $messages,
             'createdDoc' => $createdDoc,

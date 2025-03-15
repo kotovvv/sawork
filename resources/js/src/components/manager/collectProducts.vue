@@ -222,7 +222,11 @@
         <v-btn @click="prepareXLSX()" size="x-large">pobieranie XLSX</v-btn>
       </v-col>
       <v-col>
-        <v-data-table id="ordersPropucts" :items="ordersPropucts">
+        <v-data-table
+          id="ordersPropucts"
+          :items="ordersPropucts"
+          :headers="currentHeaders"
+        >
         </v-data-table>
       </v-col>
     </v-row>
@@ -233,6 +237,7 @@
 import axios from "axios";
 import _ from "lodash";
 import * as XLSX from "xlsx";
+import * as XLSXStyle from "xlsx-style";
 import { saveAs } from "file-saver";
 
 export default {
@@ -264,6 +269,22 @@ export default {
       createdDoc: [],
       productsERROR: [],
       orderERROR: [],
+      headers: [
+        { title: "Nazwa", value: "Nazwa" },
+        { title: "SKU", value: "SKU" },
+        { title: "EAN", value: "EAN" },
+        { title: "Ilosc", value: "qty" },
+        { title: "location", value: "locationCode" },
+      ],
+      headersForGetOrderProducts: [
+        { title: "IDWarehouse", value: "IDWarehouse" },
+        { title: "NumberBL", value: "NumberBL" },
+        { title: "IDOrder", value: "IDOrder" },
+        { title: "IDItem", value: "IDItem" },
+        { title: "Quantity", value: "Quantity" },
+        { title: "locations", value: "locations" },
+      ],
+      currentFunction: null,
     };
   },
 
@@ -271,7 +292,17 @@ export default {
     this.getWarehouse();
     this.getAllOrders();
   },
-
+  computed: {
+    currentHeaders() {
+      if (this.currentFunction === "prepareDoc") {
+        return this.headers;
+      } else if (this.currentFunction === "getOrderProducts") {
+        return this.headersForGetOrderProducts;
+      } else {
+        return [];
+      }
+    },
+  },
   methods: {
     clear() {
       this.selectedOrders = [];
@@ -307,6 +338,7 @@ export default {
     prepareDoc() {
       const vm = this;
       vm.loading = true;
+      vm.currentFunction = "prepareDoc";
       axios
         .post("/api/prepareDoc", {
           IDsWarehouses: vm.IDsWarehouses,
@@ -341,6 +373,7 @@ export default {
       if (vm.IDsTransCompany.length == 0 || vm.IDsWarehouses.length == 0) {
         return;
       }
+      vm.currentFunction = "getOrderProducts";
       let IDsOrder = vm.ordersTransCompany
         .filter((item) => vm.IDsTransCompany.includes(item.IDTransport))
         .map((item) => item.IDOrder);
@@ -412,11 +445,35 @@ export default {
       this.ordersWarehauses = Object.keys(this.groupsOrdersWarehauses);
     },
     prepareXLSX() {
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(this.ordersPropucts);
+      const wb = XLSXStyle.utils.book_new();
+      if ((this.currentFunction = "prepareDoc")) {
+        const filteredData = this.ordersPropucts.map((item) => ({
+          Nazwa: item.Nazwa,
+          SKU: item.SKU,
+          EAN: item.EAN,
+          Ilość: item.qty,
+          locationCode: item.locationCode,
+        }));
+        const ws = XLSXStyle.utils.json_to_sheet(filteredData);
+      } else {
+        const ws = XLSXStyle.utils.json_to_sheet(this.ordersPropucts);
+      }
+      // Apply conditional formatting
+      const range = XLSXStyle.utils.decode_range(ws["!ref"]);
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        const cellAddress = XLSXStyle.utils.encode_cell({ r: R, c: 3 }); // Column index for "Ilość"
+        const cell = ws[cellAddress];
+        if (cell && cell.v > 1) {
+          cell.s = {
+            fill: {
+              fgColor: { rgb: "D3D3D3" }, // Gray background
+            },
+          };
+        }
+      }
       XLSX.utils.book_append_sheet(wb, ws, "");
 
-      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      const wbout = XLSXStyle.write(wb, { bookType: "xlsx", type: "array" });
       saveAs(
         new Blob([wbout], { type: "application/octet-stream" }),
         "collect" + ".xlsx"
