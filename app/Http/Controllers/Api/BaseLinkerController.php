@@ -40,7 +40,8 @@ class BaseLinkerController extends Controller
     {
         $response = $this->sendRequest('getOrderStatusList');
         foreach ($response['statuses'] as $statusItem) {
-            if ($statusItem['name'] == 'Kompletowanie') {
+            if (strpos(strtolower($statusItem['name']), 'komp') === 0) {
+                // if ($statusItem['name'] == 'Kompletowanie') {
                 $this->status_id_Kompletowanie = $statusItem['id'];
                 break;
             }
@@ -49,7 +50,7 @@ class BaseLinkerController extends Controller
                 break;
             }
         }
-        // \Log::info('getOrderStatusList response:', $response['statuses']);
+        \Log::info('getOrderStatusList response:', $response['statuses']);
         return $response['statuses'];
     }
     public function getOrderExtraFields()
