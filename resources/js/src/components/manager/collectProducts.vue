@@ -454,9 +454,9 @@ export default {
         const filteredData = this.ordersPropucts.map((item) => ({
           Nazwa: item.Nazwa,
           SKU: item.SKU,
-          EAN: item.EAN,
+          EAN: parseInt(item.EAN),
           locationCode: item.locationCode,
-          Ilość: item.qty,
+          Ilość: parseInt(item.qty),
         }));
         ws = XLSX.utils.json_to_sheet(filteredData);
       } else {
