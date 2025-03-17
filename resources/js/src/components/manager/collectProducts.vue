@@ -21,11 +21,7 @@
         <v-select
           label="Magazyn"
           v-model="IDsWarehouses"
-          :items="
-            warehouses.filter((item) =>
-              ordersWarehauses.includes(item.IDMagazynu)
-            )
-          "
+          :items="filterWarehouses"
           :item-title="
             (item) =>
               `${item.Nazwa} (${
@@ -235,8 +231,8 @@
 
 <script>
 import axios from "axios";
-import _ from "lodash";
 import * as XLSX from "xlsx";
+import _ from "lodash";
 // import * as XLSXStyle from "xlsx-style";
 import { saveAs } from "file-saver";
 
@@ -249,6 +245,7 @@ export default {
       message: "",
       IDsWarehouses: [],
       warehouses: [],
+      filterWarehouses: [],
       ordersWarehauses: [],
       groupsOrdersWarehauses: [],
       IDsTransCompany: [],
@@ -443,6 +440,9 @@ export default {
     groupOrdersByWarehouse() {
       this.groupsOrdersWarehauses = _.groupBy(this.allOrders, "IDWarehouse");
       this.ordersWarehauses = Object.keys(this.groupsOrdersWarehauses);
+      this.filterWarehouses = this.warehouses.filter((item) =>
+        this.ordersWarehauses.includes(item.IDMagazynu)
+      );
     },
     prepareXLSX() {
       const wb = XLSX.utils.book_new();

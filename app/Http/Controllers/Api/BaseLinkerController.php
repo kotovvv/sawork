@@ -92,6 +92,7 @@ class BaseLinkerController extends Controller
     public function setOrderStatus($parameters)
     {
         $response = $this->sendRequest('setOrderStatus', $parameters);
+        \Log::info('setOrderStatus:', ['status' => $response]);
         return $response;
     }
 
