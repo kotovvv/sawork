@@ -430,6 +430,7 @@ class CollectController extends Controller
                         ];
                         // Изменить статус в BL
                         $response = $BL->setOrderStatus($parameters);
+                        \Log::info('setOrderStatus response in baselinker:', $response);
                         if (!$response['status'] == 'SUCCESS') {
                             $messages[] = 'Error for order: ' . $order['NumberBL'];
                             throw new \Exception('Error setting order fields in BL');
