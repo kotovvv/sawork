@@ -192,7 +192,7 @@ class CollectController extends Controller
 
     private function getListProducts($idsOrder)
     {
-        return DB::table('dbo.OrderLines as ol')
+        $listProductsOK = DB::table('dbo.OrderLines as ol')
             ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
             ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
             ->select('ol.IDItem', DB::raw('CAST(ol.Quantity AS INT) as Quantity'),  'ol.IDOrder', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 't.Nazwa', 't.KodKreskowy', 't._TowarTempString1 as sku', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
@@ -202,6 +202,8 @@ class CollectController extends Controller
             // ->orderByDesc('ol.IDItem')
             ->orderBy('o.Date', 'asc')
             ->get();
+
+        return $listProductsOK;
     }
 
     public function collectOrders(Request $request)
@@ -385,13 +387,14 @@ class CollectController extends Controller
                     }
                 } //product
 
-                DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, $productsOK) {
+                DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$productsOK) {
 
                     //если имеются все товары заказа
                     $IDsElementuRuchuMagazynowego = [];
                     if (!in_array($order['IDOrder'], $IDsOrderERROR)) {
                         // товары заказа можно перемещать в локацию пользователя
                         foreach ($productsOK as $product) {
+                            // \Log::info("message", $product);
                             $res =  $this->changeProductsLocation($product, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
                             if (isset($res['createdDoc']['idmin'])) {
                                 $listProductsOK[] = $product;
