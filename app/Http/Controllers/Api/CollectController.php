@@ -364,12 +364,15 @@ class CollectController extends Controller
                         foreach ($locations as $location) {
                             //с каждой локации забираем нужное количество товара
                             $location_ilosc = $location['ilosc'];
+                            $towar = DB::table('Towar')
+                                ->select('Nazwa', 'KodKreskowy as EAN', '_TowarTempString1 as SKU')
+                                ->where('IDTowaru', $product->IDItem)
+                                ->first();
                             if ($needqty >= $location_ilosc) {
                                 $needqty = $needqty - $location_ilosc;
-
-                                $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $location_ilosc, 'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode']];
+                                $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $location_ilosc, 'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $towar->Nazwa, 'EAN' => $towar->EAN, 'SKU' => $towar->SKU];
                             } else {
-                                $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $needqty, 'fromLocaton' =>  ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode']];
+                                $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $needqty, 'fromLocaton' =>  ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $towar->Nazwa, 'EAN' => $towar->EAN, 'SKU' => $towar->SKU];
                                 $needqty = 0;
                             }
                             if ($needqty == 0) {
@@ -480,18 +483,7 @@ class CollectController extends Controller
                 });
             } //order
         } //warehouse
-        collect($listProductsOK)->each(function ($product) {
-            $towar = DB::table('Towar')
-                ->select('Nazwa', 'KodKreskowy as EAN', '_TowarTempString1 as SKU')
-                ->where('IDTowaru', $product['IDItem'])
-                ->first();
 
-            if ($towar) {
-                $product['Nazwa'] = $towar->Nazwa;
-                $product['EAN'] = $towar->EAN;
-                $product['SKU'] = $towar->SKU;
-            }
-        });
         return response()->json([
             'messages' => $messages,
             'createdDoc' => $createdDoc,

@@ -334,6 +334,8 @@ export default {
     },
     prepareDoc() {
       const vm = this;
+      vm.productsERROR = [];
+      vm.orderERROR = [];
       vm.loading = true;
       vm.currentFunction = "prepareDoc";
       axios
@@ -446,6 +448,7 @@ export default {
     },
     prepareXLSX() {
       const wb = XLSX.utils.book_new();
+      let ws;
       if ((this.currentFunction = "prepareDoc")) {
         const filteredData = this.ordersPropucts.map((item) => ({
           Nazwa: item.Nazwa,
@@ -454,9 +457,9 @@ export default {
           locationCode: item.locationCode,
           Ilość: item.qty,
         }));
-        const ws = XLSX.utils.json_to_sheet(filteredData);
+        ws = XLSX.utils.json_to_sheet(filteredData);
       } else {
-        const ws = XLSX.utils.json_to_sheet(this.ordersPropucts);
+        ws = XLSX.utils.json_to_sheet(this.ordersPropucts);
       }
       //   // Apply conditional formatting
       //   const range = XLSX.utils.decode_range(ws["!ref"]);
