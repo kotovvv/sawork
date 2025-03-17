@@ -231,7 +231,8 @@
 
 <script>
 import axios from "axios";
-import * as XLSX from "xlsx";
+// import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import _ from "lodash";
 // import * as XLSXStyle from "xlsx-style";
 import { saveAs } from "file-saver";
@@ -449,7 +450,7 @@ export default {
     prepareXLSX() {
       const wb = XLSX.utils.book_new();
       let ws;
-      if ((this.currentFunction = "prepareDoc")) {
+      if (this.currentFunction == "prepareDoc") {
         const filteredData = this.ordersPropucts.map((item) => ({
           Nazwa: item.Nazwa,
           SKU: item.SKU,
@@ -461,19 +462,18 @@ export default {
       } else {
         ws = XLSX.utils.json_to_sheet(this.ordersPropucts);
       }
-      //   // Apply conditional formatting
-      //   const range = XLSX.utils.decode_range(ws["!ref"]);
-      //   for (let R = range.s.r; R <= range.e.r; ++R) {
-      //     const cellAddress = XLSX.utils.encode_cell({ r: R, c: 4 }); // Column index for "Ilość"
-      //     const cell = ws[cellAddress];
-      //     if (cell && cell.v > 1) {
-      //       cell.s = {
-      //         fill: {
-      //           fgColor: { rgb: "D3D3D3" }, // Gray background
-      //         },
-      //       };
-      //     }
-      //   }
+      // Apply styles to the "Ilość" column
+      const range = XLSX.utils.decode_range(ws["!ref"]);
+      for (let row = range.s.r + 1; row <= range.e.r; row++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: row, c: 4 }); // Column index 4 corresponds to "Ilość"
+        if (!ws[cellAddress]) continue; // Skip if the cell doesn't exist
+        ws[cellAddress].s = {
+          fill: {
+            patternType: "solid",
+            fgColor: { rgb: "D3D3D3" }, // Grey background
+          },
+        };
+      }
       XLSX.utils.book_append_sheet(wb, ws, "");
 
       const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
