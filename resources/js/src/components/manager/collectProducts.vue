@@ -237,7 +237,7 @@
 import axios from "axios";
 import _ from "lodash";
 import * as XLSX from "xlsx";
-import * as XLSXStyle from "xlsx-style";
+// import * as XLSXStyle from "xlsx-style";
 import { saveAs } from "file-saver";
 
 export default {
@@ -445,7 +445,7 @@ export default {
       this.ordersWarehauses = Object.keys(this.groupsOrdersWarehauses);
     },
     prepareXLSX() {
-      const wb = XLSXStyle.utils.book_new();
+      const wb = XLSX.utils.book_new();
       if ((this.currentFunction = "prepareDoc")) {
         const filteredData = this.ordersPropucts.map((item) => ({
           Nazwa: item.Nazwa,
@@ -454,26 +454,26 @@ export default {
           locationCode: item.locationCode,
           Ilość: item.qty,
         }));
-        const ws = XLSXStyle.utils.json_to_sheet(filteredData);
+        const ws = XLSX.utils.json_to_sheet(filteredData);
       } else {
-        const ws = XLSXStyle.utils.json_to_sheet(this.ordersPropucts);
+        const ws = XLSX.utils.json_to_sheet(this.ordersPropucts);
       }
-      // Apply conditional formatting
-      const range = XLSXStyle.utils.decode_range(ws["!ref"]);
-      for (let R = range.s.r; R <= range.e.r; ++R) {
-        const cellAddress = XLSXStyle.utils.encode_cell({ r: R, c: 4 }); // Column index for "Ilość"
-        const cell = ws[cellAddress];
-        if (cell && cell.v > 1) {
-          cell.s = {
-            fill: {
-              fgColor: { rgb: "D3D3D3" }, // Gray background
-            },
-          };
-        }
-      }
+      //   // Apply conditional formatting
+      //   const range = XLSX.utils.decode_range(ws["!ref"]);
+      //   for (let R = range.s.r; R <= range.e.r; ++R) {
+      //     const cellAddress = XLSX.utils.encode_cell({ r: R, c: 4 }); // Column index for "Ilość"
+      //     const cell = ws[cellAddress];
+      //     if (cell && cell.v > 1) {
+      //       cell.s = {
+      //         fill: {
+      //           fgColor: { rgb: "D3D3D3" }, // Gray background
+      //         },
+      //       };
+      //     }
+      //   }
       XLSX.utils.book_append_sheet(wb, ws, "");
 
-      const wbout = XLSXStyle.write(wb, { bookType: "xlsx", type: "array" });
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       saveAs(
         new Blob([wbout], { type: "application/octet-stream" }),
         "collect" + ".xlsx"
