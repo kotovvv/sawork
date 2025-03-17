@@ -40,14 +40,12 @@ class BaseLinkerController extends Controller
     {
         $response = $this->sendRequest('getOrderStatusList');
         foreach ($response['statuses'] as $statusItem) {
-            if (strpos(strtolower($statusItem['name']), 'komp') === 0) {
-                // if ($statusItem['name'] == 'Kompletowanie') {
+            // if (strpos(strtolower($statusItem['name']), 'komp') === 0) {
+            if ($statusItem['name'] == 'Kompletowanie') {
                 $this->status_id_Kompletowanie = $statusItem['id'];
-                break;
             }
             if ($statusItem['name'] == 'Nie wysyłać') {
                 $this->status_id_Nie_wysylac = $statusItem['id'];
-                break;
             }
         }
         \Log::info('getOrderStatusList response:', $response['statuses']);
