@@ -462,17 +462,19 @@ export default {
       } else {
         ws = XLSX.utils.json_to_sheet(this.ordersPropucts);
       }
-      // Apply styles to the "Ilość" column
+      // Apply styles to the "Ilość" column if the value is greater than 1
       const range = XLSX.utils.decode_range(ws["!ref"]);
       for (let row = range.s.r + 1; row <= range.e.r; row++) {
         const cellAddress = XLSX.utils.encode_cell({ r: row, c: 4 }); // Column index 4 corresponds to "Ilość"
         if (!ws[cellAddress]) continue; // Skip if the cell doesn't exist
-        ws[cellAddress].s = {
-          fill: {
-            patternType: "solid",
-            fgColor: { rgb: "D3D3D3" }, // Grey background
-          },
-        };
+        if (ws[cellAddress].v > 1) {
+          ws[cellAddress].s = {
+            fill: {
+              patternType: "solid",
+              fgColor: { rgb: "D3D3D3" }, // Grey background
+            },
+          };
+        }
       }
       XLSX.utils.book_append_sheet(wb, ws, "");
 

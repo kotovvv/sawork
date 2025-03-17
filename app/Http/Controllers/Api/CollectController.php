@@ -309,7 +309,7 @@ class CollectController extends Controller
         $createdDoc = [];
 
 
-        // Пока склад
+        // Пока что склад
         foreach ($request->IDsWarehouses as  $IDMagazynu) {
 
             $token = $this->getToken($IDMagazynu);
@@ -327,11 +327,11 @@ class CollectController extends Controller
                 continue;
             }
             $createdDoc[$IDMagazynu] = null;
-            // Локация пользователя
+            // Lokalizacja użytkownika
             $toLocation['IDWarehouseLocation'] = $this->getUserLocation($IDMagazynu, $request->user->IDUzytkownika);
-            // Пока Заказы по складу
+            // Podczas gdy zamówienia magazynowe
             foreach ($request->orders as $order) {
-                // если заказ не этого склада берём следующий
+                // Jeśli zamówienie jest niedostępne, przyjmiemy następne.
                 if ($order['IDWarehouse'] != $IDMagazynu) {
                     continue;
                 }
@@ -347,22 +347,22 @@ class CollectController extends Controller
                     $messages[] = 'Order BL ' . $order['NumberBL'] . ' ne W realizacji';
                     continue;
                 }
-                //иначе пропускаем
+                //w przeciwnym razie pomijamy
 
 
                 $productsOK = [];
                 $orderOK = true;
                 $products = $this->getListProducts([$order['IDOrder']]);
                 $Uwagi = 'User' . $request->user->IDUzytkownika . ' || ' . $order['Remarks'];
-                // Пока Товар
+                // Пока продукт
                 foreach ($products as $product) {
                     $needqty = $product->Quantity;
-                    // Локации товара
+                    // Lokalizacje produktów
                     $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
 
                     if ($locations) {
                         foreach ($locations as $location) {
-                            //с каждой локации забираем нужное количество товара
+                            //Z każdej lokalizacji należy pobrać wymaganą ilość towarów
                             $location_ilosc = $location['ilosc'];
                             $towar = DB::table('Towar')
                                 ->select('Nazwa', 'KodKreskowy as EAN', '_TowarTempString1 as SKU')
@@ -381,8 +381,8 @@ class CollectController extends Controller
                         }
                     }
                     if ($needqty > 0) {
-                        //  "оповестить о нехватке товара ,
-                        // занести штрих код товара в уваги документа"
+                        //  "powiadomić użytkownika o niedoborze ,
+                        // wprowadzić kod kreskowy produktu do uwagi dokumentu"
                         $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'not enough products'];
                         $orderERROR[] = $order;
                         $IDsOrderERROR[] = $order['IDOrder'];
@@ -392,10 +392,10 @@ class CollectController extends Controller
 
                 DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$productsOK) {
 
-                    //если имеются все товары заказа
+                    //jeśli wszystkie pozycje w zamówieniu są dostępne
                     $IDsElementuRuchuMagazynowego = [];
                     if (!in_array($order['IDOrder'], $IDsOrderERROR)) {
-                        // товары заказа можно перемещать в локацию пользователя
+                        // pozycje zamówienia mogą być przenoszone do lokalizacji użytkownika
                         foreach ($productsOK as $product) {
                             // \Log::info("message", $product);
                             $res =  $this->changeProductsLocation($product, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
@@ -429,7 +429,7 @@ class CollectController extends Controller
                         if (!$inserted) {
                             throw new \Exception('Error inserting into collect table');
                         }
-                        // Изменить статус заказа на "Kompletowanie"
+                        // Zmień status zamówienia na "Kompletowanie"
                         $parameters = [
                             'order_id' => $order['NumberBL'],
                             'status_id' => $BL->status_id_Kompletowanie,
@@ -441,7 +441,7 @@ class CollectController extends Controller
                             $messages[] = 'Error for order: ' . $order['NumberBL'];
                             throw new \Exception('Error setting order fields in BL');
                         }
-                        // Изменить stan в BL
+                        // Zmień stan na BL
                         $parameters = [
                             'order_id' => $order['NumberBL'],
                             'custom_extra_fields' => [$BL->id_exfield_stan => $bl_user_id],
@@ -451,11 +451,8 @@ class CollectController extends Controller
                             $messages[] = 'Error for order: ' . $order['NumberBL'];
                             throw new \Exception('Error setting order fields in BL');
                         }
-                        DB::table('collect')->where('IDOrder', $order['IDOrder'])->update([
-                            'status' => 1,
-                        ]); //1 - kompletowanie
 
-                        // Изменить статус в базе lomag
+                        // Zmiana statusu w bazie danych lomag
                         $updateted = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
                             'IDOrderStatus' => 42, //Kompletowanie
                         ]);
@@ -463,7 +460,7 @@ class CollectController extends Controller
                             throw new \Exception('Error updateted into Orders table');
                         }
                     } else {
-                        // Изменить статус заказа на "Не хватает товаров" "Nie wysyłać"
+                        // Zmień status zamówienia na "Za mało pozycji" "Nie wysyłać"
                         $parameters = [
                             'order_id' => $order['NumberBL'],
                             'status_id' => $BL->status_id_Nie_wysylac,
@@ -483,6 +480,27 @@ class CollectController extends Controller
                 });
             } //order
         } //warehouse
+
+        $result = [];
+
+        foreach ($listProductsOK as $item) {
+            $key = $item['EAN'] . '_' . $item['locationCode']; // Unikalny klucz dla EAN i lokalizacji
+            if (!isset($result[$key])) {
+                $result[$key] = [
+                    'qty' => $item['qty'],
+                    'EAN' => $item['EAN'],
+                    'locationCode' => $item['locationCode'],
+                    'Nazwa' => $item['Nazwa'],
+                    'SKU' => $item['SKU'],
+                    'NumberBL' => $item['NumberBL'],
+                    'IDItem' => $item['IDItem'],
+                ];
+            } else {
+                $result[$key]['qty'] += $item['qty'];
+            }
+        }
+
+        $listProductsOK = array_values($result);
 
         return response()->json([
             'messages' => $messages,

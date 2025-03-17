@@ -1027,6 +1027,7 @@ class MagazynController extends Controller
                 'ID2' => $orderId,
                 'IDType2' => $OrderType,
             ]);
+            DB::table('collect')->where('IDOrder', $orderId)->update(['status' => 1]);
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
