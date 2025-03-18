@@ -1007,7 +1007,7 @@ class MagazynController extends Controller
                     $FCPrice = $Price * DB::table('dbo.Orders')->where('IDOrder', $orderId)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 0)'));
                 }
 
-                DB::table('dbo.ElementRuchuMagazynowego')->insert([
+                $stat = DB::table('dbo.ElementRuchuMagazynowego')->insert([
                     'Ilosc' => $Element->Ilosc,
                     'Uwagi' => 'User' . $UserID . '|| ' . $product->Remarks,
                     'CenaJednostkowa' => $Element->CenaJednostkowa,
@@ -1017,16 +1017,25 @@ class MagazynController extends Controller
                     'IDOrderLine' => $product->IDOrderLine,
                     'CurrencyPrice' => $FCPrice ?? null,
                 ]);
+                if (!$stat) {
+                    throw new \Exception('Error creating ElementRuchuMagazynowego for WZ order ID' . $orderId . ' IDRuchuMagazynowego' . $DocumentID);
+                }
                 $ElementID = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
-                DB::statement('EXEC [dbo].[UtworzZaleznoscPZWZ] ?, ?, ?', [$IDElement->pls, $ElementID, $product->Quantity]);
+                $stat = DB::statement('EXEC [dbo].[UtworzZaleznoscPZWZ] ?, ?, ?', [$IDElement->pls, $ElementID, $product->Quantity]);
+                if (!$stat) {
+                    throw new \Exception('Error creating UtworzZaleznoscPZWZ for WZ order ID' . $orderId . ' IDRuchuMagazynowego' . $DocumentID);
+                }
             }
 
-            DB::table('dbo.DocumentRelations')->insert([
+            $stat = DB::table('dbo.DocumentRelations')->insert([
                 'ID1' => $DocumentID,
                 'IDType1' => $DocumentType,
                 'ID2' => $orderId,
                 'IDType2' => $OrderType,
             ]);
+            if (!$stat) {
+                throw new \Exception('Error creating DocumentRelations for WZ order ID2' . $orderId);
+            }
             DB::table('collect')->where('IDOrder', $orderId)->update(['status' => 1]);
             DB::commit();
         } catch (\Exception $e) {
