@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Exception;
 
 
 class MagazynController extends Controller
@@ -916,6 +917,7 @@ class MagazynController extends Controller
         $order = DB::table('Orders')->where('IDOrder', $orderId)->first();
         $symbol = DB::table('Magazyn')->where('IDMagazynu', $order->IDWarehouse)->value('Symbol');
         $documentNumber = $this->lastNumber('WZ', $symbol);
+        $DocumentID = 0;
 
         $o_collectIDsElements = json_decode($collect->IDsElementuRuchuMagazynowego);
 
@@ -924,8 +926,8 @@ class MagazynController extends Controller
 
         try {
             DB::beginTransaction();
-
-            DB::table('dbo.RuchMagazynowy')->insert([
+            // DB::transaction(function () use ($o_collectIDsElements, $products, $orderId, $UserID, $DocumentType, $DocDate, $documentNumber, $InvAlgGross, $PricesModeGross, $order, $OrderType, $DocumentID) {
+            $stat =  DB::table('dbo.RuchMagazynowy')->insert([
                 'Data' => $DocDate,
                 'Uwagi' => 'User' . $UserID . '|| ' . $order->Remarks,
                 'IDRodzajuRuchuMagazynowego' => $DocumentType,
@@ -950,80 +952,91 @@ class MagazynController extends Controller
             ]);
 
             $DocumentID = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
-
+            // Log::info('RuchMagazynowy: ' . $stat . ' DocumentID: ' . $DocumentID);
+            if (!$stat) {
+                Log::error('Error creating RuchMagazynowy for WZ order ID' . $orderId);
+                throw new \Exception('Error creating RuchMagazynowy for WZ order ID' . $orderId);
+            }
             foreach ($o_collectIDsElements as $IDItem => $IDElement) {
                 $product = $products->filter(function ($product) use ($IDItem) {
                     return $product->IDItem == $IDItem;
                 })->first();
+                foreach ($IDElement->pls as  $ZL_IDElementuRuchuMagazynowego) {
+                    $Element = DB::table('ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $ZL_IDElementuRuchuMagazynowego)->first();
+                    $PriceNet = $product->PriceNet;
+                    $PriceGross = $product->PriceGross;
+                    $IDVat = $product->IDVat;
+                    $Remarks = $product->Remarks;
+                    $Discount = $product->Discount;
+                    $FCPriceGross = $product->ForeignCurrencyPriceGross;
+                    $FCPriceNet = $product->ForeignCurrencyPriceNet;
 
-                $Element = DB::table('ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $IDElement->pls)->first();
+                    //$OnStock = DB::table('stanywdniu')->where('IDTowaru', $IDItem)->value('ilosc') ?? 0;
 
-                $PriceNet = $product->PriceNet;
-                $PriceGross = $product->PriceGross;
-                $IDVat = $product->IDVat;
-                $Remarks = $product->Remarks;
-                $Discount = $product->Discount;
-                $FCPriceGross = $product->ForeignCurrencyPriceGross;
-                $FCPriceNet = $product->ForeignCurrencyPriceNet;
-
-                //$OnStock = DB::table('stanywdniu')->where('IDTowaru', $IDItem)->value('ilosc') ?? 0;
-
-                $VatRate = DB::table('dbo.VatRates')->where('IDVatRate', $IDVat)->value('Rate');
-                $CurrencyRateBaseToForeign = 1;
-                if ($FCPriceGross > 0 || $FCPriceNet > 0) {
-                    $CurrencyRateBaseToForeign = DB::table('dbo.Orders')->where('IDOrder', $orderId)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 0)'));
-                }
-
-                if (DB::table('Ustawienia')->where('Nazwa', 'UseDiscounts')->value('Wartosc') == 'Nie') {
-                    $Discount = 0;
-                }
-                if ($FCPriceGross > 0 || $FCPriceNet > 0) {
-                    $Discount = $Discount * DB::table('dbo.Orders')->where('IDOrder', $orderId)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 1)'));
-                }
-
-                if ($InvAlgGross != $PricesModeGross && $VatRate !== null) {
-                    if ($InvAlgGross == 1 && $PricesModeGross == 0) {
-                        $PriceNet = $PriceGross / (1 + $VatRate / 100) + $Discount;
-                    } else {
-                        $PriceGross = $PriceNet * (1 + $VatRate / 100) - $Discount;
+                    $VatRate = DB::table('dbo.VatRates')->where('IDVatRate', $IDVat)->value('Rate');
+                    $CurrencyRateBaseToForeign = 1;
+                    if ($FCPriceGross > 0 || $FCPriceNet > 0) {
+                        $CurrencyRateBaseToForeign = DB::table('dbo.Orders')->where('IDOrder', $orderId)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 0)'));
                     }
-                }
 
-                if (DB::table('Ustawienia')->where('Nazwa', 'PricesMode')->value('Wartosc') == 'Brutto') {
-                    if ($PriceGross != 0) {
-                        $Price = $PriceGross;
-                    } else {
-                        $Price = ($PriceNet - $Discount) * (1 + $VatRate / 100);
+                    if (DB::table('Ustawienia')->where('Nazwa', 'UseDiscounts')->value('Wartosc') == 'Nie') {
+                        $Discount = 0;
                     }
-                } else {
-                    if ($PriceNet != 0) {
-                        $Price = ($PriceNet - $Discount);
-                    } else {
-                        $Price = $PriceGross / (1 + $VatRate / 100);
+                    if ($FCPriceGross > 0 || $FCPriceNet > 0) {
+                        $Discount = $Discount * DB::table('dbo.Orders')->where('IDOrder', $orderId)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 1)'));
                     }
-                }
 
-                if (($FCPriceGross > 0 || $FCPriceNet > 0) && DB::table('Ustawienia')->where('Nazwa', 'UseCurrenciesOnPZ')->value('Wartosc') == 1) {
-                    $FCPrice = $Price * DB::table('dbo.Orders')->where('IDOrder', $orderId)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 0)'));
-                }
+                    if ($InvAlgGross != $PricesModeGross && $VatRate !== null) {
+                        if ($InvAlgGross == 1 && $PricesModeGross == 0) {
+                            $PriceNet = $PriceGross / (1 + $VatRate / 100) + $Discount;
+                        } else {
+                            $PriceGross = $PriceNet * (1 + $VatRate / 100) - $Discount;
+                        }
+                    }
 
-                $stat = DB::table('dbo.ElementRuchuMagazynowego')->insert([
-                    'Ilosc' => $Element->Ilosc,
-                    'Uwagi' => 'User' . $UserID . '|| ' . $product->Remarks,
-                    'CenaJednostkowa' => $Element->CenaJednostkowa,
-                    'IDRuchuMagazynowego' => $DocumentID,
-                    'IDTowaru' => $IDItem,
-                    'Uzytkownik' => $UserID,
-                    'IDOrderLine' => $product->IDOrderLine,
-                    'CurrencyPrice' => $FCPrice ?? null,
-                ]);
-                if (!$stat) {
-                    throw new \Exception('Error creating ElementRuchuMagazynowego for WZ order ID' . $orderId . ' IDRuchuMagazynowego' . $DocumentID);
-                }
-                $ElementID = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
-                $stat = DB::statement('EXEC [dbo].[UtworzZaleznoscPZWZ] ?, ?, ?', [$IDElement->pls, $ElementID, $product->Quantity]);
-                if (!$stat) {
-                    throw new \Exception('Error creating UtworzZaleznoscPZWZ for WZ order ID' . $orderId . ' IDRuchuMagazynowego' . $DocumentID);
+                    if (DB::table('Ustawienia')->where('Nazwa', 'PricesMode')->value('Wartosc') == 'Brutto') {
+                        if ($PriceGross != 0) {
+                            $Price = $PriceGross;
+                        } else {
+                            $Price = ($PriceNet - $Discount) * (1 + $VatRate / 100);
+                        }
+                    } else {
+                        if ($PriceNet != 0) {
+                            $Price = ($PriceNet - $Discount);
+                        } else {
+                            $Price = $PriceGross / (1 + $VatRate / 100);
+                        }
+                    }
+
+                    if (($FCPriceGross > 0 || $FCPriceNet > 0) && DB::table('Ustawienia')->where('Nazwa', 'UseCurrenciesOnPZ')->value('Wartosc') == 1) {
+                        $FCPrice = $Price * DB::table('dbo.Orders')->where('IDOrder', $orderId)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 0)'));
+                    }
+
+                    $stat = DB::table('dbo.ElementRuchuMagazynowego')->insert([
+                        'Ilosc' => $Element->Ilosc,
+                        'Uwagi' => 'User' . $UserID . '|| ' . $product->Remarks,
+                        'CenaJednostkowa' => $Element->CenaJednostkowa,
+                        'IDRuchuMagazynowego' => $DocumentID,
+                        'IDTowaru' => $IDItem,
+                        'Uzytkownik' => $UserID,
+                        'IDOrderLine' => $product->IDOrderLine,
+                        'CurrencyPrice' => $FCPrice ?? null,
+                    ]);
+
+                    $ElementID = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
+                    // Log::info('ElementRuchuMagazynowego: ' . $stat);
+                    if (!$stat) {
+                        Log::error('Error creating ElementRuchuMagazynowego for WZ order ID' . $orderId . ' IDRuchuMagazynowego' . $DocumentID);
+                        throw new \Exception('Error creating ElementRuchuMagazynowego for WZ order ID' . $orderId . ' IDRuchuMagazynowego' . $DocumentID);
+                    }
+
+                    Log::info('UtworzZaleznoscPZWZ: ' . $ZL_IDElementuRuchuMagazynowego . ' ' . $ElementID . ' ' . $product->Quantity);
+                    DB::statement('EXEC [dbo].[UtworzZaleznoscPZWZ] ?, ?, ?', [$ZL_IDElementuRuchuMagazynowego, $ElementID, $Element->Ilosc]);
+                    $forlog = DB::table('RuchMagazynowy')->where('IDRuchuMagazynowego', $DocumentID)->value('IDRuchuMagazynowego');
+                    if ($forlog == null) {
+                        Log::error('Error creating UtworzZaleznoscPZWZ for WZ order ID' . $orderId . ' IDRuchuMagazynowego' . $DocumentID);
+                        throw new \Exception('Error creating UtworzZaleznoscPZWZ for WZ order ID' . $orderId . ' IDRuchuMagazynowego' . $DocumentID);
+                    }
                 }
             }
 
@@ -1038,10 +1051,11 @@ class MagazynController extends Controller
             }
             DB::table('collect')->where('IDOrder', $orderId)->update(['status' => 1]);
             DB::commit();
+            // });
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Error creating WZ from collect: ' . $e->getMessage(), ['exception' => $e]);
-            return ['id' => null, 'Powiązane_WZ' => '', 'date' => $DocDate->format('Y-m-d H:i:s')];
+            DB::rollBack();
+            return response()->json(['error' => $e->getMessage()], 500);
         }
         return ['id' => $DocumentID, 'Powiązane_WZ' => $documentNumber, 'date' =>  $DocDate->format('Y-m-d H:i:s')];
     }
@@ -1063,34 +1077,18 @@ class MagazynController extends Controller
             $orderId = $order['IDOrder'];
             $relatedDocument = DB::table('DocumentRelations')->where('ID2', $orderId)->where('IDType2', 15)->where('IDType1', 2)->value('ID1');
 
-            $documentNumber = $this->lastNumber('WZ', $symbol);
 
             if (!$relatedDocument) {
                 // check if order is in collection
                 if ($this->isInCollect($orderId)) {
+                    Log::info('Order is in collect');
                     $relatedDocument = $this->createWZfromCollect($orderId, $request->user->IDUzytkownika);
                     if ($relatedDocument == null) {
                         return response('Error create doc WZ', 500);
                     }
                 } else {
-                    DB::statement('
-            DECLARE @DocumentID INT;
-            EXEC GenerateWZfromOrder
-                @DocumentType = :documentType,
-                @UserID = :userId,
-                @AmountFlag = :amountFlag,
-                @ElementsGUID = :elementsGUID,
-                @OrderID = :orderId,
-                @DocumentNumber = :documentNumber,
-                @DocumentID = @DocumentID OUTPUT;
-            ', [
-                        'documentType' => $documentType,
-                        'userId' => $userId,
-                        'amountFlag' => $amountFlag,
-                        'elementsGUID' => $elementsGUID,
-                        'orderId' => $orderId,
-                        'documentNumber' => $documentNumber
-                    ]);
+                    $documentNumber = $this->lastNumber('WZ', $symbol);
+                    DB::statement(' DECLARE @DocumentID INT; EXEC GenerateWZfromOrder @DocumentType = :documentType, @UserID = :userId, @AmountFlag = :amountFlag, @ElementsGUID = :elementsGUID, @OrderID = :orderId, @DocumentNumber = :documentNumber, @DocumentID = @DocumentID OUTPUT; ', ['documentType' => $documentType, 'userId' => $userId, 'amountFlag' => $amountFlag, 'elementsGUID' => $elementsGUID, 'orderId' => $orderId, 'documentNumber' => $documentNumber]);
 
                     $relatedDocument = DB::table('DocumentRelations')
                         ->leftJoin('RuchMagazynowy', 'DocumentRelations.ID1', 'RuchMagazynowy.IDRuchuMagazynowego')
@@ -1101,6 +1099,8 @@ class MagazynController extends Controller
                         ->first();
                 }
                 $listOrders[$orderId] = $relatedDocument;
+            } else {
+                return response('Order ID ' . $orderId . ' already has WZ ', 500);
             }
         }
         return $listOrders;

@@ -402,8 +402,8 @@ class CollectController extends Controller
                             if (isset($res['createdDoc']['idmin'])) {
                                 $listProductsOK[] = $product;
                                 $createdDoc[$IDMagazynu] = $res['createdDoc'];
-                                $IDsElementuRuchuMagazynowego[$product['IDItem']]['min'] = $res['IDsElementuRuchuMagazynowego']['min'];
-                                $IDsElementuRuchuMagazynowego[$product['IDItem']]['pls'] = $res['IDsElementuRuchuMagazynowego']['pls'];
+                                $IDsElementuRuchuMagazynowego[$product['IDItem']]['min'][] = $res['IDsElementuRuchuMagazynowego']['min'];
+                                $IDsElementuRuchuMagazynowego[$product['IDItem']]['pls'][] = $res['IDsElementuRuchuMagazynowego']['pls'];
                             } else {
                                 $orderOK = false;
                                 $orderERROR[] = $order;

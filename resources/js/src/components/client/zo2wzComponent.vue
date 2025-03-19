@@ -218,6 +218,9 @@ export default {
                 return order;
               });
             }
+            if (res.status == 500) {
+              alert(res.data);
+            }
             vm.loading = false;
           })
           .catch((error) => console.log(error));
