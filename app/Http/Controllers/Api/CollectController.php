@@ -298,6 +298,7 @@ class CollectController extends Controller
         return DB::table('settings')->where('obj_name', 'sklad_token')->where('key', $IDMagazynu)->value('value');
     }
 
+
     public function prepareDoc(Request $request)
     {
         $messages = [];
@@ -308,36 +309,24 @@ class CollectController extends Controller
         $listOrders = [];
         $createdDoc = [];
 
-
-        // Пока что склад
-        foreach ($request->IDsWarehouses as  $IDMagazynu) {
-
+        foreach ($request->IDsWarehouses as $IDMagazynu) {
             $token = $this->getToken($IDMagazynu);
             $token = Crypt::decryptString($token);
             if ($token) {
                 $BL = new BaseLinkerController($token);
-                //$BLStatusList = $BL->getOrderStatusList();
-                //$BLExtraFields = $BL->getOrderExtraFields();
-                $bl_user_id = DB::table('settings')->where('obj_name', 'ext_id')->where('for_obj', $IDMagazynu)->where(
-                    'key',
-                    $request->user->IDUzytkownika
-                )->value('value');
+                $bl_user_id = DB::table('settings')->where('obj_name', 'ext_id')->where('for_obj', $IDMagazynu)->where('key', $request->user->IDUzytkownika)->value('value');
             } else {
                 $messages[] = 'no token ' . $IDMagazynu;
                 continue;
             }
             $createdDoc[$IDMagazynu] = null;
-            // Lokalizacja użytkownika
             $toLocation['IDWarehouseLocation'] = $this->getUserLocation($IDMagazynu, $request->user->IDUzytkownika);
-            // Podczas gdy zamówienia magazynowe
+
             foreach ($request->orders as $order) {
-                // Jeśli zamówienie jest niedostępne, przyjmiemy następne.
                 if ($order['IDWarehouse'] != $IDMagazynu) {
                     continue;
                 }
 
-                //!!!!!!!!!!!!!!!!!!!!!!!!!!!
-                //базелинкер заказ статус - "W realizacji"?
                 $parameters = [
                     'order_id' => $order['NumberBL'],
                     'get_unconfirmed_orders' => true,
@@ -347,46 +336,34 @@ class CollectController extends Controller
                     $messages[] = 'Order BL ' . $order['NumberBL'] . ' ne W realizacji';
                     continue;
                 }
-                //w przeciwnym razie pomijamy
-
 
                 $orderOK = true;
                 $products = $this->getListProducts([$order['IDOrder']]);
                 $Uwagi = 'User' . $request->user->IDUzytkownika . ' || ' . $order['Remarks'];
 
                 DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$products) {
-
-                    //jeśli wszystkie pozycje w zamówieniu są dostępne
                     $IDsElementuRuchuMagazynowego = [];
-                    // if (!in_array($order['IDOrder'], $IDsOrderERROR)) {
-                    // pozycje zamówienia mogą być przenoszone do lokalizacji użytkownika
+
                     foreach ($products as $product) {
                         $productsOK = [];
                         $needqty = $product->Quantity;
-                        // Lokalizacje produktów
                         $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
 
                         if ($locations) {
-                            $towar = DB::table('Towar')
-                                ->select('Nazwa', 'KodKreskowy as EAN', '_TowarTempString1 as SKU')
-                                ->where('IDTowaru', $product->IDItem)
-                                ->first();
                             foreach ($locations as $location) {
-                                //Z każdej lokalizacji należy pobrać wymaganą ilość towarów
                                 $result = [];
                                 $item = ['IDTowaru' => $product->IDItem, 'fromLocation' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'selectedWarehause' => $IDMagazynu];
                                 $location_ilosc = $location['ilosc'];
                                 if ($needqty >= $location_ilosc) {
                                     $needqty = $needqty - $location_ilosc;
-                                    $productsOK = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $location_ilosc, 'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $towar->Nazwa, 'EAN' => $towar->EAN, 'SKU' => $towar->SKU];
+                                    $productsOK = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $location_ilosc, 'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $product->Nazwa, 'EAN' => $product->EAN, 'SKU' => $product->SKU];
                                     $result =  $this->changeProductsLocation($item, $location_ilosc, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
                                 } else {
-                                    $productsOK = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $needqty, 'fromLocaton' =>  ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $towar->Nazwa, 'EAN' => $towar->EAN, 'SKU' => $towar->SKU];
+                                    $productsOK = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $needqty, 'fromLocaton' =>  ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $product->Nazwa, 'EAN' => $product->EAN, 'SKU' => $product->SKU];
                                     $result =  $this->changeProductsLocation($item, $needqty, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
                                     $needqty = 0;
                                 }
                                 if (isset($result['createdDoc']['idmin'])) {
-
                                     $createdDoc[$IDMagazynu] = $result['createdDoc'];
                                     $IDsElementuRuchuMagazynowego[$product['IDItem']]['min'][] = $result['IDsElementuRuchuMagazynowego']['min'];
                                     $IDsElementuRuchuMagazynowego[$product['IDItem']]['pls'][] = $result['IDsElementuRuchuMagazynowego']['pls'];
@@ -404,8 +381,6 @@ class CollectController extends Controller
                             }
                         }
                         if ($needqty > 0) {
-                            //  "powiadomić użytkownika o niedoborze ,
-                            // wprowadzić kod kreskowy produktu do uwagi dokumentu"
                             $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'not enough products'];
                             $orderERROR[] = $order;
                             $IDsOrderERROR[] = $order['IDOrder'];
@@ -414,7 +389,7 @@ class CollectController extends Controller
                         }
                         $listProductsOK[] = $productsOK;
                     }
-                    // }
+
                     if ($orderOK) {
                         $listOrders[] = $order;
 
@@ -430,19 +405,18 @@ class CollectController extends Controller
                         if (!$inserted) {
                             throw new \Exception('Error inserting into collect table');
                         }
-                        // Zmień status zamówienia na "Kompletowanie"
+
                         $parameters = [
                             'order_id' => $order['NumberBL'],
                             'status_id' => $BL->status_id_Kompletowanie,
                         ];
-                        // Изменить статус в BL
                         $response = $BL->setOrderStatus($parameters);
                         \Log::info('setOrderStatus response in baselinker:', $response);
                         if (!$response['status'] == 'SUCCESS') {
                             $messages[] = 'Error for order: ' . $order['NumberBL'];
                             throw new \Exception('Error setting order fields in BL');
                         }
-                        // Zmień stan na BL
+
                         $parameters = [
                             'order_id' => $order['NumberBL'],
                             'custom_extra_fields' => [$BL->id_exfield_stan => $bl_user_id],
@@ -453,15 +427,13 @@ class CollectController extends Controller
                             throw new \Exception('Error setting order fields in BL');
                         }
 
-                        // Zmiana statusu w bazie danych lomag
                         $updateted = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
-                            'IDOrderStatus' => 42, //Kompletowanie
+                            'IDOrderStatus' => 42,
                         ]);
                         if (!$updateted) {
                             throw new \Exception('Error updateted into Orders table');
                         }
                     } else {
-                        // Zmień status zamówienia na "Za mało pozycji" "Nie wysyłać"
                         $parameters = [
                             'order_id' => $order['NumberBL'],
                             'status_id' => $BL->status_id_Nie_wysylac,
@@ -479,13 +451,13 @@ class CollectController extends Controller
                         }
                     }
                 });
-            } //order
-        } //warehouse
+            }
+        }
 
         $result = [];
 
         foreach ($listProductsOK as $item) {
-            $key = $item['EAN'] . '_' . $item['locationCode']; // Unikalny klucz dla EAN i lokalizacji
+            $key = $item['EAN'] . '_' . $item['locationCode'];
             if (!isset($result[$key])) {
                 $result[$key] = [
                     'qty' => $item['qty'],
