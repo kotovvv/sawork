@@ -195,7 +195,7 @@ class CollectController extends Controller
         $listProductsOK = DB::table('dbo.OrderLines as ol')
             ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
             ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
-            ->select('ol.IDItem', DB::raw('CAST(ol.Quantity AS INT) as Quantity'),  'ol.IDOrder', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 't.Nazwa', 't.KodKreskowy', 't._TowarTempString1 as sku', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
+            ->select('ol.IDItem', DB::raw('CAST(ol.Quantity AS INT) as Quantity'),  'ol.IDOrder', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 't.Nazwa', 't.KodKreskowy as EAN', 't._TowarTempString1 as SKU', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
             ->where('t.Usluga', '!=', 1)
             ->whereIn('ol.IDOrder', $idsOrder)
             ->orderByDesc('o.IDWarehouse')
@@ -271,15 +271,15 @@ class CollectController extends Controller
         return $IDWarehouseLocation;
     }
 
-    private function changeProductsLocation($product, $toLocation, $IDUzytkownika, $createdDoc = null, $Uwagi = '')
+    private function changeProductsLocation($product, $qty, $toLocation, $IDUzytkownika, $createdDoc = null, $Uwagi = '')
     {
 
         $request = new Request([
             'IDTowaru' => $product['IDItem'],
-            'qty' => $product['qty'],
             'fromLocation' => $product['fromLocaton'],
-            'toLocation' => $toLocation,
             'selectedWarehause' => $product['IDMagazynu'],
+            'qty' => $qty,
+            'toLocation' => $toLocation,
             'createdDoc' => $createdDoc,
             'Uwagi' =>  $Uwagi,
             'IDUzytkownika' => $IDUzytkownika,
@@ -350,70 +350,71 @@ class CollectController extends Controller
                 //w przeciwnym razie pomijamy
 
 
-                $productsOK = [];
                 $orderOK = true;
                 $products = $this->getListProducts([$order['IDOrder']]);
                 $Uwagi = 'User' . $request->user->IDUzytkownika . ' || ' . $order['Remarks'];
-                // Пока продукт
-                foreach ($products as $product) {
-                    $needqty = $product->Quantity;
-                    // Lokalizacje produktów
-                    $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
 
-                    if ($locations) {
-                        foreach ($locations as $location) {
-                            //Z każdej lokalizacji należy pobrać wymaganą ilość towarów
-                            $location_ilosc = $location['ilosc'];
+                DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$products) {
+
+                    //jeśli wszystkie pozycje w zamówieniu są dostępne
+                    $IDsElementuRuchuMagazynowego = [];
+                    // if (!in_array($order['IDOrder'], $IDsOrderERROR)) {
+                    // pozycje zamówienia mogą być przenoszone do lokalizacji użytkownika
+                    foreach ($products as $product) {
+                        $productsOK = [];
+                        $needqty = $product->Quantity;
+                        // Lokalizacje produktów
+                        $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
+
+                        if ($locations) {
                             $towar = DB::table('Towar')
                                 ->select('Nazwa', 'KodKreskowy as EAN', '_TowarTempString1 as SKU')
                                 ->where('IDTowaru', $product->IDItem)
                                 ->first();
-                            if ($needqty >= $location_ilosc) {
-                                $needqty = $needqty - $location_ilosc;
-                                $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $location_ilosc, 'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $towar->Nazwa, 'EAN' => $towar->EAN, 'SKU' => $towar->SKU];
-                            } else {
-                                $productsOK[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $needqty, 'fromLocaton' =>  ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $towar->Nazwa, 'EAN' => $towar->EAN, 'SKU' => $towar->SKU];
-                                $needqty = 0;
-                            }
-                            if ($needqty == 0) {
-                                break;
+                            foreach ($locations as $location) {
+                                //Z każdej lokalizacji należy pobrać wymaganą ilość towarów
+                                $result = [];
+                                $item = ['IDTowaru' => $product->IDItem, 'fromLocation' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'selectedWarehause' => $IDMagazynu];
+                                $location_ilosc = $location['ilosc'];
+                                if ($needqty >= $location_ilosc) {
+                                    $needqty = $needqty - $location_ilosc;
+                                    $productsOK = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $location_ilosc, 'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $towar->Nazwa, 'EAN' => $towar->EAN, 'SKU' => $towar->SKU];
+                                    $result =  $this->changeProductsLocation($item, $location_ilosc, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
+                                } else {
+                                    $productsOK = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $needqty, 'fromLocaton' =>  ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $towar->Nazwa, 'EAN' => $towar->EAN, 'SKU' => $towar->SKU];
+                                    $result =  $this->changeProductsLocation($item, $needqty, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
+                                    $needqty = 0;
+                                }
+                                if (isset($result['createdDoc']['idmin'])) {
+
+                                    $createdDoc[$IDMagazynu] = $result['createdDoc'];
+                                    $IDsElementuRuchuMagazynowego[$product['IDItem']]['min'][] = $result['IDsElementuRuchuMagazynowego']['min'];
+                                    $IDsElementuRuchuMagazynowego[$product['IDItem']]['pls'][] = $result['IDsElementuRuchuMagazynowego']['pls'];
+                                } else {
+                                    $orderOK = false;
+                                    $orderERROR[] = $order;
+                                    $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product['IDItem'], 'qty' => $product['Quantity'], 'Uwagi' => $result->message];
+                                    $messages[] = $result->message;
+                                    throw new \Exception('Error change Products Location');
+                                    break;
+                                }
+                                if ($needqty == 0) {
+                                    break;
+                                }
                             }
                         }
-                    }
-                    if ($needqty > 0) {
-                        //  "powiadomić użytkownika o niedoborze ,
-                        // wprowadzić kod kreskowy produktu do uwagi dokumentu"
-                        $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'not enough products'];
-                        $orderERROR[] = $order;
-                        $IDsOrderERROR[] = $order['IDOrder'];
-                        break;
-                    }
-                } //product
-
-                DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$productsOK) {
-
-                    //jeśli wszystkie pozycje w zamówieniu są dostępne
-                    $IDsElementuRuchuMagazynowego = [];
-                    if (!in_array($order['IDOrder'], $IDsOrderERROR)) {
-                        // pozycje zamówienia mogą być przenoszone do lokalizacji użytkownika
-                        foreach ($productsOK as $product) {
-                            // \Log::info("message", $product);
-                            $res =  $this->changeProductsLocation($product, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
-                            if (isset($res['createdDoc']['idmin'])) {
-                                $listProductsOK[] = $product;
-                                $createdDoc[$IDMagazynu] = $res['createdDoc'];
-                                $IDsElementuRuchuMagazynowego[$product['IDItem']]['min'][] = $res['IDsElementuRuchuMagazynowego']['min'];
-                                $IDsElementuRuchuMagazynowego[$product['IDItem']]['pls'][] = $res['IDsElementuRuchuMagazynowego']['pls'];
-                            } else {
-                                $orderOK = false;
-                                $orderERROR[] = $order;
-                                $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product['IDItem'], 'qty' => $product['Quantity'], 'Uwagi' => $res->message];
-                                $messages[] = $res->message;
-                                throw new \Exception('Error change Products Location');
-                                break;
-                            }
+                        if ($needqty > 0) {
+                            //  "powiadomić użytkownika o niedoborze ,
+                            // wprowadzić kod kreskowy produktu do uwagi dokumentu"
+                            $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'not enough products'];
+                            $orderERROR[] = $order;
+                            $IDsOrderERROR[] = $order['IDOrder'];
+                            throw new \Exception('Error change Products Location not enough quantity');
+                            break;
                         }
+                        $listProductsOK[] = $productsOK;
                     }
+                    // }
                     if ($orderOK) {
                         $listOrders[] = $order;
 
