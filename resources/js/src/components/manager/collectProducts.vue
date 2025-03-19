@@ -363,7 +363,12 @@ export default {
             vm.setTransComany();
           }
         })
-        .catch((error) => console.log(error));
+        .catch((error) => {
+          console.log(error);
+          vm.loading = false;
+          vm.snackbar = true;
+          vm.message = error.response.data.message;
+        });
     },
     getOrderProducts() {
       const vm = this;

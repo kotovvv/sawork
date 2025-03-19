@@ -276,8 +276,8 @@ class CollectController extends Controller
 
         $request = new Request([
             'IDTowaru' => $product['IDItem'],
-            'fromLocation' => $product['fromLocaton'],
-            'selectedWarehause' => $product['IDMagazynu'],
+            'fromLocation' => $product['fromLocation'],
+            'selectedWarehause' => $product['selectedWarehause'],
             'qty' => $qty,
             'toLocation' => $toLocation,
             'createdDoc' => $createdDoc,
@@ -289,7 +289,7 @@ class CollectController extends Controller
         if (isset($response['createdDoc'])) {
             return $response;
         } else {
-            return $response;
+            return [];
         }
     }
 
@@ -352,7 +352,7 @@ class CollectController extends Controller
                         if ($locations) {
                             foreach ($locations as $location) {
                                 $result = [];
-                                $item = ['IDTowaru' => $product->IDItem, 'fromLocation' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'selectedWarehause' => $IDMagazynu];
+                                $item = ['IDItem' => $product->IDItem, 'fromLocation' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'selectedWarehause' => $IDMagazynu];
                                 $location_ilosc = $location['ilosc'];
                                 if ($needqty >= $location_ilosc) {
                                     $needqty = $needqty - $location_ilosc;
@@ -365,8 +365,8 @@ class CollectController extends Controller
                                 }
                                 if (isset($result['createdDoc']['idmin'])) {
                                     $createdDoc[$IDMagazynu] = $result['createdDoc'];
-                                    $IDsElementuRuchuMagazynowego[$product['IDItem']]['min'][] = $result['IDsElementuRuchuMagazynowego']['min'];
-                                    $IDsElementuRuchuMagazynowego[$product['IDItem']]['pls'][] = $result['IDsElementuRuchuMagazynowego']['pls'];
+                                    $IDsElementuRuchuMagazynowego[$product->IDItem]['min'][] = $result['IDsElementuRuchuMagazynowego']['min'];
+                                    $IDsElementuRuchuMagazynowego[$product->IDItem]['pls'][] = $result['IDsElementuRuchuMagazynowego']['pls'];;
                                 } else {
                                     $orderOK = false;
                                     $orderERROR[] = $order;
