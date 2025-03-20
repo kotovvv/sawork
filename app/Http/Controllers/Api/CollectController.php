@@ -338,10 +338,11 @@ class CollectController extends Controller
                 }
 
                 $orderOK = true;
+                $remarks = $order['Remarks'];
                 $products = $this->getListProducts([$order['IDOrder']]);
                 $Uwagi = 'User' . $request->user->IDUzytkownika . ' || ' . $order['Remarks'];
 
-                DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$products) {
+                DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$products, $remarks) {
                     $IDsElementuRuchuMagazynowego = [];
 
                     foreach ($products as $product) {
@@ -370,9 +371,10 @@ class CollectController extends Controller
                                 } else {
                                     $orderOK = false;
                                     $orderERROR[] = $order;
+                                    $remarks += 'Błąd zmiany lokalizacji produktów #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU;
+                                    $messages[] = $remarks;
                                     $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product['IDItem'], 'qty' => $product['Quantity'], 'Uwagi' => $result->message];
-                                    $messages[] = $result->message;
-                                    throw new \Exception('Error change Products Location');
+                                    //throw new \Exception('Error change Products Location');
                                     break;
                                 }
                                 if ($needqty == 0) {
@@ -381,8 +383,12 @@ class CollectController extends Controller
                             }
                         }
                         if ($needqty > 0) {
-                            $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'not enough products'];
+                            $orderOK = false;
+                            $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'za mało produktów'];
                             $orderERROR[] = $order;
+                            $remarks += 'Niewystarczająca ilość #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU;
+                            $messages[] = $remarks;
+
                             $IDsOrderERROR[] = $order['IDOrder'];
                             throw new \Exception('Error change Products Location not enough quantity');
                             break;
@@ -433,24 +439,20 @@ class CollectController extends Controller
                         if (!$updateted) {
                             throw new \Exception('Error updateted into Orders table');
                         }
-                    } else {
-                        $parameters = [
-                            'order_id' => $order['NumberBL'],
-                            'status_id' => $BL->status_id_Nie_wysylac,
-                        ];
-                        $response = $BL->setOrderStatus($parameters);
-                        if (!$response['status'] == 'SUCCESS') {
-                            $messages[] = 'Error for order: ' . $order['NumberBL'];
-                            throw new \Exception('Error setting order fields in BL');
-                        }
-                        $updateted = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
-                            'IDOrderStatus' => 29,
-                        ]);
-                        if (!$updateted) {
-                            throw new \Exception('Error updateted into Orders table');
-                        }
                     }
                 });
+                if (!$orderOK) {
+                    $parameters = [
+                        'order_id' => $order['NumberBL'],
+                        'status_id' => $BL->status_id_Nie_wysylac,
+                    ];
+                    $BL->setOrderStatus($parameters);
+
+                    DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                        'IDOrderStatus' => 29, //Nie wysyłać
+                        'Remarks' => $remarks
+                    ]);
+                }
             }
         }
 
