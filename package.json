@@ -18,6 +18,8 @@
         "file-saver": "^2.0.5",
         "html5-qrcode": "^2.3.8",
         "jsbarcode": "^3.11.6",
+        "jspdf": "^3.0.1",
+        "jspdf-autotable": "^5.0.2",
         "less": "^4.2.0",
         "lodash": "^4.17.21",
         "moment": "^2.30.1",

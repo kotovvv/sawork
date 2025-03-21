@@ -216,6 +216,7 @@
     <v-row v-if="ordersPropucts.length">
       <v-col cols="12">
         <v-btn @click="prepareXLSX()" size="x-large">pobieranie XLSX</v-btn>
+        <v-btn @click="generatePDF()" size="x-large">Pobieranie PDF</v-btn>
       </v-col>
       <v-col>
         <v-data-table
@@ -223,6 +224,12 @@
           :items="ordersPropucts"
           :headers="currentHeaders"
         >
+          <template v-slot:item.qty="{ item }">
+            <span
+              :style="{ backgroundColor: item.qty > 1 ? 'grey' : 'white' }"
+              >{{ item.qty }}</span
+            >
+          </template>
         </v-data-table>
       </v-col>
     </v-row>
@@ -236,6 +243,8 @@ import * as XLSX from "xlsx-js-style";
 import _ from "lodash";
 // import * as XLSXStyle from "xlsx-style";
 import { saveAs } from "file-saver";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default {
   name: "FulstorcollectOrders",
@@ -271,8 +280,8 @@ export default {
         { title: "Nazwa", value: "Nazwa" },
         { title: "SKU", value: "SKU" },
         { title: "EAN", value: "EAN" },
-        { title: "Ilosc", value: "qty" },
         { title: "location", value: "locationCode" },
+        { title: "Ilosc", value: "qty" },
       ],
       headersForGetOrderProducts: [
         { title: "IDWarehouse", value: "IDWarehouse" },
@@ -290,6 +299,11 @@ export default {
     this.getWarehouse();
     this.getAllOrders();
   },
+  mounted() {
+    this.getWarehouse();
+    this.getAllOrders();
+    this.generatePDF = this.generatePDF.bind(this);
+  },
   computed: {
     currentHeaders() {
       if (this.currentFunction === "prepareDoc") {
@@ -302,6 +316,22 @@ export default {
     },
   },
   methods: {
+    generatePDF() {
+      const doc = new jsPDF();
+      const columns = this.currentHeaders.map((header) => header.title);
+      const rows = this.ordersPropucts.map((item) => {
+        return this.currentHeaders.map((header) => item[header.value]);
+      });
+
+      autoTable(doc, {
+        head: [columns],
+        body: rows,
+      });
+
+      const pdfBlob = doc.output("blob");
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      window.open(pdfUrl, "_blank");
+    },
     clear() {
       this.selectedOrders = [];
       this.ordersPropucts = [];
