@@ -118,12 +118,14 @@ class LocationController extends Controller
                 'e.IDTowaru',
                 'e.ilosc',
                 'e.Wydano',
+                'e.CenaJednostkowa',
                 DB::raw('e.ilosc - ISNULL(e.Wydano, 0) as qty'),
                 'e.IDWarehouseLocation',
                 'l.LocationCode',
                 'r.Operator',
                 'r.Data'
             )
+            ->orderBy('r.Data', 'asc')
             ->get()->toArray();
         return  $results;
     }
@@ -225,14 +227,13 @@ class LocationController extends Controller
         }
 
         foreach ($pz as $key => $value) {
-            $CenaJednostkowa = DB::table('ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $pz[$key]->IDElementuRuchuMagazynowego)->take(1)->value('CenaJednostkowa');;
             $debt = $k > $pz[$key]->qty ?  $pz[$key]->qty : $k;
             $el['Ilosc'] = -$debt;
             $el['Uwagi'] =  $Uwagi;
             $el['IDRodzic'] = null;
             $el['IDWarehouseLocation'] = null;
             $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idmin'];
-            $el['CenaJednostkowa'] = $CenaJednostkowa;
+            $el['CenaJednostkowa'] = $pz[$key]->CenaJednostkowa;
             DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
             $ndocidmin = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
             $el['Ilosc'] = $debt;
