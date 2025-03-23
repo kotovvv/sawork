@@ -355,15 +355,21 @@ class CollectController extends Controller
                                 $result = [];
                                 $item = ['IDItem' => $product->IDItem, 'fromLocation' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'selectedWarehause' => $IDMagazynu];
                                 $location_ilosc = $location['ilosc'];
-                                if ($needqty >= $location_ilosc) {
-                                    $needqty = $needqty - $location_ilosc;
-                                    $productsOK = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $location_ilosc, 'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $product->Nazwa, 'EAN' => $product->EAN, 'SKU' => $product->SKU];
-                                    $result =  $this->changeProductsLocation($item, $location_ilosc, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
-                                } else {
-                                    $productsOK = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $needqty, 'fromLocaton' =>  ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'locationCode' => $location['LocationCode'], 'Nazwa' => $product->Nazwa, 'EAN' => $product->EAN, 'SKU' => $product->SKU];
-                                    $result =  $this->changeProductsLocation($item, $needqty, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
-                                    $needqty = 0;
-                                }
+                                $qtyToMove = min($needqty, $location_ilosc);
+                                $needqty -= $qtyToMove;
+                                $productsOK = [
+                                    'IDMagazynu' => $IDMagazynu,
+                                    'IDOrder' => $order['IDOrder'],
+                                    'NumberBL' => $order['NumberBL'],
+                                    'IDItem' => $product->IDItem,
+                                    'qty' => $qtyToMove,
+                                    'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']],
+                                    'locationCode' => $location['LocationCode'],
+                                    'Nazwa' => $product->Nazwa,
+                                    'EAN' => $product->EAN,
+                                    'SKU' => $product->SKU
+                                ];
+                                $result = $this->changeProductsLocation($item, $qtyToMove, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
                                 if (isset($result['createdDoc']['idmin'])) {
                                     $createdDoc[$IDMagazynu] = $result['createdDoc'];
                                     $IDsElementuRuchuMagazynowego[$product->IDItem]['min'][] = $result['IDsElementuRuchuMagazynowego']['min'];
