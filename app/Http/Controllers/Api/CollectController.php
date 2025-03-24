@@ -383,7 +383,7 @@ class CollectController extends Controller
                                     //throw new \Exception('Error change Products Location');
                                     break;
                                 }
-                                if ($needqty == 0) {
+                                if ($needqty <= 0) {
                                     break;
                                 }
                             }
