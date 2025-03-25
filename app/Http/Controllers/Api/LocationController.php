@@ -112,6 +112,8 @@ class LocationController extends Controller
             ->where('r.Data', '>=', DB::raw('BO.MinDate'))
             ->where('e.IDTowaru', $IDTowaru)
             ->where('l.IDWarehouseLocation', $IDWarehouseLocation)
+            ->where('l.IsArchive', 0)
+            ->whereNotIn('l.IDWarehouseLocation', DB::raw('(SELECT IDWarehouseLocation FROM WarehouseLocations WHERE LocationCode LIKE "User%")'))
             ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
             ->select(
                 'e.IDElementuRuchuMagazynowego',
@@ -219,7 +221,7 @@ class LocationController extends Controller
         $pz = $this->getPZ($IDTowaru, $fromLocation['IDWarehouseLocation']);
         $el = [];
         $el['IDTowaru'] = $IDTowaru;
-        $k = $qty;
+        $qtyToMove = $qty;
 
         if (empty($pz)) {
             $this->errorLocation($request->user, 'Document ' . $createdDoc . ' No towar ID:' . $IDTowaru . ' qty=' . $qty . ' found from location: ' . $fromLocation['LocationCode'] . ' to location: ' . $toLocation['LocationCode'], $request->ip());
@@ -227,7 +229,7 @@ class LocationController extends Controller
         }
 
         foreach ($pz as $key => $value) {
-            $debt = $k > $pz[$key]->qty ?  $pz[$key]->qty : $k;
+            $debt = $qtyToMove > $pz[$key]->qty ?  $pz[$key]->qty : $qtyToMove;
             $el['Ilosc'] = -$debt;
             $el['Uwagi'] =  $Uwagi;
             $el['IDRodzic'] = null;
@@ -253,8 +255,8 @@ class LocationController extends Controller
             ]);
 
             DB::table('ZaleznosciPZWZ')->insert(['IDElementuPZ' => $pz[$key]->IDElementuRuchuMagazynowego, 'IDElementuWZ' => $ndocidmin, 'Ilosc' => $debt]);
-            $k -=  $pz[$key]->qty;
-            if ($k <= 0) break;
+            $qtyToMove -=  $debt;
+            if ($qtyToMove <= 0) break;
         }
 
         return $resnonse;
