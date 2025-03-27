@@ -113,7 +113,11 @@ class LocationController extends Controller
             ->where('e.IDTowaru', $IDTowaru)
             ->where('l.IDWarehouseLocation', $IDWarehouseLocation)
             ->where('l.IsArchive', 0)
-            ->whereNotIn('l.IDWarehouseLocation', DB::raw('(SELECT IDWarehouseLocation FROM WarehouseLocations WHERE LocationCode LIKE "User%")'))
+            ->whereNotIn('l.IDWarehouseLocation', function ($query) {
+                $query->select('IDWarehouseLocation')
+                    ->from('WarehouseLocations')
+                    ->where('LocationCode', 'LIKE', 'User%');
+            })
             ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
             ->select(
                 'e.IDElementuRuchuMagazynowego',
