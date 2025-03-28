@@ -310,15 +310,24 @@ class CollectController extends Controller
         $createdDoc = [];
 
         foreach ($request->IDsWarehouses as $IDMagazynu) {
-            $token = $this->getToken($IDMagazynu);
-            $token = Crypt::decryptString($token);
-            if ($token) {
-                $BL = new BaseLinkerController($token);
-                $bl_user_id = DB::table('settings')->where('obj_name', 'ext_id')->where('for_obj', $IDMagazynu)->where('key', $request->user->IDUzytkownika)->value('value');
+
+            if (env('APP_ENV') != 'local') {
+                $token = $this->getToken($IDMagazynu);
+                $token = Crypt::decryptString($token);
+                if ($token) {
+                    $BL = new BaseLinkerController($token);
+                    $bl_user_id = DB::table('settings')->where('obj_name', 'ext_id')->where('for_obj', $IDMagazynu)->where('key', $request->user->IDUzytkownika)->value('value');
+                } else {
+                    $messages[] = 'no token ' . $IDMagazynu;
+                    continue;
+                }
             } else {
-                $messages[] = 'no token ' . $IDMagazynu;
-                continue;
+                $BL = null;
+                $bl_user_id = 0;
             }
+
+
+
             $createdDoc[$IDMagazynu] = null;
             $toLocation['IDWarehouseLocation'] = $this->getUserLocation($IDMagazynu, $request->user->IDUzytkownika);
 
@@ -327,14 +336,16 @@ class CollectController extends Controller
                     continue;
                 }
 
-                $parameters = [
-                    'order_id' => $order['NumberBL'],
-                    'get_unconfirmed_orders' => true,
-                    'include_custom_extra_fields' => true,
-                ];
-                if (!$BL->inRealizacji($parameters)) {
-                    $messages[] = 'Order BL ' . $order['NumberBL'] . ' ne W realizacji';
-                    continue;
+                if (env('APP_ENV') != 'local') {
+                    $parameters = [
+                        'order_id' => $order['NumberBL'],
+                        'get_unconfirmed_orders' => true,
+                        'include_custom_extra_fields' => true,
+                    ];
+                    if (!$BL->inRealizacji($parameters)) {
+                        $messages[] = 'Order BL ' . $order['NumberBL'] . ' ne W realizacji';
+                        continue;
+                    }
                 }
 
                 $orderOK = true;
@@ -392,7 +403,7 @@ class CollectController extends Controller
                             $orderOK = false;
                             $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'za mało produktów'];
                             $orderERROR[] = $order;
-                            $remarks += 'Niewystarczająca ilość #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU;
+                            $remarks .= 'Niewystarczająca ilość #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU;
                             $messages[] = $remarks;
 
                             $IDsOrderERROR[] = $order['IDOrder'];
@@ -417,28 +428,28 @@ class CollectController extends Controller
                         if (!$inserted) {
                             throw new \Exception('Error inserting into collect table');
                         }
+                        if (env('APP_ENV') != 'local') {
+                            $parameters = [
+                                'order_id' => $order['NumberBL'],
+                                'status_id' => $BL->status_id_Kompletowanie,
+                            ];
+                            $response = $BL->setOrderStatus($parameters);
+                            \Log::info('setOrderStatus response in baselinker:', $response);
+                            if (!$response['status'] == 'SUCCESS') {
+                                $messages[] = 'Error for order: ' . $order['NumberBL'];
+                                throw new \Exception('Error setting order fields in BL');
+                            }
 
-                        $parameters = [
-                            'order_id' => $order['NumberBL'],
-                            'status_id' => $BL->status_id_Kompletowanie,
-                        ];
-                        $response = $BL->setOrderStatus($parameters);
-                        \Log::info('setOrderStatus response in baselinker:', $response);
-                        if (!$response['status'] == 'SUCCESS') {
-                            $messages[] = 'Error for order: ' . $order['NumberBL'];
-                            throw new \Exception('Error setting order fields in BL');
+                            $parameters = [
+                                'order_id' => $order['NumberBL'],
+                                'custom_extra_fields' => [$BL->id_exfield_stan => $bl_user_id],
+                            ];
+                            $response = $BL->setOrderFields($parameters);
+                            if (!$response['status'] == 'SUCCESS') {
+                                $messages[] = 'Error for order: ' . $order['NumberBL'];
+                                throw new \Exception('Error setting order fields in BL');
+                            }
                         }
-
-                        $parameters = [
-                            'order_id' => $order['NumberBL'],
-                            'custom_extra_fields' => [$BL->id_exfield_stan => $bl_user_id],
-                        ];
-                        $response = $BL->setOrderFields($parameters);
-                        if (!$response['status'] == 'SUCCESS') {
-                            $messages[] = 'Error for order: ' . $order['NumberBL'];
-                            throw new \Exception('Error setting order fields in BL');
-                        }
-
                         $updateted = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
                             'IDOrderStatus' => 42,
                         ]);
@@ -448,12 +459,13 @@ class CollectController extends Controller
                     }
                 });
                 if (!$orderOK) {
-                    $parameters = [
-                        'order_id' => $order['NumberBL'],
-                        'status_id' => $BL->status_id_Nie_wysylac,
-                    ];
-                    $BL->setOrderStatus($parameters);
-
+                    if (env('APP_ENV') != 'local') {
+                        $parameters = [
+                            'order_id' => $order['NumberBL'],
+                            'status_id' => $BL->status_id_Nie_wysylac,
+                        ];
+                        $BL->setOrderStatus($parameters);
+                    }
                     DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
                         'IDOrderStatus' => 29, //Nie wysyłać
                         'Remarks' => $remarks

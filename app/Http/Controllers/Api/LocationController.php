@@ -113,6 +113,7 @@ class LocationController extends Controller
             ->where('e.IDTowaru', $IDTowaru)
             ->where('l.IDWarehouseLocation', $IDWarehouseLocation)
             ->where('l.IsArchive', 0)
+            ->where('l.Priority', '<', 999)
             ->whereNotIn('l.IDWarehouseLocation', function ($query) {
                 $query->select('IDWarehouseLocation')
                     ->from('WarehouseLocations')
@@ -258,7 +259,6 @@ class LocationController extends Controller
                 $debt
             ]);
 
-            DB::table('ZaleznosciPZWZ')->insert(['IDElementuPZ' => $pz[$key]->IDElementuRuchuMagazynowego, 'IDElementuWZ' => $ndocidmin, 'Ilosc' => $debt]);
             $qtyToMove -=  $debt;
             if ($qtyToMove <= 0) break;
         }
@@ -339,6 +339,12 @@ class LocationController extends Controller
                 return $query->where('l.IsArchive', 0);
             })
             ->where('l.IsArchive',  $allLocations)
+            ->where('l.Priority', '<', 999)
+            ->whereNotIn('l.IDWarehouseLocation', function ($query) {
+                $query->select('IDWarehouseLocation')
+                    ->from('WarehouseLocations')
+                    ->where('LocationCode', 'LIKE', 'User%');
+            })
             ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
             ->whereRaw('LEN(l.LocationCode) > 0')
             ->groupBy('l.LocationCode', 'l.IDWarehouseLocation', 't.IDTowaru', 'r.IDRuchuMagazynowego', 'r.Data')
