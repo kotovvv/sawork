@@ -341,7 +341,7 @@ class LocationController extends Controller
             ->when(!$allLocations, function ($query) {
                 return $query->where('l.IsArchive', 0);
             })
-            ->where('l.IsArchive',  $allLocations)
+            ->where('l.IsArchive', $allLocations)
             ->whereNotIn('l.IDWarehouseLocation', function ($query) {
                 $query->select('IDWarehouseLocation')
                     ->from('WarehouseLocations')
@@ -350,7 +350,7 @@ class LocationController extends Controller
             })
             ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
             ->whereRaw('LEN(l.LocationCode) > 0')
-            ->groupBy('l.LocationCode', 'l.IDWarehouseLocation', 't.IDTowaru', 'r.IDRuchuMagazynowego', 'r.Data')
+            ->groupBy('l.LocationCode', 'l.IDWarehouseLocation', 't.IDTowaru', 'r.IDRuchuMagazynowego', 'r.Data', 'l.Priority')
             ->select(
                 't.IDTowaru',
                 'r.IDRuchuMagazynowego',
@@ -360,7 +360,7 @@ class LocationController extends Controller
                 DB::raw('SUM((e.ilosc - ISNULL(e.Wydano, 0)) * r.Operator) AS ilosc')
             )
             ->orderBy('l.Priority', 'asc')
-            ->orderBy('r.Data', 'asc')
+            ->orderBy('r.Data', 'asc') // Ensure no duplicate columns in ORDER BY
             ->get();
 
         $results = $results->groupBy('LocationCode')->map(function ($row) {
