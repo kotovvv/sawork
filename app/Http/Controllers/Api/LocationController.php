@@ -113,10 +113,11 @@ class LocationController extends Controller
             ->where('e.IDTowaru', $IDTowaru)
             ->where('l.IDWarehouseLocation', $IDWarehouseLocation)
             ->where('l.IsArchive', 0)
-            ->where('l.Priority', '<', 999)
+
             ->whereNotIn('l.IDWarehouseLocation', function ($query) {
                 $query->select('IDWarehouseLocation')
                     ->from('WarehouseLocations')
+                    ->where('LocationCode', ['Zniszczony', 'Naprawa'])
                     ->where('LocationCode', 'LIKE', 'User%');
             })
             ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
@@ -132,6 +133,8 @@ class LocationController extends Controller
                 'r.Operator',
                 'r.Data'
             )
+
+            ->orderBy('l.Priority', 'asc')
             ->orderBy('r.Data', 'asc')
             ->get()->toArray();
         return  $results;
@@ -339,10 +342,10 @@ class LocationController extends Controller
                 return $query->where('l.IsArchive', 0);
             })
             ->where('l.IsArchive',  $allLocations)
-            ->where('l.Priority', '<', 999)
             ->whereNotIn('l.IDWarehouseLocation', function ($query) {
                 $query->select('IDWarehouseLocation')
                     ->from('WarehouseLocations')
+                    ->where('LocationCode', ['Zniszczony', 'Naprawa'])
                     ->where('LocationCode', 'LIKE', 'User%');
             })
             ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
@@ -356,6 +359,7 @@ class LocationController extends Controller
                 'l.IDWarehouseLocation',
                 DB::raw('SUM((e.ilosc - ISNULL(e.Wydano, 0)) * r.Operator) AS ilosc')
             )
+            ->orderBy('l.Priority', 'asc')
             ->orderBy('r.Data', 'asc')
             ->get();
 
