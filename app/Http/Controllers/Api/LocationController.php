@@ -117,24 +117,25 @@ class LocationController extends Controller
             ->whereNotIn('l.IDWarehouseLocation', function ($query) {
                 $query->select('IDWarehouseLocation')
                     ->from('WarehouseLocations')
-                    ->where('LocationCode', ['Zniszczony', 'Naprawa'])
-                    ->where('LocationCode', 'LIKE', 'User%');
+                    ->whereIn('LocationCode', ['Zniszczony', 'Naprawa'])
+                    ->orWhere('LocationCode', 'LIKE', 'User%');
             })
-            ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
+            ->whereRaw('(e.ilosc - ABS(ISNULL(e.Wydano, 0))) > 0')
+            ->whereRaw('LEN(l.LocationCode) > 0')
             ->select(
                 'e.IDElementuRuchuMagazynowego',
                 'e.IDTowaru',
                 'e.ilosc',
                 'e.Wydano',
                 'e.CenaJednostkowa',
-                DB::raw('e.ilosc - ISNULL(e.Wydano, 0) as qty'),
+                DB::raw('e.ilosc - ABS(ISNULL(e.Wydano, 0)) as qty'),
                 'e.IDWarehouseLocation',
                 'l.LocationCode',
                 'r.Operator',
                 'r.Data'
             )
 
-            ->orderBy('l.Priority', 'asc')
+            ->orderBy('l.Priority', 'desc')
             ->orderBy('r.Data', 'asc')
             ->get()->toArray();
         return  $results;
@@ -345,21 +346,21 @@ class LocationController extends Controller
             ->whereNotIn('l.IDWarehouseLocation', function ($query) {
                 $query->select('IDWarehouseLocation')
                     ->from('WarehouseLocations')
-                    ->where('LocationCode', ['Zniszczony', 'Naprawa'])
-                    ->where('LocationCode', 'LIKE', 'User%');
+                    ->whereIn('LocationCode', ['Zniszczony', 'Naprawa'])
+                    ->orWhere('LocationCode', 'LIKE', 'User%');
             })
-            ->whereRaw('(e.ilosc - ISNULL(e.Wydano, 0)) > 0')
+            ->whereRaw('(e.ilosc - ABS(ISNULL(e.Wydano, 0))) > 0')
             ->whereRaw('LEN(l.LocationCode) > 0')
-            ->groupBy('l.LocationCode', 'l.IDWarehouseLocation', 't.IDTowaru', 'r.IDRuchuMagazynowego', 'r.Data', 'l.Priority')
+            ->groupBy('l.LocationCode', 'l.IDWarehouseLocation', 't.IDTowaru', 'r.IDRuchuMagazynowego', 'l.Priority', 'r.Data')
             ->select(
                 't.IDTowaru',
                 'r.IDRuchuMagazynowego',
                 'r.Data',
                 'l.LocationCode',
                 'l.IDWarehouseLocation',
-                DB::raw('SUM((e.ilosc - ISNULL(e.Wydano, 0)) * r.Operator) AS ilosc')
+                DB::raw('SUM((e.ilosc - ABS(ISNULL(e.Wydano, 0))) * r.Operator) AS ilosc')
             )
-            ->orderBy('l.Priority', 'asc')
+            ->orderBy('l.Priority', 'desc')
             ->orderBy('r.Data', 'asc') // Ensure no duplicate columns in ORDER BY
             ->get();
 

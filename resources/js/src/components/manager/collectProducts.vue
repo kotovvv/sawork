@@ -298,10 +298,6 @@ export default {
   mounted() {
     this.getWarehouse();
     this.getAllOrders();
-  },
-  mounted() {
-    this.getWarehouse();
-    this.getAllOrders();
     this.generatePDF = this.generatePDF.bind(this);
   },
   computed: {
