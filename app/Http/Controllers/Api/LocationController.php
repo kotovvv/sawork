@@ -95,51 +95,68 @@ class LocationController extends Controller
             'LocationCode',
         )->get();
     }
-
-    private function getPZ($IDTowaru, $IDWarehouseLocation)
+    private function getPZ($IDTowaru)
     {
-        $date = Carbon::now()->format('Ymd');
+        $DataMax = Carbon::now()->format('Y-m-d H:i:s');
+        $IDElementuRuchuMagazynowego = -1;
+        $ExcludeElementID = -1;
+        $query = "
+    exec sp_executesql N'Select ID, Sum(Edycja) as Edycja, sum(X.ilosc) as ''qty'', AVG(Cena) as Cena,
+X.NumerSerii as ''Numer serii'',
+CONVERT(DateTime, CONVERT(Char, X.DataWaznosci, 103), 103) as ''Data ważności'',
+LocationCode, LocationName as ''Nazwa lokalizacji'', LocationPriority,
+X.NrDokumentu as ''Nr Dokumentu'', X.DataDokumentu As ''Data Dokumentu'',
+ElementRuchuMagazynowego.Reserved as ''Rezerwacje dostaw'',
+Kontrahent.Nazwa as ''Kontrahent''
+, RuchMagazynowy.[_RuchMagazynowyTempBool1] AS ''Niepełnowartościowe'' , RuchMagazynowy.[_RuchMagazynowyTempDecimal1] AS ''Nr. Baselinker'' , RuchMagazynowy.[_RuchMagazynowyTempString2] AS ''Nr. Faktury BL'' , RuchMagazynowy.[_RuchMagazynowyTempString3] AS ''Nr. Korekty BL'' , RuchMagazynowy.[_RuchMagazynowyTempString1] AS ''Nr. Nadania BL'' , RuchMagazynowy.[_RuchMagazynowyTempString4] AS ''Nr. Zwrotny BL'' ,RuchMagazynowy.[_RuchMagazynowyTempLink1] AS ''Link do Korekty BL'' , RuchMagazynowy.[_RuchMagazynowyTempLink2] AS ''Link do Faktury BL'' , RuchMagazynowy.[_RuchMagazynowyTempBool2] AS ''Zweryfikowane'' , RuchMagazynowy.[_RuchMagazynowyTempString5] AS ''Product_Chang'' , RuchMagazynowy.[_RuchMagazynowyTempString6] AS ''Uwagi sprzedawcy'' , RuchMagazynowy.[_RuchMagazynowyTempBool3] AS ''Pieniądze zwrócone'' , RuchMagazynowy.[_RuchMagazynowyTempString7] AS ''Źródło:'' , RuchMagazynowy.[_RuchMagazynowyTempString8] AS ''External_id'' , RuchMagazynowy.[_RuchMagazynowyTempString9] AS ''Login_klienta''
+FROM
+(
+	-- stany w danym punkcie czasu:
+	SELECT IDElementuPZ as ID, CAST(0 as decimal(18,6)) as Edycja,
+	ilosc, CenaJednostkowa as Cena, --Jednostka, Wartosc as ''Wartość'',
+	NumerSerii, DataWaznosci, NrDokumentu, DataDokumentu, LocationCode, LocationName,LocationPriority
+	FROM StanySzczegolowo(@DataMax)
+	WHERE IDTowaru = @IDTowaru
+	AND IDElementuPZ <> @ExcludeElementID
+	AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''
 
-        $results = DB::table('dbo.ElementRuchuMagazynowego as e')
-            ->join('dbo.RuchMagazynowy as r', 'r.IDRuchuMagazynowego', '=', 'e.IDRuchuMagazynowego')
-            ->join('dbo.Towar as t', 't.IDTowaru', '=', 'e.IDTowaru')
-            ->join('dbo.WarehouseLocations as l', 'l.IDWarehouseLocation', '=', 'e.IDWarehouseLocation')
-            ->join(DB::raw('dbo.MostRecentOBDate(?) as BO'), function ($join) use ($date) {
-                $join->on('t.IDMagazynu', '=', 'BO.IDMagazynu')
-                    ->addBinding($date);
-            })
-            ->whereRaw('e.ilosc * r.Operator > 0')
-            ->where('r.Data', '>=', DB::raw('BO.MinDate'))
-            ->where('e.IDTowaru', $IDTowaru)
-            ->where('l.IDWarehouseLocation', $IDWarehouseLocation)
-            ->where('l.IsArchive', 0)
+	UNION ALL  -- dodatkowo istniejące już elementy
+	SELECT PZ.IDElementuRuchuMagazynowego ID, PZWZ.ilosc as Edycja,
+	PZWZ.ilosc,ISNULL(PZ.CenaJednostkowa ,0) as Cena,
+	PZ.NumerSerii, PZ.DataWaznosci,	RuchPZ.NrDokumentu, RuchPZ.Data,
+	isnull(loc.LocationCode,'''') LocationCode, isnull(loc.LocationName,'''') LocationName, loc.Priority ''LocationPriority''
+	FROM ZaleznosciPZWZ PZWZ
+		INNER JOIN ElementRuchuMagazynowego AS WZ ON WZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuWZ
+		INNER JOIN ElementRuchuMagazynowego AS PZ ON PZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuPZ
+		INNER JOIN RuchMagazynowy AS RuchWZ ON RuchWZ.IDRuchuMagazynowego = WZ.IDRuchuMagazynowego
+		INNER JOIN RuchMagazynowy AS RuchPZ ON RuchPZ.IDRuchuMagazynowego = PZ.IDRuchuMagazynowego
+		INNER JOIN Towar t ON t.IDTowaru = WZ.IDTowaru
+		LEFT OUTER JOIN WarehouseLocations AS loc ON PZ.IDWarehouseLocation = loc.IDWarehouseLocation
+	WHERE
+		t.IdTowaru = @IDTowaru
+		AND WZ.IDElementuRuchuMagazynowego = @IDElementuRuchuMagazynowego
+		AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''
+) X
+INNER JOIN [dbo].[ElementRuchuMagazynowego] ON ElementRuchuMagazynowego.IDElementuRuchuMagazynowego = X.ID
+INNER JOIN [dbo].[RuchMagazynowy] ON RuchMagazynowy.IDRuchuMagazynowego = ElementRuchuMagazynowego.IDRuchuMagazynowego
+LEFT JOIN dbo.Kontrahent ON Kontrahent.IDKontrahenta = RuchMagazynowy.IDKontrahenta
+group by ID, X.NumerSerii, X.DataWaznosci ,	X.NrDokumentu , X.DataDokumentu , LocationCode , LocationName, LocationPriority,
+	ElementRuchuMagazynowego.Reserved, Kontrahent.Nazwa
+	, RuchMagazynowy.[_RuchMagazynowyTempBool1] , RuchMagazynowy.[_RuchMagazynowyTempDecimal1] , RuchMagazynowy.[_RuchMagazynowyTempString2] , RuchMagazynowy.[_RuchMagazynowyTempString3] , RuchMagazynowy.[_RuchMagazynowyTempString1] , RuchMagazynowy.[_RuchMagazynowyTempString4] , RuchMagazynowy.[_RuchMagazynowyTempLink1] , RuchMagazynowy.[_RuchMagazynowyTempLink2] , RuchMagazynowy.[_RuchMagazynowyTempBool2] , RuchMagazynowy.[_RuchMagazynowyTempString5] , RuchMagazynowy.[_RuchMagazynowyTempString6] , RuchMagazynowy.[_RuchMagazynowyTempBool3] , RuchMagazynowy.[_RuchMagazynowyTempString7] , RuchMagazynowy.[_RuchMagazynowyTempString8] , RuchMagazynowy.[_RuchMagazynowyTempString9]
+ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
+',N'@IDTowaru int,@DataMax datetime,@IDElementuRuchuMagazynowego int,@ExcludeElementID int',@IDTowaru=?,@DataMax=?,@IDElementuRuchuMagazynowego=?,@ExcludeElementID=?
+";
 
-            ->whereNotIn('l.IDWarehouseLocation', function ($query) {
-                $query->select('IDWarehouseLocation')
-                    ->from('WarehouseLocations')
-                    ->whereIn('LocationCode', ['Zniszczony', 'Naprawa'])
-                    ->orWhere('LocationCode', 'LIKE', 'User%');
-            })
-            ->whereRaw('(e.ilosc - ABS(ISNULL(e.Wydano, 0))) > 0')
-            ->whereRaw('LEN(l.LocationCode) > 0')
-            ->select(
-                'e.IDElementuRuchuMagazynowego',
-                'e.IDTowaru',
-                'e.ilosc',
-                'e.Wydano',
-                'e.CenaJednostkowa',
-                DB::raw('e.ilosc - ABS(ISNULL(e.Wydano, 0)) as qty'),
-                'e.IDWarehouseLocation',
-                'l.LocationCode',
-                'r.Operator',
-                'r.Data'
-            )
+        $results = DB::select($query, [
+            $IDTowaru,
+            $DataMax,
+            $IDElementuRuchuMagazynowego,
+            $ExcludeElementID
+        ]);
 
-            ->orderBy('l.Priority', 'desc')
-            ->orderBy('r.Data', 'asc')
-            ->get()->toArray();
-        return  $results;
+        return $results;
     }
+
 
     public function lastNumber($doc, $symbol)
     {
@@ -227,7 +244,7 @@ class LocationController extends Controller
         }
 
         //2. ElementRuchuMagazynowego
-        $pz = $this->getPZ($IDTowaru, $fromLocation['IDWarehouseLocation']);
+        $pz = $this->getPZ($IDTowaru);
         $el = [];
         $el['IDTowaru'] = $IDTowaru;
         $qtyToMove = $qty;
@@ -244,7 +261,7 @@ class LocationController extends Controller
             $el['IDRodzic'] = null;
             $el['IDWarehouseLocation'] = null;
             $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idmin'];
-            $el['CenaJednostkowa'] = $pz[$key]->CenaJednostkowa;
+            $el['CenaJednostkowa'] = $pz[$key]->Cena;
             DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
             $ndocidmin = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
             $el['Ilosc'] = $debt;
@@ -258,7 +275,7 @@ class LocationController extends Controller
             $resnonse['IDsElementuRuchuMagazynowego']['min'] = $ndocidmin;
             $resnonse['IDsElementuRuchuMagazynowego']['pls'] = $ndocidpls;
             DB::statement('EXEC dbo.UtworzZaleznoscPZWZ @IDElementuPZ = ?, @IDElementuWZ = ?, @Ilosc = ?', [
-                $pz[$key]->IDElementuRuchuMagazynowego,
+                $pz[$key]->ID,
                 $ndocidmin,
                 $debt
             ]);
@@ -327,50 +344,15 @@ class LocationController extends Controller
     public function getProductLocations($id, $allLocations = 0)
     {
         $IDTowaru = intval($id);
-        $date = Carbon::now()->setTime(23, 59, 59)->format('Y/m/d H:i:s');
-        $results = DB::table('ElementRuchuMagazynowego as e')
-            ->join('RuchMagazynowy as r', 'r.IDRuchuMagazynowego', '=', 'e.IDRuchuMagazynowego')
-            ->join('Towar as t', 't.IDTowaru', '=', 'e.IDTowaru')
-            ->join('WarehouseLocations as l', 'l.IDWarehouseLocation', '=', 'e.IDWarehouseLocation')
-            ->join(DB::raw('dbo.MostRecentOBDate(?) as BO'), function ($join) use ($date) {
-                $join->on('t.IDMagazynu', '=', 'BO.IDMagazynu')
-                    ->addBinding($date);
-            })
-            ->whereRaw('e.ilosc * r.Operator > 0')
-            ->where('r.Data', '>=', DB::raw('BO.MinDate'))
-            ->where('e.IDTowaru', $IDTowaru)
-            ->when(!$allLocations, function ($query) {
-                return $query->where('l.IsArchive', 0);
-            })
-            ->where('l.IsArchive', $allLocations)
-            ->whereNotIn('l.IDWarehouseLocation', function ($query) {
-                $query->select('IDWarehouseLocation')
-                    ->from('WarehouseLocations')
-                    ->whereIn('LocationCode', ['Zniszczony', 'Naprawa'])
-                    ->orWhere('LocationCode', 'LIKE', 'User%');
-            })
-            ->whereRaw('(e.ilosc - ABS(ISNULL(e.Wydano, 0))) > 0')
-            ->whereRaw('LEN(l.LocationCode) > 0')
-            ->groupBy('l.LocationCode', 'l.IDWarehouseLocation', 't.IDTowaru', 'r.IDRuchuMagazynowego', 'l.Priority', 'r.Data')
-            ->select(
-                't.IDTowaru',
-                'r.IDRuchuMagazynowego',
-                'r.Data',
-                'l.LocationCode',
-                'l.IDWarehouseLocation',
-                DB::raw('SUM((e.ilosc - ABS(ISNULL(e.Wydano, 0))) * r.Operator) AS ilosc')
-            )
-            ->orderBy('l.Priority', 'desc')
-            ->orderBy('r.Data', 'asc') // Ensure no duplicate columns in ORDER BY
-            ->get();
+        $results = $this->getPZ($IDTowaru);
 
-        $results = $results->groupBy('LocationCode')->map(function ($row) {
+        $results = collect($results)->groupBy('LocationCode')->map(function ($row) {
             return [
-                'IDWarehouseLocation' => $row->first()->IDWarehouseLocation,
                 'LocationCode' => $row->first()->LocationCode,
-                'IDRuchuMagazynowego' => $row->first()->IDRuchuMagazynowego,
-                'Data'  => $row->first()->Data,
-                'ilosc' => $row->sum('ilosc')
+                'ilosc' => $row->sum('qty'),
+                // 'IDWarehouseLocation' => $row->first()->IDWarehouseLocation,
+                // 'IDRuchuMagazynowego' => $row->first()->ID,
+                // 'Data'  => $row->first()->Data Dokumentu,
             ];
         })->values();
 
