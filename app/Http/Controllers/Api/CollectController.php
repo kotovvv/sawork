@@ -289,7 +289,7 @@ class CollectController extends Controller
         if (isset($response['createdDoc'])) {
             return $response;
         } else {
-            return [];
+            throw new \Exception('Error created Doc');
         }
     }
 
@@ -364,7 +364,7 @@ class CollectController extends Controller
                         if ($locations) {
                             foreach ($locations as $location) {
                                 $result = [];
-                                $item = ['IDItem' => $product->IDItem, 'fromLocation' => ['IDWarehouseLocation' => $location['LocationCode']], 'selectedWarehause' => $IDMagazynu];
+                                $item = ['IDItem' => $product->IDItem, 'fromLocation' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'selectedWarehause' => $IDMagazynu];
                                 $location_ilosc = $location['ilosc'];
                                 $qtyToMove = min($needqty, $location_ilosc);
                                 $needqty -= $qtyToMove;
@@ -374,7 +374,7 @@ class CollectController extends Controller
                                     'NumberBL' => $order['NumberBL'],
                                     'IDItem' => $product->IDItem,
                                     'qty' => $qtyToMove,
-                                    'fromLocaton' => ['IDWarehouseLocation' => $location['LocationCode']],
+                                    'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']],
                                     'locationCode' => $location['LocationCode'],
                                     'Nazwa' => $product->Nazwa,
                                     'EAN' => $product->EAN,

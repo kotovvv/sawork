@@ -50,10 +50,10 @@
           clearable
           append-icon="mdi-refresh"
           @click:append="
+            clear();
             getAllOrders();
             getOrderProducts();
             setTransComany();
-            clear();
           "
         ></v-select>
       </v-col>
@@ -334,6 +334,7 @@ export default {
       this.messages = [];
       this.orderERROR = [];
       this.productsERROR = [];
+      this.IDsWarehouses = [];
       this.IDsTransCompany = [];
     },
     deleteSelectedMakeOrders() {

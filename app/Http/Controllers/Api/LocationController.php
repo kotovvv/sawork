@@ -101,48 +101,47 @@ class LocationController extends Controller
         $IDElementuRuchuMagazynowego = -1;
         $ExcludeElementID = -1;
         $query = "
-    exec sp_executesql N'Select ID, Sum(Edycja) as Edycja, sum(X.ilosc) as ''qty'', AVG(Cena) as Cena,
+exec sp_executesql N'Select ID, Sum(Edycja) as Edycja, sum(X.ilosc) as ''qty'', AVG(Cena) as Cena,
 X.NumerSerii as ''Numer serii'',
 CONVERT(DateTime, CONVERT(Char, X.DataWaznosci, 103), 103) as ''Data ważności'',
-LocationCode, LocationName as ''Nazwa lokalizacji'', LocationPriority,
+X.Idloc as ''IDWarehouseLocation'', X.LocationCode, X.LocationName as ''Nazwa lokalizacji'', X.LocationPriority,
 X.NrDokumentu as ''Nr Dokumentu'', X.DataDokumentu As ''Data Dokumentu'',
 ElementRuchuMagazynowego.Reserved as ''Rezerwacje dostaw'',
 Kontrahent.Nazwa as ''Kontrahent''
 , RuchMagazynowy.[_RuchMagazynowyTempBool1] AS ''Niepełnowartościowe'' , RuchMagazynowy.[_RuchMagazynowyTempDecimal1] AS ''Nr. Baselinker'' , RuchMagazynowy.[_RuchMagazynowyTempString2] AS ''Nr. Faktury BL'' , RuchMagazynowy.[_RuchMagazynowyTempString3] AS ''Nr. Korekty BL'' , RuchMagazynowy.[_RuchMagazynowyTempString1] AS ''Nr. Nadania BL'' , RuchMagazynowy.[_RuchMagazynowyTempString4] AS ''Nr. Zwrotny BL'' ,RuchMagazynowy.[_RuchMagazynowyTempLink1] AS ''Link do Korekty BL'' , RuchMagazynowy.[_RuchMagazynowyTempLink2] AS ''Link do Faktury BL'' , RuchMagazynowy.[_RuchMagazynowyTempBool2] AS ''Zweryfikowane'' , RuchMagazynowy.[_RuchMagazynowyTempString5] AS ''Product_Chang'' , RuchMagazynowy.[_RuchMagazynowyTempString6] AS ''Uwagi sprzedawcy'' , RuchMagazynowy.[_RuchMagazynowyTempBool3] AS ''Pieniądze zwrócone'' , RuchMagazynowy.[_RuchMagazynowyTempString7] AS ''Źródło:'' , RuchMagazynowy.[_RuchMagazynowyTempString8] AS ''External_id'' , RuchMagazynowy.[_RuchMagazynowyTempString9] AS ''Login_klienta''
 FROM
 (
-	-- stany w danym punkcie czasu:
-	SELECT IDElementuPZ as ID, CAST(0 as decimal(18,6)) as Edycja,
-	ilosc, CenaJednostkowa as Cena, --Jednostka, Wartosc as ''Wartość'',
-	NumerSerii, DataWaznosci, NrDokumentu, DataDokumentu, LocationCode, LocationName,LocationPriority
-	FROM StanySzczegolowo(@DataMax)
-	WHERE IDTowaru = @IDTowaru
-	AND IDElementuPZ <> @ExcludeElementID
-	AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''
-
-	UNION ALL  -- dodatkowo istniejące już elementy
-	SELECT PZ.IDElementuRuchuMagazynowego ID, PZWZ.ilosc as Edycja,
-	PZWZ.ilosc,ISNULL(PZ.CenaJednostkowa ,0) as Cena,
-	PZ.NumerSerii, PZ.DataWaznosci,	RuchPZ.NrDokumentu, RuchPZ.Data,
-	isnull(loc.LocationCode,'''') LocationCode, isnull(loc.LocationName,'''') LocationName, loc.Priority ''LocationPriority''
-	FROM ZaleznosciPZWZ PZWZ
-		INNER JOIN ElementRuchuMagazynowego AS WZ ON WZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuWZ
-		INNER JOIN ElementRuchuMagazynowego AS PZ ON PZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuPZ
-		INNER JOIN RuchMagazynowy AS RuchWZ ON RuchWZ.IDRuchuMagazynowego = WZ.IDRuchuMagazynowego
-		INNER JOIN RuchMagazynowy AS RuchPZ ON RuchPZ.IDRuchuMagazynowego = PZ.IDRuchuMagazynowego
-		INNER JOIN Towar t ON t.IDTowaru = WZ.IDTowaru
-		LEFT OUTER JOIN WarehouseLocations AS loc ON PZ.IDWarehouseLocation = loc.IDWarehouseLocation
-	WHERE
-		t.IdTowaru = @IDTowaru
-		AND WZ.IDElementuRuchuMagazynowego = @IDElementuRuchuMagazynowego
-		AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''
+-- stany w danym punkcie czasu:
+SELECT IDElementuPZ as ID, CAST(0 as decimal(18,6)) as Edycja,
+ilosc, CenaJednostkowa as Cena, --Jednostka, Wartosc as ''Wartość'',
+NumerSerii, DataWaznosci, NrDokumentu, DataDokumentu, IDWarehouseLocation as Idloc, LocationCode, LocationName,LocationPriority
+FROM StanySzczegolowo(@DataMax)
+WHERE IDTowaru = @IDTowaru
+AND IDElementuPZ <> @ExcludeElementID
+AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''
+UNION ALL  -- дополнительное существующие элементы
+SELECT PZ.IDElementuRuchuMagazynowego ID, PZWZ.ilosc as Edycja,
+PZWZ.ilosc,ISNULL(PZ.CenaJednostkowa ,0) as Cena,
+PZ.NumerSerii, PZ.DataWaznosci,	RuchPZ.NrDokumentu, RuchPZ.Data,
+loc.IDWarehouseLocation as Idloc, isnull(loc.LocationCode,'''') LocationCode, isnull(loc.LocationName,'''') LocationName, loc.Priority as LocationPriority
+FROM ZaleznosciPZWZ PZWZ
+INNER JOIN ElementRuchuMagazynowego AS WZ ON WZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuWZ
+INNER JOIN ElementRuchuMagazynowego AS PZ ON PZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuPZ
+INNER JOIN RuchMagazynowy AS RuchWZ ON RuchWZ.IDRuchuMagazynowego = WZ.IDRuchuMagazynowego
+INNER JOIN RuchMagazynowy AS RuchPZ ON RuchPZ.IDRuchuMagazynowego = PZ.IDRuchuMagazynowego
+INNER JOIN Towar t ON t.IDTowaru = WZ.IDTowaru
+LEFT OUTER JOIN WarehouseLocations AS loc ON PZ.IDWarehouseLocation = loc.IDWarehouseLocation
+WHERE
+t.IdTowaru = @IDTowaru
+AND WZ.IDElementuRuchuMagazynowego = @IDElementuRuchuMagazynowego
+AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''
 ) X
 INNER JOIN [dbo].[ElementRuchuMagazynowego] ON ElementRuchuMagazynowego.IDElementuRuchuMagazynowego = X.ID
 INNER JOIN [dbo].[RuchMagazynowy] ON RuchMagazynowy.IDRuchuMagazynowego = ElementRuchuMagazynowego.IDRuchuMagazynowego
 LEFT JOIN dbo.Kontrahent ON Kontrahent.IDKontrahenta = RuchMagazynowy.IDKontrahenta
-group by ID, X.NumerSerii, X.DataWaznosci ,	X.NrDokumentu , X.DataDokumentu , LocationCode , LocationName, LocationPriority,
-	ElementRuchuMagazynowego.Reserved, Kontrahent.Nazwa
-	, RuchMagazynowy.[_RuchMagazynowyTempBool1] , RuchMagazynowy.[_RuchMagazynowyTempDecimal1] , RuchMagazynowy.[_RuchMagazynowyTempString2] , RuchMagazynowy.[_RuchMagazynowyTempString3] , RuchMagazynowy.[_RuchMagazynowyTempString1] , RuchMagazynowy.[_RuchMagazynowyTempString4] , RuchMagazynowy.[_RuchMagazynowyTempLink1] , RuchMagazynowy.[_RuchMagazynowyTempLink2] , RuchMagazynowy.[_RuchMagazynowyTempBool2] , RuchMagazynowy.[_RuchMagazynowyTempString5] , RuchMagazynowy.[_RuchMagazynowyTempString6] , RuchMagazynowy.[_RuchMagazynowyTempBool3] , RuchMagazynowy.[_RuchMagazynowyTempString7] , RuchMagazynowy.[_RuchMagazynowyTempString8] , RuchMagazynowy.[_RuchMagazynowyTempString9]
+group by ID, X.NumerSerii, X.DataWaznosci ,	X.NrDokumentu , X.DataDokumentu, X.Idloc , X.LocationCode , X.LocationName, X.LocationPriority,
+ElementRuchuMagazynowego.Reserved, Kontrahent.Nazwa
+, RuchMagazynowy.[_RuchMagazynowyTempBool1] , RuchMagazynowy.[_RuchMagazynowyTempDecimal1] , RuchMagazynowy.[_RuchMagazynowyTempString2] , RuchMagazynowy.[_RuchMagazynowyTempString3] , RuchMagazynowy.[_RuchMagazynowyTempString1] , RuchMagazynowy.[_RuchMagazynowyTempString4] , RuchMagazynowy.[_RuchMagazynowyTempLink1] , RuchMagazynowy.[_RuchMagazynowyTempLink2] , RuchMagazynowy.[_RuchMagazynowyTempBool2] , RuchMagazynowy.[_RuchMagazynowyTempString5] , RuchMagazynowy.[_RuchMagazynowyTempString6] , RuchMagazynowy.[_RuchMagazynowyTempBool3] , RuchMagazynowy.[_RuchMagazynowyTempString7] , RuchMagazynowy.[_RuchMagazynowyTempString8] , RuchMagazynowy.[_RuchMagazynowyTempString9]
 ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
 ',N'@IDTowaru int,@DataMax datetime,@IDElementuRuchuMagazynowego int,@ExcludeElementID int',@IDTowaru=?,@DataMax=?,@IDElementuRuchuMagazynowego=?,@ExcludeElementID=?
 ";
@@ -213,7 +212,6 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
         // 1. chech if doc cteated
         if ($createdDoc == null) {
 
-
             $NrDokumentu = $this->lastNumber('ZL', $symbol);
 
             $creat_zl = [];
@@ -230,13 +228,10 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
 
             // create doc
             DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
-            $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->value('IDRuchuMagazynowego');
-            // DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $resnonse['createdDoc']['idmin'])->update(['Uwagi' => 'User' . $IDUzytkownika . '|| ']);
+            $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
 
             DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
-            $resnonse['createdDoc']['idpls'] =
-                DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->value('IDRuchuMagazynowego');
-            // DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $resnonse['createdDoc']['idpls'])->update(['Uwagi' => 'User' . $IDUzytkownika . '||']);
+            $resnonse['createdDoc']['idpls'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
 
             DB::table('PrzesunieciaMM')->insert(['IDRuchuMagazynowegoZ' => $resnonse['createdDoc']['idmin'], 'IDRuchuMagazynowegoDo' => $resnonse['createdDoc']['idpls']]);
         } else {
@@ -251,9 +246,8 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
 
         if (empty($pz)) {
             $this->errorLocation($request->user, 'Document ' . $createdDoc . ' No towar ID:' . $IDTowaru . ' qty=' . $qty . ' found from location: ' . $fromLocation['LocationCode'] . ' to location: ' . $toLocation['LocationCode'], $request->ip());
-            return \response()->json(['message' => 'Uwaga! Uwaga! Uwaga! Nie znaleziono identyfikatora towaru ID:' . $IDTowaru . '  z lokalizacji: ' . $fromLocation['LocationCode'] . ' do lokalizacji:' . $toLocation['LocationCode'] . ' qty' . $qty], 400);
+            throw new \Exception('Uwaga! Uwaga! Uwaga! Nie znaleziono identyfikatora towaru ID:' . $IDTowaru . '  z lokalizacji: ' . $fromLocation['LocationCode'] . ' do lokalizacji:' . $toLocation['LocationCode'] . ' qty' . $qty);
         }
-
         foreach ($pz as $key => $value) {
             $debt = $qtyToMove > $pz[$key]->qty ?  $pz[$key]->qty : $qtyToMove;
             $el['Ilosc'] = -$debt;
@@ -262,7 +256,16 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
             $el['IDWarehouseLocation'] = null;
             $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idmin'];
             $el['CenaJednostkowa'] = $pz[$key]->Cena;
-            DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
+
+            // Ensure the IDRuchuMagazynowego exists in the RuchMagazynowy table
+            $exists = DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $el['IDRuchuMagazynowego'])->exists();
+
+            if ($exists) {
+                DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
+            } else {
+                Log::error('Failed to insert into ElementRuchuMagazynowego: IDRuchuMagazynowego does not exist', ['IDRuchuMagazynowego' => $el['IDRuchuMagazynowego']]);
+                throw new \Exception('IDRuchuMagazynowego does not exist in RuchMagazynowy table.');
+            }
             $ndocidmin = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
             $el['Ilosc'] = $debt;
             $el['Uwagi'] =  $Uwagi;
@@ -350,7 +353,7 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
             return [
                 'LocationCode' => $row->first()->LocationCode,
                 'ilosc' => $row->sum('qty'),
-                // 'IDWarehouseLocation' => $row->first()->IDWarehouseLocation,
+                'IDWarehouseLocation' => $row->first()->IDWarehouseLocation,
                 // 'IDRuchuMagazynowego' => $row->first()->ID,
                 // 'Data'  => $row->first()->Data Dokumentu,
             ];
