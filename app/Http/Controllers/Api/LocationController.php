@@ -15,14 +15,14 @@ class LocationController extends Controller
         $data = $request->all();
         $stor = $data['stor'];
         $days = $data['days'];
-        $dataMin = Carbon::now()->subDays($days)->format('Y/m/d H:i:s');
-        $dataMax = Carbon::now()->format('Y/m/d H:i:s');
+        $dataMin = Carbon::now()->subDays($days)->format('Y-m-d H:i:s');
+        $dataMax = Carbon::now()->format('Y-m-d H:i:s');
         $idMag = $stor;
         $sql = '';
 
         DB::table('TowarLocationTipTab')->delete();
         // Выполнение первого блока запросов
-        $towarItems = DB::table('Towar')->select('IDTowaru', 'IDMagazynu')->where('IDMagazynu', $idMag)->get();
+        $towarItems = DB::table('Towar')->select('IDTowaru', 'IDMagazynu')->where('Usluga', 0)->where('KodKreskowy', '!=', '')->where('IDMagazynu', $idMag)->get();
 
         $sql = '';
         foreach ($towarItems as $item) {
@@ -37,12 +37,11 @@ class LocationController extends Controller
             UPDATE tlt
             SET tlt.IloscZa5dni = ISNULL(CAST(CASE WHEN s.SumIlosci > 9999999999999.9999 THEN 9999999999999.9999 ELSE s.SumIlosci END AS decimal(38, 4)), 0)
             FROM TowarLocationTipTab tlt
-            JOIN Towar t ON tlt.IDTowaru = t.IDTowaru
+            JOIN Towar t ON tlt.IDTowaru = t.IDTowaru and t.Usluga = 0 and t.KodKreskowy != ''
             CROSS APPLY (
             SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, '$dataMin', '$dataMax', $idMag) AS SumIlosci
             ) AS s
-             where t.Usluga = 0
-        ";
+         ";
 
         DB::statement($updateSql);
 
