@@ -41,6 +41,7 @@ class LocationController extends Controller
             CROSS APPLY (
             SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, '$dataMin', '$dataMax', $idMag) AS SumIlosci
             ) AS s
+             where t.Usluga = 0
         ";
 
         DB::statement($updateSql);

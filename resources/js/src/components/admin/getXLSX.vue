@@ -95,7 +95,7 @@ export default {
       this.dataforxsls.forEach((sheet) => {
         let m3 = sheet[1].reduce((acc, o) => acc + parseFloat(o.m3xstan), 0);
         sum += parseFloat(m3 * koef);
-        all.push({ day: sheet[0], m3: m3, zl: m3 * koef });
+        all.push({ day: sheet[0], m3: parseFloat(m3).toFixed(2), zl: m3 * koef });
       });
       all.push({ day: "Итого", m3: "", zl: sum });
 
@@ -106,7 +106,7 @@ export default {
         sheet[1].forEach((item) => {
           item.stan = parseFloat(item.stan);
           item.Wartosc = parseFloat(item.Wartosc);
-          item.m3xstan = parseFloat(item.m3xstan);
+          //item.m3xstan = parseFloat(item.m3xstan);
         });
         const ws = XLSX.utils.json_to_sheet(sheet[1]);
         XLSX.utils.book_append_sheet(wb, ws, sheet[0]);

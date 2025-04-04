@@ -304,7 +304,7 @@ class MagazynController extends Controller
                 'GrupyTowarow.Nazwa as GrupaTowarów',
                 DB::raw('t._TowarTempString1 as sku'),
                 DB::raw('CAST(SUM(DostawyMinusWydania.Wartosc) as decimal(32,2)) as wartosc'),
-                DB::raw('CAST(ISNULL(SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2, 0) as decimal(32,2)) as m3xstan'),
+                DB::raw('CAST(ISNULL(SUM(DostawyMinusWydania.ilosc) * t._TowarTempDecimal2, 0) as decimal(32,8)) as m3xstan'),
                 DB::raw('CAST(SUM(DostawyMinusWydania.ilosc) AS INT) as stan'),
                 DB::raw('CAST(ISNULL(ol.ProductCountWithoutWZ, 0) AS INT) as rezerv'),
                 DB::raw('CAST(ISNULL(SUM(DostawyMinusWydania.ilosc) - ISNULL(ol.ProductCountWithoutWZ, 0), 0) AS INT) as pozostać')
