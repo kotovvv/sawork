@@ -368,7 +368,7 @@ class CollectController extends Controller
                                 $location_ilosc = $location['ilosc'];
                                 $qtyToMove = min($needqty, $location_ilosc);
                                 $needqty -= $qtyToMove;
-                                $productsOK = [
+                                $productsOK[] = [
                                     'IDMagazynu' => $IDMagazynu,
                                     'IDOrder' => $order['IDOrder'],
                                     'NumberBL' => $order['NumberBL'],
@@ -383,8 +383,14 @@ class CollectController extends Controller
                                 $result = $this->changeProductsLocation($item, $qtyToMove, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
                                 if (isset($result['createdDoc']['idmin'])) {
                                     $createdDoc[$IDMagazynu] = $result['createdDoc'];
-                                    $IDsElementuRuchuMagazynowego[$product->IDItem]['min'][] = $result['IDsElementuRuchuMagazynowego']['min'];
-                                    $IDsElementuRuchuMagazynowego[$product->IDItem]['pls'][] = $result['IDsElementuRuchuMagazynowego']['pls'];;
+                                    $IDsElementuRuchuMagazynowego[$product->IDItem]['min'] = array_merge(
+                                        $IDsElementuRuchuMagazynowego[$product->IDItem]['min'] ?? [],
+                                        $result['IDsElementuRuchuMagazynowego']['min']
+                                    );
+                                    $IDsElementuRuchuMagazynowego[$product->IDItem]['pls'] = array_merge(
+                                        $IDsElementuRuchuMagazynowego[$product->IDItem]['pls'] ?? [],
+                                        $result['IDsElementuRuchuMagazynowego']['pls']
+                                    );
                                 } else {
                                     $orderOK = false;
                                     $orderERROR[] = $order;
@@ -476,20 +482,22 @@ class CollectController extends Controller
 
         $result = [];
 
-        foreach ($listProductsOK as $item) {
-            $key = $item['EAN'] . '_' . $item['locationCode'];
-            if (!isset($result[$key])) {
-                $result[$key] = [
-                    'qty' => $item['qty'],
-                    'EAN' => $item['EAN'],
-                    'locationCode' => $item['locationCode'],
-                    'Nazwa' => $item['Nazwa'],
-                    'SKU' => $item['SKU'],
-                    'NumberBL' => $item['NumberBL'],
-                    'IDItem' => $item['IDItem'],
-                ];
-            } else {
-                $result[$key]['qty'] += $item['qty'];
+        foreach ($listProductsOK as $location) {
+            foreach ($location as $item) {
+                $key = $item['EAN'] . '_' . $item['locationCode'];
+                if (isset($result[$key])) {
+                    $result[$key]['qty'] += $item['qty'];
+                } else {
+                    $result[$key] = [
+                        'qty' => $item['qty'],
+                        'EAN' => $item['EAN'],
+                        'locationCode' => $item['locationCode'],
+                        'Nazwa' => $item['Nazwa'],
+                        'SKU' => $item['SKU'],
+                        'NumberBL' => $item['NumberBL'],
+                        'IDItem' => $item['IDItem'],
+                    ];
+                }
             }
         }
 

@@ -33,15 +33,25 @@ class LocationController extends Controller
         }
 
         // Обновление таблицы TowarLocationTipTab
+        // $updateSql = "
+        //     UPDATE tlt
+        //     SET tlt.IloscZa5dni = ISNULL(CAST(CASE WHEN s.SumIlosci > 9999999999999.9999 THEN 9999999999999.9999 ELSE s.SumIlosci END AS decimal(38, 4)), 0)
+        //     FROM TowarLocationTipTab tlt
+        //     JOIN Towar t ON tlt.IDTowaru = t.IDTowaru and t.Usluga = 0 and t.KodKreskowy != ''
+        //     CROSS APPLY (
+        //     SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, '$dataMin', '$dataMax', $idMag) AS SumIlosci
+        //     ) AS s
+        //  ";
         $updateSql = "
             UPDATE tlt
-            SET tlt.IloscZa5dni = ISNULL(CAST(CASE WHEN s.SumIlosci > 9999999999999.9999 THEN 9999999999999.9999 ELSE s.SumIlosci END AS decimal(38, 4)), 0)
-            FROM TowarLocationTipTab tlt
-            JOIN Towar t ON tlt.IDTowaru = t.IDTowaru and t.Usluga = 0 and t.KodKreskowy != ''
-            CROSS APPLY (
-            SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, '$dataMin', '$dataMax', $idMag) AS SumIlosci
-            ) AS s
+	SET tlt.IloscZa5dni =  s.SumIlosci
+   	FROM TowarLocationTipTab tlt
+      left JOIN Towar t ON tlt.IDTowaru = t.IDTowaru and t.Usluga = 0 and t.KodKreskowy != ''
+      CROSS APPLY (
+            SELECT sum(Ilosc) AS SumIlosci FROM dbo.ElementRuchuMagazynowego e JOIN dbo.RuchMagazynowy r ON r.IDRuchuMagazynowego = e.IDRuchuMagazynowego AND r.IDMagazynu = $idMag AND r.IDRodzajuRuchuMagazynowego = 2 AND r.Data >= '$dataMin' AND r.Data <= '$dataMax'  WHERE IDTowaru = t.IDTowaru
+      ) AS s
          ";
+
 
         DB::statement($updateSql);
 
@@ -275,8 +285,8 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
             DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
             $ndocidpls = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
 
-            $resnonse['IDsElementuRuchuMagazynowego']['min'] = $ndocidmin;
-            $resnonse['IDsElementuRuchuMagazynowego']['pls'] = $ndocidpls;
+            $resnonse['IDsElementuRuchuMagazynowego']['min'][] = $ndocidmin;
+            $resnonse['IDsElementuRuchuMagazynowego']['pls'][] = $ndocidpls;
             DB::statement('EXEC dbo.UtworzZaleznoscPZWZ @IDElementuPZ = ?, @IDElementuWZ = ?, @Ilosc = ?', [
                 $pz[$key]->ID,
                 $ndocidmin,
