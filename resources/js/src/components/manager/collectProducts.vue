@@ -315,9 +315,11 @@ export default {
     generatePDF() {
       const doc = new jsPDF();
       const columns = this.currentHeaders.map((header) => header.title);
-      const rows = this.ordersPropucts.map((item) => {
-        return this.currentHeaders.map((header) => item[header.value]);
-      });
+      const rows = this.ordersPropucts
+        .sort((a, b) => (a.locationCode > b.locationCode ? 1 : -1))
+        .map((item) => {
+          return this.currentHeaders.map((header) => item[header.value]);
+        });
 
       autoTable(doc, {
         head: [columns],
