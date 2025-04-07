@@ -397,7 +397,18 @@ class CollectController extends Controller
                                     $remarks += 'Błąd zmiany lokalizacji produktów #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU;
                                     $messages[] = $remarks;
                                     $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product['IDItem'], 'qty' => $product['Quantity'], 'Uwagi' => $result->message];
-                                    //throw new \Exception('Error change Products Location');
+                                    if (env('APP_ENV') != 'local') {
+                                        $parameters = [
+                                            'order_id' => $order['NumberBL'],
+                                            'status_id' => $BL->status_id_Nie_wysylac,
+                                        ];
+                                        $BL->setOrderStatus($parameters);
+                                    }
+                                    DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                                        'IDOrderStatus' => 29, //Nie wysyłać
+                                        'Remarks' => $remarks
+                                    ]);
+                                    DB::rollBack();
                                     break;
                                 }
                                 if ($needqty <= 0) {
@@ -413,7 +424,19 @@ class CollectController extends Controller
                             $messages[] = $remarks;
 
                             $IDsOrderERROR[] = $order['IDOrder'];
-                            throw new \Exception('Error change Products Location not enough quantity');
+                            if (env('APP_ENV') != 'local') {
+                                $parameters = [
+                                    'order_id' => $order['NumberBL'],
+                                    'status_id' => $BL->status_id_Nie_wysylac,
+                                ];
+                                $BL->setOrderStatus($parameters);
+                            }
+                            DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                                'IDOrderStatus' => 29, //Nie wysyłać
+                                'Remarks' => $remarks
+                            ]);
+                            DB::rollBack();
+
                             break;
                         }
                         $listProductsOK[] = $productsOK;
