@@ -48,7 +48,7 @@ class BaseLinkerController extends Controller
                 $this->status_id_Nie_wysylac = $statusItem['id'];
             }
         }
-        \Log::info('getOrderStatusList response:', $response['statuses']);
+        //\Log::info('getOrderStatusList response:', $response['statuses']);
         return $response['statuses'];
     }
     public function getOrderExtraFields()
@@ -91,7 +91,7 @@ class BaseLinkerController extends Controller
     public function setOrderStatus($parameters)
     {
         $response = $this->sendRequest('setOrderStatus', $parameters);
-        \Log::info('setOrderStatus:', ['status' => $response]);
+        //\Log::info('setOrderStatus:', ['status' => $response]);
         return $response;
     }
 
