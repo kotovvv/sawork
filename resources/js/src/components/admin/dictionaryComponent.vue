@@ -5,6 +5,7 @@
       <v-tab value="price">Magazyn price</v-tab>
       <v-tab value="setprice">Set price</v-tab>
       <v-tab value="userstab">Users</v-tab>
+      <v-tab value="locations">Locations</v-tab>
     </v-tabs>
 
     <v-card-text>
@@ -22,6 +23,9 @@
         <v-tabs-window-item value="userstab">
           <Users />
         </v-tabs-window-item>
+        <v-tabs-window-item value="locations">
+          <Locations />
+        </v-tabs-window-item>
       </v-tabs-window>
     </v-card-text>
   </v-card>
@@ -31,8 +35,9 @@ import MagazynEmail from "./MagazynEmail.vue";
 import MagazynPrice from "./MagazynPrice.vue";
 import SetPrice from "./setPrice.vue";
 import Users from "./UsersComponent.vue";
+import Locations from "./warehouseLocations.vue";
 export default {
-  components: { MagazynEmail, MagazynPrice, SetPrice, Users },
+  components: { MagazynEmail, MagazynPrice, SetPrice, Users, Locations },
   data: () => ({
     tab: null,
   }),

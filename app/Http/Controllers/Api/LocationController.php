@@ -100,10 +100,7 @@ class LocationController extends Controller
 
     public function getWarehouseLocations($id)
     {
-        return  DB::table('dbo.WarehouseLocations')->where('IDMagazynu', $id)->select(
-            'IDWarehouseLocation',
-            'LocationCode',
-        )->get();
+        return  DB::table('dbo.WarehouseLocations')->where('IDMagazynu', $id)->get();
     }
     private function getPZ($IDTowaru)
     {
@@ -370,5 +367,30 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
         })->values();
 
         return $results;
+    }
+
+    public function getLocationsM3()
+    {
+        $LocationsM3 = DB::table('LocationsM3')->get();
+        return $LocationsM3;
+    }
+
+    public function getLocationsTyp()
+    {
+        $LocationsTypes = DB::table('LocationsTyp')->get();
+        return $LocationsTypes;
+    }
+
+    public function updateLocationsTyp(Request $request)
+    {
+        $data = $request->all();
+        $IDTyp = $data['IDTyp'];
+        $IDWarehouseLocation = $data['IDWarehouseLocation'];
+        $TypLocations = $data['TypLocations'];
+
+        DB::table('LocationsTyp')->where('IDTyp', $IDTyp)->update(['TypLocations' => $TypLocations]);
+        DB::table('WarehouseLocations')->where('IDWarehouseLocation', $IDWarehouseLocation)->update(['TypLocations' => $TypLocations]);
+
+        return response()->json(['success' => true]);
     }
 }

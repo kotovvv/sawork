@@ -1,0 +1,222 @@
+<template>
+  <v-container>
+    <v-row>
+      <v-progress-linear
+        :active="loading"
+        indeterminate
+        color="purple"
+      ></v-progress-linear>
+    </v-row>
+    <v-row>
+      <v-col cols="12" md="2" lg="2">
+        <v-select
+          label="Magazyn"
+          v-model="IDWarehouse"
+          :items="warehouses"
+          item-title="Nazwa"
+          item-value="IDMagazynu"
+          hide-details="auto"
+          @update:modelValue="getWarehouseLocations()"
+        ></v-select>
+      </v-col>
+      <v-col cols="12" md="2" lg="2">
+        <v-switch
+          v-model="filterIsArchive"
+          label="Show Archived"
+          inset
+          hide-details
+          @change="filterLocations"
+        ></v-switch>
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col cols="12" md="12" lg="12">
+        <v-data-table
+          :headers="headers"
+          :items="filterLocations"
+          item-value="IDWarehouseLocation"
+          :search="search"
+          show-select
+          v-model="selected"
+          class="elevation-1"
+        >
+          <template v-slot:top>
+            <div class="d-flex gap-2" style="width: auto">
+              <v-text-field
+                v-model="search"
+                label="Search"
+                variant="outlined"
+                hide-details
+                single-line
+                clearable
+                style="max-width: 200px"
+              ></v-text-field>
+              <v-select
+                label="Location Type"
+                v-model="IDTypLocation"
+                :items="locationsTypOptions"
+                item-title="Opis"
+                item-value="IDTypLocations"
+                dense
+                hide-details
+                style="max-width: 200px"
+              ></v-select>
+              <v-select
+                label="M3 Locations"
+                v-model="IDLocationsM3"
+                :items="locationsM3Options"
+                item-title="Opis"
+                item-value="IDLocationsM3"
+                dense
+                hide-details
+                style="max-width: 200px"
+              ></v-select>
+              <v-text-field
+                label="Priority"
+                v-model="Priority"
+                dense
+                hide-details
+                style="max-width: 200px"
+              ></v-text-field>
+              <v-btn
+                size="x-large"
+                color="primary"
+                @click="bulkUpdateLocationsTyp"
+                :disabled="selected.length === 0"
+                style="max-width: 300px"
+              >
+                {{ selected.length }} Update LocationsTyp
+              </v-btn>
+            </div>
+          </template>
+          <template v-slot:item.TypLocations="{ item }">
+            {{
+              locationsTypOptions.find(
+                (loc) => loc.IDTypLocations === item.TypLocations
+              )?.Opis
+            }}
+          </template>
+
+          <template v-slot:item.M3Locations="{ item }">
+            {{
+              locationsM3Options.find(
+                (loc) => loc.IDLocationsM3 === item.M3Locations
+              )?.Opis || "N/A"
+            }}
+          </template>
+        </v-data-table>
+      </v-col>
+    </v-row>
+  </v-container>
+</template>
+
+<script>
+import axios from "axios";
+export default {
+  name: "warehouseLocations",
+  data() {
+    return {
+      loading: false,
+      IDWarehouse: null,
+      warehouses: [],
+      locations: [],
+      IDTypLocation: null,
+      IDLocationsM3: null,
+      locationsTypOptions: [],
+      locationsM3Options: [],
+      filterIsArchive: false,
+      Priority: null,
+      headers: [
+        { title: "Location Code", key: "LocationCode" },
+        { title: "Location Name", key: "LocationName" },
+        { title: "Typ Locations", key: "TypLocations" },
+        { title: "Priority", key: "Priority" },
+        { title: "Is Archive", key: "IsArchive" },
+        { title: "M3 Locations", key: "M3Locations" },
+      ],
+      search: "",
+      selected: [],
+    };
+  },
+  computed: {
+    filterLocations() {
+      return this.locations.filter((location) => {
+        return location.IsArchive == this.filterIsArchive;
+      });
+    },
+  },
+
+  mounted() {
+    this.getWarehouse();
+    this.getLocationsTyp();
+    this.getLocationsM3();
+  },
+  methods: {
+    getWarehouse() {
+      const vm = this;
+      vm.locations = [];
+      axios
+        .get("/api/getWarehouse")
+        .then((res) => {
+          if (res.status == 200) {
+            vm.warehouses = res.data;
+          }
+        })
+        .catch((error) => console.log(error));
+    },
+    getLocationsTyp() {
+      axios
+        .get("/api/getLocationsTyp")
+        .then((res) => {
+          if (res.status === 200) {
+            this.locationsTypOptions = res.data;
+          }
+        })
+        .catch((error) => console.log(error));
+    },
+    getLocationsM3() {
+      axios
+        .get("/api/getLocationsM3")
+        .then((res) => {
+          if (res.status === 200) {
+            this.locationsM3Options = res.data;
+          }
+        })
+        .catch((error) => console.log(error));
+    },
+    getWarehouseLocations() {
+      this.loading = true;
+      axios
+        .get("/api/getWarehouseLocations/" + this.IDWarehouse)
+        .then((res) => {
+          if (res.status === 200) {
+            this.locations = res.data;
+            this.loading = false;
+          }
+        })
+        .catch((error) => console.log(error));
+    },
+    bulkUpdateLocationsTyp() {
+      return;
+      const updatedLocations = this.selected.map((id) => {
+        const location = this.locations.find(
+          (loc) => loc.IDWarehouseLocation === id
+        );
+        return {
+          IDWarehouseLocation: location.IDWarehouseLocation,
+          TypLocations: location.TypLocations,
+        };
+      });
+      axios
+        .post("/api/updateLocationsTyp", { locations: updatedLocations })
+        .then(() => {
+          this.selected = [];
+          this.getWarehouseLocations();
+        })
+        .catch((error) => console.log(error));
+    },
+  },
+};
+</script>
+<style>
+</style>
