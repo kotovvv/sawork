@@ -385,7 +385,6 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
     {
         $data = $request->all();
         $IDWarehouseLocation = $data['IDWarehouseLocation'];
-        Log::info($data);
 
         $update = [
             'isArchive' => $data['IsArchive']  ? 1 : 0,
