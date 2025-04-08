@@ -324,6 +324,12 @@ export default {
       autoTable(doc, {
         head: [columns],
         body: rows,
+        didDrawCell: (data) => {
+          // Adjust for Polish language if needed
+          if (data.column.index === 0) {
+            doc.setFont("helvetica", "bold");
+          }
+        },
       });
 
       const pdfBlob = doc.output("blob");

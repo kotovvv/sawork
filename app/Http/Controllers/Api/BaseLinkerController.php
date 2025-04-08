@@ -60,14 +60,14 @@ class BaseLinkerController extends Controller
                 break;
             }
         }
-        // \Log::info('getOrderExtraFields response:', $response['extra_fields']);
+        \Log::info('getOrderExtraFields response:', $response['extra_fields']);
         return $response['extra_fields'];
     }
 
     public function getOrders($parameters)
     {
         $response = $this->sendRequest('getOrders', $parameters);
-        //\Log::info('getOrders response:', $response);
+        \Log::info('getOrders response:', $response);
         return $response;
     }
 

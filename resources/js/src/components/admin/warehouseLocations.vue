@@ -20,9 +20,24 @@
         ></v-select>
       </v-col>
       <v-col cols="12" md="2" lg="2">
+        <v-select
+          label="Typ Lokalizacji"
+          v-model="IDTypLocation"
+          :items="[
+            { IDTypLocation: null, Opis: 'pusty' },
+            ...locationsTypOptions,
+          ]"
+          @change="filterLocations"
+          item-title="Opis"
+          item-value="IDTypLocations"
+          hide-details
+          clearable
+        ></v-select>
+      </v-col>
+      <v-col cols="12" md="2" lg="2">
         <v-switch
           v-model="filterIsArchive"
-          label="Show Archived"
+          label="Pokaż zarchiwizowane"
           inset
           hide-details
           @change="filterLocations"
@@ -60,6 +75,7 @@
                 dense
                 hide-details
                 style="max-width: 200px"
+                clearable
               ></v-select>
               <v-select
                 label="M3 Locations"
@@ -70,6 +86,7 @@
                 dense
                 hide-details
                 style="max-width: 200px"
+                clearable
               ></v-select>
               <v-text-field
                 label="Priority"
@@ -141,7 +158,15 @@ export default {
   computed: {
     filterLocations() {
       return this.locations.filter((location) => {
-        return location.IsArchive == this.filterIsArchive;
+        return (
+          location.IsArchive == this.filterIsArchive &&
+          (this.IDTypLocation
+            ? location.TypLocations == this.IDTypLocation
+            : true) &&
+          (this.IDLocationsM3
+            ? location.M3Locations == this.IDLocationsM3
+            : true)
+        );
       });
     },
   },

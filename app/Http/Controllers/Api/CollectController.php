@@ -355,9 +355,10 @@ class CollectController extends Controller
 
                 DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$products, $remarks) {
                     $IDsElementuRuchuMagazynowego = [];
+                    $orderProductsOK = [];
 
                     foreach ($products as $product) {
-                        $productsOK = [];
+
                         $needqty = $product->Quantity;
                         $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
 
@@ -368,7 +369,7 @@ class CollectController extends Controller
                                 $location_ilosc = $location['ilosc'];
                                 $qtyToMove = min($needqty, $location_ilosc);
                                 $needqty -= $qtyToMove;
-                                $productsOK[] = [
+                                $orderProductsOK[] = [
                                     'IDMagazynu' => $IDMagazynu,
                                     'IDOrder' => $order['IDOrder'],
                                     'NumberBL' => $order['NumberBL'],
@@ -396,7 +397,9 @@ class CollectController extends Controller
                                     $orderERROR[] = $order;
                                     $remarks += 'Błąd zmiany lokalizacji produktów #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU;
                                     $messages[] = $remarks;
+                                    Log::error('Błąd zmiany lokalizacji produktów #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
                                     $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product['IDItem'], 'qty' => $product['Quantity'], 'Uwagi' => $result->message];
+                                    DB::rollBack();
                                     if (env('APP_ENV') != 'local') {
                                         $parameters = [
                                             'order_id' => $order['NumberBL'],
@@ -408,7 +411,6 @@ class CollectController extends Controller
                                         'IDOrderStatus' => 29, //Nie wysyłać
                                         'Remarks' => $remarks
                                     ]);
-                                    DB::rollBack();
                                     break;
                                 }
                                 if ($needqty <= 0) {
@@ -424,6 +426,9 @@ class CollectController extends Controller
                             $messages[] = $remarks;
 
                             $IDsOrderERROR[] = $order['IDOrder'];
+
+                            DB::rollBack();
+                            Log::error('Niewystarczająca ilość #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
                             if (env('APP_ENV') != 'local') {
                                 $parameters = [
                                     'order_id' => $order['NumberBL'],
@@ -435,15 +440,14 @@ class CollectController extends Controller
                                 'IDOrderStatus' => 29, //Nie wysyłać
                                 'Remarks' => $remarks
                             ]);
-                            DB::rollBack();
 
                             break;
                         }
-                        $listProductsOK[] = $productsOK;
                     }
 
                     if ($orderOK) {
                         $listOrders[] = $order;
+                        $listProductsOK = array_merge($listProductsOK, $orderProductsOK);
 
                         $inserted = DB::table('collect')->insert([
                             'IDUzytkownika' => $request->user->IDUzytkownika,
@@ -487,19 +491,6 @@ class CollectController extends Controller
                         }
                     }
                 });
-                if (!$orderOK) {
-                    if (env('APP_ENV') != 'local') {
-                        $parameters = [
-                            'order_id' => $order['NumberBL'],
-                            'status_id' => $BL->status_id_Nie_wysylac,
-                        ];
-                        $BL->setOrderStatus($parameters);
-                    }
-                    DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
-                        'IDOrderStatus' => 29, //Nie wysyłać
-                        'Remarks' => $remarks
-                    ]);
-                }
             }
         }
 

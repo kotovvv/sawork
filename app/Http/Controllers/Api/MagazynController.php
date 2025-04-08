@@ -1030,7 +1030,7 @@ class MagazynController extends Controller
                         throw new \Exception('Error creating ElementRuchuMagazynowego for WZ order ID' . $orderId . ' IDRuchuMagazynowego' . $DocumentID);
                     }
 
-                    Log::info('UtworzZaleznoscPZWZ: ' . $ZL_IDElementuRuchuMagazynowego . ' ' . $ElementID . ' ' . $product->Quantity);
+                    //Log::info('UtworzZaleznoscPZWZ: ' . $ZL_IDElementuRuchuMagazynowego . ' ' . $ElementID . ' ' . $product->Quantity);
                     DB::statement('EXEC [dbo].[UtworzZaleznoscPZWZ] ?, ?, ?', [$ZL_IDElementuRuchuMagazynowego, $ElementID, $Element->Ilosc]);
                     $forlog = DB::table('RuchMagazynowy')->where('IDRuchuMagazynowego', $DocumentID)->value('IDRuchuMagazynowego');
                     if ($forlog == null) {
@@ -1081,7 +1081,6 @@ class MagazynController extends Controller
             if (!$relatedDocument) {
                 // check if order is in collection
                 if ($this->isInCollect($orderId)) {
-                    Log::info('Order is in collect');
                     $relatedDocument = $this->createWZfromCollect($orderId, $request->user->IDUzytkownika);
                     if ($relatedDocument == null) {
                         return response('Error create doc WZ', 500);
