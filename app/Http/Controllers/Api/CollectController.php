@@ -496,24 +496,26 @@ class CollectController extends Controller
 
         $result = [];
 
-        foreach ($listProductsOK as $location) {
-            foreach ($location as $item) {
-                $key = $item['EAN'] . '_' . $item['locationCode'];
-                if (isset($result[$key])) {
-                    $result[$key]['qty'] += $item['qty'];
-                } else {
-                    $result[$key] = [
-                        'qty' => $item['qty'],
-                        'EAN' => $item['EAN'],
-                        'locationCode' => $item['locationCode'],
-                        'Nazwa' => $item['Nazwa'],
-                        'SKU' => $item['SKU'],
-                        'NumberBL' => $item['NumberBL'],
-                        'IDItem' => $item['IDItem'],
-                    ];
-                }
+        //foreach ($listProductsOK as $location) {
+        // \Log::info('location', $location);
+        foreach ($listProductsOK as $item) {
+            //\Log::info('item', $item);
+            $key = $item['EAN'] . '_' . $item['locationCode'];
+            if (isset($result[$key])) {
+                $result[$key]['qty'] += $item['qty'];
+            } else {
+                $result[$key] = [
+                    'qty' => $item['qty'],
+                    'EAN' => $item['EAN'],
+                    'locationCode' => $item['locationCode'],
+                    'Nazwa' => $item['Nazwa'],
+                    'SKU' => $item['SKU'],
+                    'NumberBL' => $item['NumberBL'],
+                    'IDItem' => $item['IDItem'],
+                ];
             }
         }
+        // }
 
         $listProductsOK = array_values($result);
 

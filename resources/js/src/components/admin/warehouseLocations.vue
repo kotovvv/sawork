@@ -22,7 +22,7 @@
       <v-col cols="12" md="2" lg="2">
         <v-select
           label="Typ Lokalizacji"
-          v-model="IDTypLocation"
+          v-model="filterTypLocation"
           :items="[
             { IDTypLocation: null, Opis: 'pusty' },
             ...locationsTypOptions,
@@ -95,6 +95,13 @@
                 hide-details
                 style="max-width: 200px"
               ></v-text-field>
+              <v-switch
+                v-model="IsArchive"
+                label="Archive Status"
+                inset
+                hide-details
+                @change="toggleArchiveStatus"
+              ></v-switch>
               <v-btn
                 size="x-large"
                 color="primary"
@@ -139,9 +146,11 @@ export default {
       locations: [],
       IDTypLocation: null,
       IDLocationsM3: null,
+      IsArchive: null,
       locationsTypOptions: [],
       locationsM3Options: [],
       filterIsArchive: false,
+      filterTypLocation: null,
       Priority: null,
       headers: [
         { title: "Location Code", key: "LocationCode" },
@@ -160,11 +169,8 @@ export default {
       return this.locations.filter((location) => {
         return (
           location.IsArchive == this.filterIsArchive &&
-          (this.IDTypLocation
-            ? location.TypLocations == this.IDTypLocation
-            : true) &&
-          (this.IDLocationsM3
-            ? location.M3Locations == this.IDLocationsM3
+          (this.filterTypLocation
+            ? location.TypLocations == this.filterTypLocation
             : true)
         );
       });
@@ -177,6 +183,13 @@ export default {
     this.getLocationsM3();
   },
   methods: {
+    clear() {
+      this.IDWarehouse = null;
+      this.IDTypLocation = null;
+      this.IDLocationsM3 = null;
+      this.Priority = null;
+      this.filterIsArchive = false;
+    },
     getWarehouse() {
       const vm = this;
       vm.locations = [];
@@ -222,20 +235,25 @@ export default {
         .catch((error) => console.log(error));
     },
     bulkUpdateLocationsTyp() {
-      return;
-      const updatedLocations = this.selected.map((id) => {
-        const location = this.locations.find(
-          (loc) => loc.IDWarehouseLocation === id
-        );
-        return {
-          IDWarehouseLocation: location.IDWarehouseLocation,
-          TypLocations: location.TypLocations,
-        };
-      });
+      let data = {};
+      data.ids = this.selected.map((item) => item.IDWarehouseLocation);
+      if (this.IDTypLocation) {
+        data.typ = this.IDTypLocation;
+      }
+      if (this.IDLocationsM3) {
+        data.m3 = this.IDLocationsM3;
+      }
+      if (this.Priority) {
+        data.priority = this.Priority;
+      }
+      data.IsArchive = this.IsArchive;
+
       axios
         .post("/api/updateLocationsTyp", { locations: updatedLocations })
         .then(() => {
           this.selected = [];
+          this.clear();
+
           this.getWarehouseLocations();
         })
         .catch((error) => console.log(error));
