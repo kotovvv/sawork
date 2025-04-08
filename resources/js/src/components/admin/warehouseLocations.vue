@@ -19,22 +19,22 @@
           @update:modelValue="getWarehouseLocations()"
         ></v-select>
       </v-col>
-      <v-col cols="12" md="2" lg="2">
+      <v-col cols="12" md="2" lg="2" v-if="IDWarehouse">
         <v-select
           label="Typ Lokalizacji"
           v-model="filterTypLocation"
           :items="[
-            { IDTypLocation: null, Opis: 'pusty' },
+            { IDTypLocations: 0, Opis: '--wszystkie' },
+            { IDTypLocations: null, Opis: '--pusty' },
             ...locationsTypOptions,
           ]"
           @change="filterLocations"
           item-title="Opis"
           item-value="IDTypLocations"
           hide-details
-          clearable
         ></v-select>
       </v-col>
-      <v-col cols="12" md="2" lg="2">
+      <v-col cols="12" md="2" lg="2" v-if="IDWarehouse">
         <v-switch
           v-model="filterIsArchive"
           label="Pokaż zarchiwizowane"
@@ -45,7 +45,7 @@
       </v-col>
     </v-row>
     <v-row>
-      <v-col cols="12" md="12" lg="12">
+      <v-col cols="12" md="12" lg="12" v-if="filterLocations.length > 0">
         <v-data-table
           :headers="headers"
           :items="filterLocations"
@@ -169,7 +169,7 @@ export default {
       return this.locations.filter((location) => {
         return (
           location.IsArchive == this.filterIsArchive &&
-          (this.filterTypLocation
+          (this.filterTypLocation > 0 || this.filterTypLocation == null
             ? location.TypLocations == this.filterTypLocation
             : true)
         );
@@ -184,7 +184,7 @@ export default {
   },
   methods: {
     clear() {
-      this.IDWarehouse = null;
+      //   this.IDWarehouse = null;
       this.IDTypLocation = null;
       this.IDLocationsM3 = null;
       this.Priority = null;
@@ -236,20 +236,20 @@ export default {
     },
     bulkUpdateLocationsTyp() {
       let data = {};
-      data.ids = this.selected.map((item) => item.IDWarehouseLocation);
+      data.IDWarehouseLocation = this.selected;
       if (this.IDTypLocation) {
-        data.typ = this.IDTypLocation;
+        data.TypLocations = this.IDTypLocation;
       }
       if (this.IDLocationsM3) {
-        data.m3 = this.IDLocationsM3;
+        data.M3Locations = this.IDLocationsM3;
       }
       if (this.Priority) {
-        data.priority = this.Priority;
+        data.Priority = this.Priority;
       }
       data.IsArchive = this.IsArchive;
 
       axios
-        .post("/api/updateLocationsTyp", { locations: updatedLocations })
+        .post("/api/updateLocationsTyp", data)
         .then(() => {
           this.selected = [];
           this.clear();

@@ -98,5 +98,5 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::get('getWarehouseLocations/{id}', [LocationController::class, 'getWarehouseLocations']);
     Route::get('getLocationsM3', [LocationController::class, 'getLocationsM3']);
     Route::get('getLocationsTyp', [LocationController::class, 'getLocationsTyp']);
-    Route::post('updateLocationsTyp ', [LocationController::class, 'updateLocationsTyp ']);
+    Route::post('updateLocationsTyp', [LocationController::class, 'updateLocationsTyp']);
 });

@@ -384,12 +384,23 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
     public function updateLocationsTyp(Request $request)
     {
         $data = $request->all();
-        $IDTyp = $data['IDTyp'];
         $IDWarehouseLocation = $data['IDWarehouseLocation'];
-        $TypLocations = $data['TypLocations'];
+        Log::info($data);
 
-        DB::table('LocationsTyp')->where('IDTyp', $IDTyp)->update(['TypLocations' => $TypLocations]);
-        DB::table('WarehouseLocations')->where('IDWarehouseLocation', $IDWarehouseLocation)->update(['TypLocations' => $TypLocations]);
+        $update = [
+            'isArchive' => $data['IsArchive']  ? 1 : 0,
+        ];
+        if (isset($data['TypLocations'])) {
+            $update['TypLocations'] = $data['TypLocations'];
+        }
+        if (isset($data['M3Locations'])) {
+            $update['M3Locations'] = $data['M3Locations'];
+        }
+        if (isset($data['Priority'])) {
+            $update['Priority'] = $data['Priority'];
+        }
+
+        DB::table('WarehouseLocations')->whereIn('IDWarehouseLocation', $IDWarehouseLocation)->update($update);
 
         return response()->json(['success' => true]);
     }
