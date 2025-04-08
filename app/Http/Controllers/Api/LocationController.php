@@ -44,15 +44,43 @@ class LocationController extends Controller
         //  ";
         $updateSql = "
             UPDATE tlt
-	SET tlt.IloscZa5dni =  s.SumIlosci
-   	FROM TowarLocationTipTab tlt
-      left JOIN Towar t ON tlt.IDTowaru = t.IDTowaru and t.Usluga = 0 and t.KodKreskowy != ''
-      CROSS APPLY (
-            SELECT sum(Ilosc) AS SumIlosci FROM dbo.ElementRuchuMagazynowego e JOIN dbo.RuchMagazynowy r ON r.IDRuchuMagazynowego = e.IDRuchuMagazynowego AND r.IDMagazynu = $idMag AND r.IDRodzajuRuchuMagazynowego = 2 AND r.Data >= '$dataMin' AND r.Data <= '$dataMax'  WHERE IDTowaru = t.IDTowaru
-      ) AS s
-         ";
+            SET tlt.IloscZa5dni = s.SumIlosci + ISNULL(r.rezerv, 0)
+            FROM TowarLocationTipTab tlt
+            LEFT JOIN Towar t ON tlt.IDTowaru = t.IDTowaru AND t.Usluga = 0 AND t.KodKreskowy != ''
+            CROSS APPLY (
+                SELECT SUM(Ilosc) AS SumIlosci
+                FROM dbo.ElementRuchuMagazynowego e
+                JOIN dbo.RuchMagazynowy r ON r.IDRuchuMagazynowego = e.IDRuchuMagazynowego
+                AND r.IDMagazynu = $idMag
+                AND r.IDRodzajuRuchuMagazynowego = 2
+                AND r.Data >= '$dataMin'
+                AND r.Data <= '$dataMax'
+                WHERE IDTowaru = t.IDTowaru
+            ) AS s
+            LEFT JOIN (
+                SELECT t.IDTowaru, CAST(ISNULL(SUM(ol.ProductCountWithoutWZ), 0) AS INT) AS rezerv
+                FROM Towar t
+                LEFT JOIN (
+                    SELECT ol.IDItem AS IDTowaru, SUM(ol.Quantity) AS ProductCountWithoutWZ
+                    FROM OrderLines ol
+                    JOIN Orders o ON o.IDOrder = ol.IDOrder
+                    JOIN OrderStatus os ON os.IDOrderStatus = o.IDOrderStatus
+                    WHERE (os.SetUpAction IS NULL OR os.SetUpAction <> 256)
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM DocumentRelations dr
+                        WHERE dr.ID2 = o.IDOrder
+                        AND dr.IDType2 = 15
+                        AND dr.IDType1 = 2
+                    )
+                    GROUP BY ol.IDItem
+                ) ol ON ol.IDTowaru = t.IDTowaru
+                WHERE t.IDMagazynu = $idMag
+                GROUP BY t.IDTowaru
+            ) AS r ON r.IDTowaru = t.IDTowaru
+        ";
 
-
+        // Execute the query
         DB::statement($updateSql);
 
         // Создание временной таблицы и выполнение SELECT-запроса
