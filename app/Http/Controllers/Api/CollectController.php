@@ -290,6 +290,7 @@ class CollectController extends Controller
         if (isset($response['createdDoc'])) {
             return $response;
         } else {
+            Log::error('Error created Doc');
             throw new \Exception('Error created Doc');
         }
     }
@@ -353,145 +354,137 @@ class CollectController extends Controller
                 $remarks = $order['Remarks'];
                 $products = $this->getListProducts([$order['IDOrder']]);
                 $Uwagi = 'User' . $request->user->IDUzytkownika . ' || ' . $order['Remarks'];
+                try {
+                    DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$products, $remarks) {
+                        $IDsElementuRuchuMagazynowego = [];
+                        $orderProductsOK = [];
 
-                DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$products, $remarks) {
-                    $IDsElementuRuchuMagazynowego = [];
-                    $orderProductsOK = [];
+                        foreach ($products as $product) {
 
-                    foreach ($products as $product) {
+                            $needqty = $product->Quantity;
+                            $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
 
-                        $needqty = $product->Quantity;
-                        $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
+                            if ($locations) {
+                                foreach ($locations as $location) {
+                                    $result = [];
+                                    $item = ['IDItem' => $product->IDItem, 'fromLocation' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'selectedWarehause' => $IDMagazynu];
+                                    $location_ilosc = $location['ilosc'];
+                                    $qtyToMove = min($needqty, $location_ilosc);
+                                    $needqty -= $qtyToMove;
+                                    $orderProductsOK[] = [
+                                        'IDMagazynu' => $IDMagazynu,
+                                        'IDOrder' => $order['IDOrder'],
+                                        'NumberBL' => $order['NumberBL'],
+                                        'IDItem' => $product->IDItem,
+                                        'qty' => $qtyToMove,
+                                        'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']],
+                                        'locationCode' => $location['LocationCode'],
+                                        'Nazwa' => $product->Nazwa,
+                                        'EAN' => $product->EAN,
+                                        'SKU' => $product->SKU
+                                    ];
 
-                        if ($locations) {
-                            foreach ($locations as $location) {
-                                $result = [];
-                                $item = ['IDItem' => $product->IDItem, 'fromLocation' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'selectedWarehause' => $IDMagazynu];
-                                $location_ilosc = $location['ilosc'];
-                                $qtyToMove = min($needqty, $location_ilosc);
-                                $needqty -= $qtyToMove;
-                                $orderProductsOK[] = [
-                                    'IDMagazynu' => $IDMagazynu,
-                                    'IDOrder' => $order['IDOrder'],
-                                    'NumberBL' => $order['NumberBL'],
-                                    'IDItem' => $product->IDItem,
-                                    'qty' => $qtyToMove,
-                                    'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']],
-                                    'locationCode' => $location['LocationCode'],
-                                    'Nazwa' => $product->Nazwa,
-                                    'EAN' => $product->EAN,
-                                    'SKU' => $product->SKU
-                                ];
-                                $result = $this->changeProductsLocation($item, $qtyToMove, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
-                                if (isset($result['createdDoc']['idmin'])) {
-                                    $createdDoc[$IDMagazynu] = $result['createdDoc'];
-                                    $IDsElementuRuchuMagazynowego[$product->IDItem]['min'] = array_merge(
-                                        $IDsElementuRuchuMagazynowego[$product->IDItem]['min'] ?? [],
-                                        $result['IDsElementuRuchuMagazynowego']['min']
-                                    );
-                                    $IDsElementuRuchuMagazynowego[$product->IDItem]['pls'] = array_merge(
-                                        $IDsElementuRuchuMagazynowego[$product->IDItem]['pls'] ?? [],
-                                        $result['IDsElementuRuchuMagazynowego']['pls']
-                                    );
-                                } else {
-                                    $orderOK = false;
-                                    $orderERROR[] = $order;
-                                    $remarks += 'Błąd zmiany lokalizacji produktów #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU;
-                                    $messages[] = $remarks;
-                                    Log::error('Błąd zmiany lokalizacji produktów #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
-                                    $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product['IDItem'], 'qty' => $product['Quantity'], 'Uwagi' => $result->message];
-                                    DB::rollBack();
-                                    if (env('APP_ENV') != 'local') {
-                                        $parameters = [
-                                            'order_id' => $order['NumberBL'],
-                                            'status_id' => $BL->status_id_Nie_wysylac,
-                                        ];
-                                        $BL->setOrderStatus($parameters);
+                                    $result = $this->changeProductsLocation($item, $qtyToMove, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
+                                    if (isset($result['createdDoc']['idmin'])) {
+                                        $createdDoc[$IDMagazynu] = $result['createdDoc'];
+                                        $IDsElementuRuchuMagazynowego[$product->IDItem]['min'] = array_merge(
+                                            $IDsElementuRuchuMagazynowego[$product->IDItem]['min'] ?? [],
+                                            $result['IDsElementuRuchuMagazynowego']['min']
+                                        );
+                                        $IDsElementuRuchuMagazynowego[$product->IDItem]['pls'] = array_merge(
+                                            $IDsElementuRuchuMagazynowego[$product->IDItem]['pls'] ?? [],
+                                            $result['IDsElementuRuchuMagazynowego']['pls']
+                                        );
+                                    } else {
+                                        $orderOK = false;
+                                        $orderERROR[] = $order;
+                                        $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product['IDItem'], 'qty' => $product['Quantity'], 'Uwagi' => $result->message];
+                                        Log::error('Błąd zmiany lokalizacji produktów #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
+                                        throw new \Exception('Błąd zmiany lokalizacji produktów #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
                                     }
-                                    DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
-                                        'IDOrderStatus' => 29, //Nie wysyłać
-                                        'Remarks' => $remarks
-                                    ]);
-                                    break;
-                                }
-                                if ($needqty <= 0) {
-                                    break;
+                                    if ($needqty <= 0) {
+                                        break;
+                                    }
                                 }
                             }
+                            if ($needqty > 0) {
+                                $orderOK = false;
+                                $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'za mało produktów'];
+                                $orderERROR[] = $order;
+                                $IDsOrderERROR[] = $order['IDOrder'];
+                                Log::error('Niewystarczająca ilość #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
+                                throw new \Exception('Niewystarczająca ilość #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
+                            }
                         }
-                        if ($needqty > 0) {
-                            $orderOK = false;
-                            $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'za mało produktów'];
-                            $orderERROR[] = $order;
-                            $remarks .= 'Niewystarczająca ilość #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU;
-                            $messages[] = $remarks;
 
-                            $IDsOrderERROR[] = $order['IDOrder'];
+                        if ($orderOK) {
+                            $listOrders[] = $order;
+                            $listProductsOK = array_merge($listProductsOK, $orderProductsOK);
 
-                            DB::rollBack();
-                            Log::error('Niewystarczająca ilość #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
+                            $inserted = DB::table('collect')->insert([
+                                'IDUzytkownika' => $request->user->IDUzytkownika,
+                                'Date' => Carbon::now(),
+                                'IDOrder' => $order['IDOrder'],
+                                'status' => 0,
+                                'created_doc' => json_encode($createdDoc[$IDMagazynu]),
+                                'IDsElementuRuchuMagazynowego' => json_encode($IDsElementuRuchuMagazynowego),
+                            ]);
+
+                            if (!$inserted) {
+                                throw new \Exception('Error inserting into collect table');
+                            }
                             if (env('APP_ENV') != 'local') {
                                 $parameters = [
                                     'order_id' => $order['NumberBL'],
-                                    'status_id' => $BL->status_id_Nie_wysylac,
+                                    'status_id' => $BL->status_id_Kompletowanie,
                                 ];
-                                $BL->setOrderStatus($parameters);
+                                $response = $BL->setOrderStatus($parameters);
+                                //\Log::info('setOrderStatus response in baselinker:', $response);
+                                if (!$response['status'] == 'SUCCESS') {
+                                    $messages[] = 'Error for order: ' . $order['NumberBL'];
+                                    throw new \Exception('Error setting order fields in BL');
+                                }
+
+                                $parameters = [
+                                    'order_id' => $order['NumberBL'],
+                                    'custom_extra_fields' => [$BL->id_exfield_stan => $bl_user_id],
+                                    //'admin_comments' => 'Zamówienie zrealizowane przez system',
+                                ];
+                                $response = $BL->setOrderFields($parameters);
+                                if (!$response['status'] == 'SUCCESS') {
+                                    $messages[] = 'Error for order: ' . $order['NumberBL'];
+                                    throw new \Exception('Error setting order fields in BL');
+                                }
                             }
-                            DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
-                                'IDOrderStatus' => 29, //Nie wysyłać
-                                'Remarks' => $remarks
+                            $updateted = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                                'IDOrderStatus' => 42,
                             ]);
-
-                            break;
-                        }
-                    }
-
-                    if ($orderOK) {
-                        $listOrders[] = $order;
-                        $listProductsOK = array_merge($listProductsOK, $orderProductsOK);
-
-                        $inserted = DB::table('collect')->insert([
-                            'IDUzytkownika' => $request->user->IDUzytkownika,
-                            'Date' => Carbon::now(),
-                            'IDOrder' => $order['IDOrder'],
-                            'status' => 0,
-                            'created_doc' => json_encode($createdDoc[$IDMagazynu]),
-                            'IDsElementuRuchuMagazynowego' => json_encode($IDsElementuRuchuMagazynowego),
-                        ]);
-
-                        if (!$inserted) {
-                            throw new \Exception('Error inserting into collect table');
-                        }
-                        if (env('APP_ENV') != 'local') {
-                            $parameters = [
-                                'order_id' => $order['NumberBL'],
-                                'status_id' => $BL->status_id_Kompletowanie,
-                            ];
-                            $response = $BL->setOrderStatus($parameters);
-                            //\Log::info('setOrderStatus response in baselinker:', $response);
-                            if (!$response['status'] == 'SUCCESS') {
-                                $messages[] = 'Error for order: ' . $order['NumberBL'];
-                                throw new \Exception('Error setting order fields in BL');
-                            }
-
-                            $parameters = [
-                                'order_id' => $order['NumberBL'],
-                                'custom_extra_fields' => [$BL->id_exfield_stan => $bl_user_id],
-                            ];
-                            $response = $BL->setOrderFields($parameters);
-                            if (!$response['status'] == 'SUCCESS') {
-                                $messages[] = 'Error for order: ' . $order['NumberBL'];
-                                throw new \Exception('Error setting order fields in BL');
+                            if (!$updateted) {
+                                throw new \Exception('Error updateted into Orders table');
                             }
                         }
-                        $updateted = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
-                            'IDOrderStatus' => 42,
-                        ]);
-                        if (!$updateted) {
-                            throw new \Exception('Error updateted into Orders table');
-                        }
+                    });
+                } catch (\Exception $e) {
+                    Log::error($e->getMessage());
+                    $messages[] = $e->getMessage();
+                    if (env('APP_ENV') != 'local') {
+                        $parameters = [
+                            'order_id' => $order['NumberBL'],
+                            'status_id' => $BL->status_id_Nie_wysylac,
+                        ];
+                        $BL->setOrderStatus($parameters);
+                        $parameters = [
+                            'order_id' => $order['NumberBL'],
+                            'admin_comments' => $e->getMessage(),
+                        ];
+                        $BL->setOrderFields($parameters);
                     }
-                });
+                    DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                        'IDOrderStatus' => 29, //Nie wysyłać
+                        'Remarks' => $remarks . ' ' . $e->getMessage(),
+                    ]);
+                    //throw $e;
+                }
             }
         }
 
