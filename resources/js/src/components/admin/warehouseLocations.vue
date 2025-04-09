@@ -265,7 +265,7 @@ export default {
 .top_actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 2rem;
+  gap: 1rem;
 }
 @media (max-width: 600px) {
   .top_actions {
