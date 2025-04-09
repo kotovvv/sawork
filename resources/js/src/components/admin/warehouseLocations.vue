@@ -56,7 +56,7 @@
           class="elevation-1"
         >
           <template v-slot:top>
-            <div class="d-flex gap-2" style="width: auto">
+            <div class="top_actions">
               <v-text-field
                 v-model="search"
                 label="Search"
@@ -262,4 +262,14 @@ export default {
 };
 </script>
 <style>
+.top_actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+}
+@media (max-width: 600px) {
+  .top_actions {
+    flex-direction: column;
+  }
+}
 </style>
