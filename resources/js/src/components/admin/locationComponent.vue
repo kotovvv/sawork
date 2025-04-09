@@ -56,7 +56,7 @@
       @keyup="handleKeypress"
     >
       <v-container>
-        <v-card height="80vh" class="overflow-y-auto">
+        <v-card height="80vh" style="overflow-y: auto">
           <v-card-title class="mb-5 bg-grey-lighten-3">
             <v-row>
               <v-col>
