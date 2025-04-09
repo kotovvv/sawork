@@ -411,11 +411,10 @@ export default {
       data.IDTowaru = vm.product.IDTowaru;
       data.qty = vm.product.qty;
 
-      data.fromLocation = vm.warehouseLocations.find((w) => {
-        return w.LocationCode == vm.selected_item.LocationCode;
-      });
+      data.fromLocation = { LocationCode: vm.selected_item.LocationCode };
+
       data.toLocation = vm.toLocation;
-      data.selectedWarehause = vm.selectedWarehause;
+      data.selectedWarehause = vm.selectedWarehause.IDMagazynu;
       data.createdDoc = vm.createdDoc;
       axios
         .post("/api/doRelokacja", data)
