@@ -187,9 +187,9 @@
       </v-col>
     </v-row>
 
-    <v-row v-if="ordersPropucts.length">
+    <v-row v-if="ordersPropucts.length && showBtn">
       <v-col>
-        <v-btn @click="prepareDoc" v-if="ordersPropucts.length">Zbierać</v-btn>
+        <v-btn @click="prepareDoc">Zbierać</v-btn>
       </v-col>
     </v-row>
     <v-row v-if="ordersPropucts.length">
@@ -276,6 +276,7 @@ export default {
       createdDoc: [],
       productsERROR: [],
       orderERROR: [],
+      showBtn: false,
       headers: [
         { title: "Nazwa", value: "Nazwa" },
         { title: "SKU", value: "SKU" },
@@ -396,6 +397,7 @@ export default {
             vm.getAllOrders();
             vm.selectedMakeOrders = [];
             vm.setTransComany();
+            vm.showBtn = false;
           }
         })
         .catch((error) => {
@@ -407,6 +409,7 @@ export default {
     },
     getOrderProducts() {
       const vm = this;
+      vm.showBtn = true;
       vm.ordersPropucts = [];
       vm.selectedOrders = [];
       vm.endParamas = [];
