@@ -4,431 +4,797 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 
-class LocationController extends Controller
+class CollectController extends Controller
 {
-    public function TowarLocationTipTab(Request $request)
+
+    public function getAllOrders(Request $request)
     {
-        $data = $request->all();
-        $stor = $data['stor'];
-        $days = $data['days'];
-        $dataMin = Carbon::now()->subDays($days)->format('Y-m-d H:i:s');
-        $dataMax = Carbon::now()->format('Y-m-d H:i:s');
-        $idMag = $stor;
-        $sql = '';
+        //get collected orders
+        $waiteOrders = $this->waitOrders($request->user);
+        $IDsWaiteOrders = $waiteOrders->pluck('IDOrder');
+        //get free orders
+        $allOrders = DB::table('dbo.Orders as o')
+            ->leftJoin('dbo.RodzajTransportu as rt', 'rt.IDRodzajuTransportu', '=', 'o.IDTransport')
+            ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', 'o.Remarks', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport', 'rt.Nazwa as transport_name')
+            ->where('o.IDOrderType', 15)
+            ->where('o.IDOrderStatus', 23)
+            ->when($IDsWaiteOrders, function ($query, $IDsWaiteOrders) {
+                return $query->whereNotIn('o.IDOrder', $IDsWaiteOrders);
+            })
+            ->whereNotNull('o._OrdersTempDecimal2') //Nr. Baselinker
+            ->whereNotNull('o._OrdersTempString1') //Nr. Faktury BL
+            ->whereNotNull('o._OrdersTempString7') //Źródło
+            ->where(function ($query) {
+                $query->where('o._OrdersTempString5', '')
+                    ->orWhereNull('o._OrdersTempString5');
+            }) //Product_Chang
+            ->whereNotIn('o.IDOrder', function ($query) {
+                $query->select('ID2')
+                    ->from('dbo.DocumentRelations')
+                    ->where('IDType1', 2)
+                    ->where('IDType2', 15);
+            })
+            ->get();
+        return response()->json(['allOrders' => $allOrders, 'waiteOrders' => $waiteOrders]);
+    }
 
-        DB::table('TowarLocationTipTab')->delete();
-        // Выполнение первого блока запросов
-        $towarItems = DB::table('Towar')->select('IDTowaru', 'IDMagazynu')->where('Usluga', 0)->where('KodKreskowy', '!=', '')->where('IDMagazynu', $idMag)->get();
-
-        $sql = '';
-        foreach ($towarItems as $item) {
-            $sql = "EXEC TowarLocationTip {$item->IDTowaru}, {$item->IDMagazynu}; ";
-            if (!empty($sql)) {
-                DB::unprepared($sql);
-            }
-        }
-
-        // Обновление таблицы TowarLocationTipTab
-        // $updateSql = "
-        //     UPDATE tlt
-        //     SET tlt.IloscZa5dni = ISNULL(CAST(CASE WHEN s.SumIlosci > 9999999999999.9999 THEN 9999999999999.9999 ELSE s.SumIlosci END AS decimal(38, 4)), 0)
-        //     FROM TowarLocationTipTab tlt
-        //     JOIN Towar t ON tlt.IDTowaru = t.IDTowaru and t.Usluga = 0 and t.KodKreskowy != ''
-        //     CROSS APPLY (
-        //     SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, '$dataMin', '$dataMax', $idMag) AS SumIlosci
-        //     ) AS s
-        //  ";
-        $updateSql = "
-            UPDATE tlt
-            SET tlt.IloscZa5dni = s.SumIlosci + ISNULL(r.rezerv, 0)
-            FROM TowarLocationTipTab tlt
-            LEFT JOIN Towar t ON tlt.IDTowaru = t.IDTowaru AND t.Usluga = 0 AND t.KodKreskowy != ''
-            CROSS APPLY (
-                SELECT SUM(Ilosc) AS SumIlosci
-                FROM dbo.ElementRuchuMagazynowego e
-                JOIN dbo.RuchMagazynowy r ON r.IDRuchuMagazynowego = e.IDRuchuMagazynowego
-                AND r.IDMagazynu = $idMag
-                AND r.IDRodzajuRuchuMagazynowego = 2
-                AND r.Data >= '$dataMin'
-                AND r.Data <= '$dataMax'
-                WHERE IDTowaru = t.IDTowaru
-            ) AS s
-            LEFT JOIN (
-                SELECT t.IDTowaru, CAST(ISNULL(SUM(ol.ProductCountWithoutWZ), 0) AS INT) AS rezerv
-                FROM Towar t
-                LEFT JOIN (
-                    SELECT ol.IDItem AS IDTowaru, SUM(ol.Quantity) AS ProductCountWithoutWZ
-                    FROM OrderLines ol
-                    JOIN Orders o ON o.IDOrder = ol.IDOrder
-                    JOIN OrderStatus os ON os.IDOrderStatus = o.IDOrderStatus
-                    WHERE (os.SetUpAction IS NULL OR os.SetUpAction <> 256)
-                    AND NOT EXISTS (
-                        SELECT 1
-                        FROM DocumentRelations dr
-                        WHERE dr.ID2 = o.IDOrder
-                        AND dr.IDType2 = 15
-                        AND dr.IDType1 = 2
-                    )
-                    GROUP BY ol.IDItem
-                ) ol ON ol.IDTowaru = t.IDTowaru
-                WHERE t.IDMagazynu = $idMag
-                GROUP BY t.IDTowaru
-            ) AS r ON r.IDTowaru = t.IDTowaru
-        ";
-
-        // Execute the query
-        DB::statement($updateSql);
-
-        // Создание временной таблицы и выполнение SELECT-запроса
-        $results = DB::table('TowarLocationTipTab')
-            ->select(
-                'IDTowaru',
-                'KodKreskowy',
-                DB::raw('SUM(CASE WHEN TypLocations = 1 THEN Quantity ELSE 0 END) AS Quantity1'),
-                DB::raw('SUM(CASE WHEN TypLocations = 2 THEN Quantity ELSE 0 END) AS Quantity2'),
-                DB::raw('MAX(IloscZa5dni) AS SoldLast5Days'),
-                DB::raw('CASE WHEN SUM(CASE WHEN TypLocations = 1 THEN Quantity ELSE 0 END) < MAX(IloscZa5dni) AND SUM(CASE WHEN TypLocations = 2 THEN Quantity ELSE 0 END) > 0 THEN MAX(IloscZa5dni) - SUM(CASE WHEN TypLocations = 1 THEN Quantity ELSE 0 END) ELSE 0 END AS peremestit')
-            )
-            ->groupBy('IDTowaru', 'KodKreskowy')
+    private function waitOrders($user)
+    {
+        $waiteOrders = DB::table('collect')
+            ->leftJoin('Orders as o', 'o.IDOrder', '=', 'collect.IDOrder')
+            ->where([
+                'IDUzytkownika' => $user->IDUzytkownika,
+                'status' => 0,
+            ])
+            ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', 'o.Remarks', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport')
             ->get();
 
-        // Обновление таблицы TowarLocationTipTab на основе временных результатов
-        foreach ($results as $result) {
-            DB::table('TowarLocationTipTab')
-                ->where('IDTowaru', $result->IDTowaru)
-                ->where('KodKreskowy', $result->KodKreskowy)
-                ->where('TypLocations', 2)
-                ->update(['peremestit' => (int) $result->peremestit]);
-        }
-
-        unset($tempResults);
-        unset($tempResultsCollection);
-        return DB::table('TowarLocationTipTab')->get();
+        return $waiteOrders;
     }
 
-    public function getProduct($id)
+    private function freeOrdersFromCollect($orders, $user)
     {
+        $ordersInCollect = DB::table('collect as col')
+            ->whereIn('col.IDOrder', $orders)
+            ->pluck('IDOrder');
+        $freeOrders = array_diff($orders, $ordersInCollect->toArray());
 
-        $product =   DB::table('dbo.Towar')->where('IDTowaru', $id)->select(
-            'IDTowaru',
-            'Nazwa',
-            'KodKreskowy',
-            '_TowarTempString1 as sku',
-            'Zdjecie',
-            DB::raw("0 as qty")
-        )->first();
+        // $waiteOrders = $this->waitOrders($user);
+        // $freeOrders = array_merge($freeOrders, $waiteOrders->toArray());
 
-        $product->Zdjecie = base64_encode($product->Zdjecie);
-        return $product;
+        return $freeOrders;
     }
 
-    public function getWarehouseLocations($id)
+    public function getOrderProducts(Request $request)
     {
-        return  DB::table('dbo.WarehouseLocations')->where('IDMagazynu', $id)->get();
-    }
-    private function getPZ($IDTowaru)
-    {
-        $DataMax = Carbon::now()->format('Y-m-d H:i:s');
-        $IDElementuRuchuMagazynowego = -1;
-        $ExcludeElementID = -1;
-        $query = "
-exec sp_executesql N'Select ID, Sum(Edycja) as Edycja, sum(X.ilosc) as ''qty'', AVG(Cena) as Cena,
-X.NumerSerii as ''Numer serii'',
-CONVERT(DateTime, CONVERT(Char, X.DataWaznosci, 103), 103) as ''Data ważności'',
-X.Idloc as ''IDWarehouseLocation'', X.LocationCode, X.LocationName as ''Nazwa lokalizacji'', X.LocationPriority,
-X.NrDokumentu as ''Nr Dokumentu'', X.DataDokumentu As ''Data Dokumentu'',
-ElementRuchuMagazynowego.Reserved as ''Rezerwacje dostaw'',
-Kontrahent.Nazwa as ''Kontrahent''
-, RuchMagazynowy.[_RuchMagazynowyTempBool1] AS ''Niepełnowartościowe'' , RuchMagazynowy.[_RuchMagazynowyTempDecimal1] AS ''Nr. Baselinker'' , RuchMagazynowy.[_RuchMagazynowyTempString2] AS ''Nr. Faktury BL'' , RuchMagazynowy.[_RuchMagazynowyTempString3] AS ''Nr. Korekty BL'' , RuchMagazynowy.[_RuchMagazynowyTempString1] AS ''Nr. Nadania BL'' , RuchMagazynowy.[_RuchMagazynowyTempString4] AS ''Nr. Zwrotny BL'' ,RuchMagazynowy.[_RuchMagazynowyTempLink1] AS ''Link do Korekty BL'' , RuchMagazynowy.[_RuchMagazynowyTempLink2] AS ''Link do Faktury BL'' , RuchMagazynowy.[_RuchMagazynowyTempBool2] AS ''Zweryfikowane'' , RuchMagazynowy.[_RuchMagazynowyTempString5] AS ''Product_Chang'' , RuchMagazynowy.[_RuchMagazynowyTempString6] AS ''Uwagi sprzedawcy'' , RuchMagazynowy.[_RuchMagazynowyTempBool3] AS ''Pieniądze zwrócone'' , RuchMagazynowy.[_RuchMagazynowyTempString7] AS ''Źródło:'' , RuchMagazynowy.[_RuchMagazynowyTempString8] AS ''External_id'' , RuchMagazynowy.[_RuchMagazynowyTempString9] AS ''Login_klienta''
-FROM
-(
--- stany w danym punkcie czasu:
-SELECT IDElementuPZ as ID, CAST(0 as decimal(18,6)) as Edycja,
-ilosc, CenaJednostkowa as Cena, --Jednostka, Wartosc as ''Wartość'',
-NumerSerii, DataWaznosci, NrDokumentu, DataDokumentu, IDWarehouseLocation as Idloc, LocationCode, LocationName,LocationPriority
-FROM StanySzczegolowo(@DataMax)
-WHERE IDTowaru = @IDTowaru
-AND IDElementuPZ <> @ExcludeElementID
-AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''
-UNION ALL  -- дополнительное существующие элементы
-SELECT PZ.IDElementuRuchuMagazynowego ID, PZWZ.ilosc as Edycja,
-PZWZ.ilosc,ISNULL(PZ.CenaJednostkowa ,0) as Cena,
-PZ.NumerSerii, PZ.DataWaznosci,	RuchPZ.NrDokumentu, RuchPZ.Data,
-loc.IDWarehouseLocation as Idloc, isnull(loc.LocationCode,'''') LocationCode, isnull(loc.LocationName,'''') LocationName, loc.Priority as LocationPriority
-FROM ZaleznosciPZWZ PZWZ
-INNER JOIN ElementRuchuMagazynowego AS WZ ON WZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuWZ
-INNER JOIN ElementRuchuMagazynowego AS PZ ON PZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuPZ
-INNER JOIN RuchMagazynowy AS RuchWZ ON RuchWZ.IDRuchuMagazynowego = WZ.IDRuchuMagazynowego
-INNER JOIN RuchMagazynowy AS RuchPZ ON RuchPZ.IDRuchuMagazynowego = PZ.IDRuchuMagazynowego
-INNER JOIN Towar t ON t.IDTowaru = WZ.IDTowaru
-LEFT OUTER JOIN WarehouseLocations AS loc ON PZ.IDWarehouseLocation = loc.IDWarehouseLocation
-WHERE
-t.IdTowaru = @IDTowaru
-AND WZ.IDElementuRuchuMagazynowego = @IDElementuRuchuMagazynowego
-AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''
-) X
-INNER JOIN [dbo].[ElementRuchuMagazynowego] ON ElementRuchuMagazynowego.IDElementuRuchuMagazynowego = X.ID
-INNER JOIN [dbo].[RuchMagazynowy] ON RuchMagazynowy.IDRuchuMagazynowego = ElementRuchuMagazynowego.IDRuchuMagazynowego
-LEFT JOIN dbo.Kontrahent ON Kontrahent.IDKontrahenta = RuchMagazynowy.IDKontrahenta
-group by ID, X.NumerSerii, X.DataWaznosci ,	X.NrDokumentu , X.DataDokumentu, X.Idloc , X.LocationCode , X.LocationName, X.LocationPriority,
-ElementRuchuMagazynowego.Reserved, Kontrahent.Nazwa
-, RuchMagazynowy.[_RuchMagazynowyTempBool1] , RuchMagazynowy.[_RuchMagazynowyTempDecimal1] , RuchMagazynowy.[_RuchMagazynowyTempString2] , RuchMagazynowy.[_RuchMagazynowyTempString3] , RuchMagazynowy.[_RuchMagazynowyTempString1] , RuchMagazynowy.[_RuchMagazynowyTempString4] , RuchMagazynowy.[_RuchMagazynowyTempLink1] , RuchMagazynowy.[_RuchMagazynowyTempLink2] , RuchMagazynowy.[_RuchMagazynowyTempBool2] , RuchMagazynowy.[_RuchMagazynowyTempString5] , RuchMagazynowy.[_RuchMagazynowyTempString6] , RuchMagazynowy.[_RuchMagazynowyTempBool3] , RuchMagazynowy.[_RuchMagazynowyTempString7] , RuchMagazynowy.[_RuchMagazynowyTempString8] , RuchMagazynowy.[_RuchMagazynowyTempString9]
-ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
-',N'@IDTowaru int,@DataMax datetime,@IDElementuRuchuMagazynowego int,@ExcludeElementID int',@IDTowaru=?,@DataMax=?,@IDElementuRuchuMagazynowego=?,@ExcludeElementID=?
-";
 
-        $results = DB::select($query, [
-            $IDTowaru,
-            $DataMax,
-            $IDElementuRuchuMagazynowego,
-            $ExcludeElementID
-        ]);
+        $freeOrders = $this->freeOrdersFromCollect($request->IDsOrder, $request->user);
 
-        return $results;
-    }
+        $maxProducts = $request->maxProducts ?? 30;
+        $maxWeight = $request->maxWeight ?? 30;
+        $maxM3 = $request->maxM3 ?? 0.2;
+        $selectedOrders = collect();
+        $currentProducts = 0;
+        $currentWeight = 0;
+        $currentM3 = 0;
+        foreach ($request->IDsWarehouses as  $warehouse) {
 
-
-    public function lastNumber($doc, $symbol)
-    {
-        $year = Carbon::now()->format('y');
-        $pattern =  $doc . '%/' . $year . ' - ' . $symbol;
-        $patternIndex = strlen($doc);
-        $patternToEndLen = strlen($symbol) + 6; // 6 символов: " - " + год (2 символа) + "/"
-
-        $res = DB::table('RuchMagazynowy')
-            ->select(DB::raw('MAX(CAST(SUBSTRING(NrDokumentu, ' . ($patternIndex + 1) . ', LEN(NrDokumentu) - ' . ($patternToEndLen + $patternIndex) . ') AS INT)) as max_number'))
-            ->whereRaw('RTRIM(NrDokumentu) LIKE ?', [$pattern])
-            ->whereRaw('ISNUMERIC(SUBSTRING(NrDokumentu, ' . ($patternIndex + 1) . ', LEN(NrDokumentu) - ' . ($patternToEndLen + $patternIndex) . ')) <> 0')
-            ->value('max_number');
-
-        if ($res === null) {
-            return str_replace('%', '1', $pattern);
-        }
-        return str_replace('%', $res + 1, $pattern);
-    }
-
-    public function errorLocation($user, $what, $ip = 0)
-    {
-        $myLogInfo = date('Y-m-d H:i:s') . ', ' . $ip . ', ' . $user->NazwaUzytkownika . ', ' . $what;
-        file_put_contents(
-            storage_path() . '/logs/errorLocation.log',
-            $myLogInfo . PHP_EOL,
-            FILE_APPEND | LOCK_EX
-        );
-    }
-
-    public function doRelokacja(Request $request)
-    {
-        $resnonse = [];
-        $data = $request->all();
-        $IDTowaru = $data['IDTowaru'];
-        $qty = $data['qty'];
-        $fromLocation = $data['fromLocation'];
-        $toLocation = $data['toLocation'];
-        $idWarehause = $data['selectedWarehause'];
-        $createdDoc = $data['createdDoc'];
-        if (isset($data['Uwagi'])) {
-            $Uwagi = $data['Uwagi'];
-        } else {
-            $Uwagi = '';
-        }
-        if (isset($data['IDUzytkownika'])) {
-            $IDUzytkownika = $data['IDUzytkownika'];
-        } else {
-            $IDUzytkownika = 1;
-        }
-        $pz = [];
-
-        $symbol = DB::table('Magazyn')->where('IDMagazynu', $idWarehause)->value('Symbol');
-        // 1. chech if doc cteated
-        if ($createdDoc == null) {
-
-            $NrDokumentu = $this->lastNumber('ZL', $symbol);
-
-            $creat_zl = [];
-
-            $creat_zl['IDRodzajuRuchuMagazynowego'] = 27;
-            $creat_zl['Data'] = Date('m-d-Y H:i:s');
-            $creat_zl['IDMagazynu'] = $idWarehause;
-            $creat_zl['NrDokumentu'] = $NrDokumentu;
-            $creat_zl['Uwagi'] = $Uwagi;
-            $creat_zl['Operator'] = 1;
-            $creat_zl['IDCompany'] = 1;
-            $creat_zl['IDUzytkownika'] = $IDUzytkownika;
-            // $creat_zl['WartoscDokumentu'] = 0; // - в строке в которой отнимаем указываем сумму товаров
-
-            // create doc
-            DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
-            $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
-
-            DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
-            $resnonse['createdDoc']['idpls'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
-
-            DB::table('PrzesunieciaMM')->insert(['IDRuchuMagazynowegoZ' => $resnonse['createdDoc']['idmin'], 'IDRuchuMagazynowegoDo' => $resnonse['createdDoc']['idpls']]);
-        } else {
-            $resnonse['createdDoc'] = $createdDoc;
-        }
-
-        //2. ElementRuchuMagazynowego
-        $pz = $this->getPZ($IDTowaru);
-        $el = [];
-        $el['IDTowaru'] = $IDTowaru;
-        $qtyToMove = $qty;
-
-        if (empty($pz)) {
-            $this->errorLocation($request->user, 'Document ' . $createdDoc . ' No towar ID:' . $IDTowaru . ' qty=' . $qty . ' found from location: ' . $fromLocation['LocationCode'] . ' to location: ' . $toLocation['LocationCode'], $request->ip());
-            throw new \Exception('Uwaga! Uwaga! Uwaga! Nie znaleziono identyfikatora towaru ID:' . $IDTowaru . '  z lokalizacji: ' . $fromLocation['LocationCode'] . ' do lokalizacji:' . $toLocation['LocationCode'] . ' qty' . $qty);
-        }
-        foreach ($pz as $key => $value) {
-            $debt = $qtyToMove > $pz[$key]->qty ?  $pz[$key]->qty : $qtyToMove;
-            $el['Ilosc'] = -$debt;
-            $el['Uwagi'] =  $Uwagi;
-            $el['IDRodzic'] = null;
-            $el['IDWarehouseLocation'] = null;
-            $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idmin'];
-            $el['CenaJednostkowa'] = $pz[$key]->Cena;
-
-            // Ensure the IDRuchuMagazynowego exists in the RuchMagazynowy table
-            $exists = DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $el['IDRuchuMagazynowego'])->exists();
-
-            if ($exists) {
-                DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
-            } else {
-                Log::error('Failed to insert into ElementRuchuMagazynowego: IDRuchuMagazynowego does not exist', ['IDRuchuMagazynowego' => $el['IDRuchuMagazynowego']]);
-                throw new \Exception('IDRuchuMagazynowego does not exist in RuchMagazynowy table.');
-            }
-            $ndocidmin = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
-            $el['Ilosc'] = $debt;
-            $el['Uwagi'] =  $Uwagi;
-            $el['IDRodzic'] = $ndocidmin;
-            $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idpls'];
-            $el['IDWarehouseLocation'] = $toLocation['IDWarehouseLocation'];
-            DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
-            $ndocidpls = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
-
-            $resnonse['IDsElementuRuchuMagazynowego']['min'][] = $ndocidmin;
-            $resnonse['IDsElementuRuchuMagazynowego']['pls'][] = $ndocidpls;
-            DB::statement('EXEC dbo.UtworzZaleznoscPZWZ @IDElementuPZ = ?, @IDElementuWZ = ?, @Ilosc = ?', [
-                $pz[$key]->ID,
-                $ndocidmin,
-                $debt
-            ]);
-
-            $qtyToMove -=  $debt;
-            if ($qtyToMove <= 0) break;
-        }
-
-        return $resnonse;
-    }
-
-    public function updateOrInsertLocation($IDRuchuMagazynowego, $locations)
-    {
-        // Define the condition to check for existing records
-        $condition = ['IDRuchuMagazynowego' => $IDRuchuMagazynowego];
-        // Define the data to update or insert
-        $data = [
-            'locations' => $locations,
-            // Add other fields as necessary
-        ];
-
-        // Use updateOrInsert to update if exists, or insert if not
-        DB::table('InfoComming')->updateOrInsert($condition, $data);
-    }
-
-    public function refreshLocations(Request $request)
-    {
-        $data = $request->all();
-        $res = [];
-        $IDWarehouse = $data['IDWarehouse'];
-        $dateMin = Carbon::parse($data['dateMin'])->setTime(00, 00, 00)->format('m.d.Y H:i:s');
-        $dateMax = Carbon::parse($data['dateMax'])->setTime(23, 59, 59)->format('m.d.Y H:i:s');
-
-        // get all WZk for magazin
-        $res['allWZk'] = DB::table('RuchMagazynowy')
-            ->where('IDMagazynu', $IDWarehouse)
-            ->whereBetween('Data', [$dateMin, $dateMax])
-            ->pluck('IDRuchuMagazynowego');
-
-        // get locations name
-        $loc_name =  (array) DB::table('EMailMagazyn')
-            ->where('IDMagazyn', $IDWarehouse)
-            ->select('IDLokalizaciiZwrot as ok', 'Zniszczony', 'Naprawa')
-            ->first();
-        $loc_name = array_flip($loc_name);
-
-        // get locations of products each WZK
-        foreach ($res['allWZk'] as $key => $IDRuchuMagazynowego) {
-            $locations = [];
-            $products = DB::table('ElementRuchuMagazynowego')
-                ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
+            $sharedItems = DB::table('dbo.OrderLines as ol')
+                ->select('ol.IDItem', DB::raw('SUM(ol.Quantity) as TotalQuantity'), DB::raw('STRING_AGG(ol.IDOrder, \',\') as Orders'))
+                ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
+                ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+                ->where('o.IDWarehouse', $warehouse)
+                ->where('t.Usluga', '!=', 1)
+                ->whereIn('ol.IDOrder', $freeOrders)
+                ->groupBy('ol.IDItem')
+                ->havingRaw('COUNT(DISTINCT ol.IDOrder) > 1')
+                ->orderByDesc('TotalQuantity')
                 ->get();
-            foreach ($products as $key => $product) {
-                $locations[] = $loc_name[$product->IDWarehouseLocation] ?? $product->IDWarehouseLocation;
+
+            $orders = [];
+            $sharedItems->each(function ($item) use (&$orders) {
+                $orders = array_merge($orders, explode(',', $item->Orders));
+            });
+
+            $orders = array_unique($orders);
+
+            $ordersData = collect();
+            if (count($orders) > 0) {
+
+                $ordersData = DB::table('dbo.OrderLines as ol')
+                    ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
+                    ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+                    ->select(
+                        'o.IDOrder',
+                        'o.IDWarehouse',
+                        DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'),
+                        DB::raw('SUM(ol.Quantity) as TotalQuantity'),
+                        DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
+                        DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
+                    )
+                    ->where('o.IDWarehouse', $warehouse)
+                    ->where('t.Usluga', '!=', 1)
+                    ->whereIn('ol.IDOrder', $orders)
+                    ->groupBy('o.IDOrder', 'o._OrdersTempDecimal2', 'o.IDWarehouse')
+                    ->orderBy(DB::raw("CASE " . implode(" ", array_map(function ($id, $index) {
+                        return "WHEN o.IDOrder = $id THEN $index";
+                    }, $orders, array_keys($orders))) . " END"))
+                    ->get();
             }
-            if (is_array($locations) && count($locations)) {
-                $locations = array_unique($locations);
-                $this->updateOrInsertLocation($IDRuchuMagazynowego, implode(',', $locations));
+
+            $nextOrdersData =  DB::table('dbo.OrderLines as ol')
+                ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
+                ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+                ->select(
+                    'o.IDOrder',
+                    'o.IDWarehouse',
+                    DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'),
+                    DB::raw('SUM(ol.Quantity) as TotalQuantity'),
+                    DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
+                    DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
+                )
+                ->where('o.IDWarehouse', $warehouse)
+                ->where('t.Usluga', '!=', 1)
+                ->whereIn('ol.IDOrder', array_diff($freeOrders, $orders))
+                ->groupBy('o.IDOrder', 'o._OrdersTempDecimal2', 'o.IDWarehouse')
+                ->orderByDesc('TotalQuantity')
+                ->get();
+            $ordersData = $ordersData->merge($nextOrdersData);
+            $ordersData = $ordersData->sortByDesc('IDWarehouse');
+
+
+            if (count($selectedOrders) == 0) {
+                $firstOrder = $ordersData->shift();
+                if ($firstOrder) {
+                    $selectedOrders->push($firstOrder);
+                    $currentProducts = $firstOrder->TotalQuantity;
+                    $currentWeight = $firstOrder->TotalWeight;
+                    $currentM3 = $firstOrder->TotalM3;
+                }
+            }
+            // Going through the remaining orders until we exceed the limits
+            foreach ($ordersData as $order) {
+                if (
+                    ($currentProducts + $order->TotalQuantity <= $maxProducts) &&
+                    ($currentWeight + $order->TotalWeight <= $maxWeight) &&
+                    ($currentM3 + $order->TotalM3 <= $maxM3)
+                ) {
+                    $selectedOrders->push($order);
+                    $currentProducts += $order->TotalQuantity;
+                    $currentWeight += $order->TotalWeight;
+                    $currentM3 += $order->TotalM3;
+                }
             }
         }
 
+        $selectedOrdersIDs = $selectedOrders->pluck('IDOrder');
+        $listProducts = $this->getListProducts($selectedOrdersIDs);
 
-        return $res;
+        $listProducts->each(function ($product) {
+            $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
+            $product->locations = $locations->pluck('LocationCode')->implode(',');
+            $product->locationsData = $locations;
+        });
+
+        // Selected orders
+        return response()->json([
+            'listProducts' => $listProducts,
+            'selectedOrders' => $selectedOrdersIDs,
+            'sharedItems' => $sharedItems,
+            'endParamas' => ['maxProducts' => $currentProducts, 'maxWeight' =>  $currentWeight, 'maxM3' => $currentM3],
+
+        ]);
     }
 
-    public function getProductLocations($id, $allLocations = 0)
+    private function getListProducts($idsOrder)
     {
-        $IDTowaru = intval($id);
-        $results = $this->getPZ($IDTowaru);
+        $listProductsOK = DB::table('dbo.OrderLines as ol')
+            ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
+            ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+            ->select('ol.IDItem', DB::raw('CAST(ol.Quantity AS INT) as Quantity'),  'ol.IDOrder', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 't.Nazwa', 't.KodKreskowy as EAN', 't._TowarTempString1 as SKU', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
+            ->where('t.Usluga', '!=', 1)
+            ->whereIn('ol.IDOrder', $idsOrder)
+            ->orderByDesc('o.IDWarehouse')
+            // ->orderByDesc('ol.IDItem')
+            ->orderBy('o.Date', 'asc')
+            ->get();
 
-        $results = collect($results)->groupBy('LocationCode')->map(function ($row) {
-            return [
-                'LocationCode' => $row->first()->LocationCode,
-                'ilosc' => $row->sum('qty'),
-                'IDWarehouseLocation' => $row->first()->IDWarehouseLocation,
-                // 'IDRuchuMagazynowego' => $row->first()->ID,
-                // 'Data'  => $row->first()->Data Dokumentu,
-            ];
-        })->values();
-
-        return $results;
+        return $listProductsOK;
     }
 
-    public function getLocationsM3()
+    public function collectOrders(Request $request)
     {
-        $LocationsM3 = DB::table('LocationsM3')->get();
-        return $LocationsM3;
-    }
 
-    public function getLocationsTyp()
-    {
-        $LocationsTypes = DB::table('LocationsTyp')->get();
-        return $LocationsTypes;
-    }
+        $freeOrders = $this->freeOrdersFromCollect($request->selectedOrders, $request->user);
 
-    public function updateLocationsTyp(Request $request)
-    {
-        $data = $request->all();
-        $IDWarehouseLocation = $data['IDWarehouseLocation'];
+        $makeOrders = [];
+        foreach ($freeOrders as $IDOrder) {
 
-        $update = [
-            'isArchive' => $data['IsArchive']  ? 1 : 0,
-        ];
-        if (isset($data['TypLocations'])) {
-            $update['TypLocations'] = $data['TypLocations'];
+            try {
+                DB::table('collect')->insert([
+                    'IDUzytkownika' => $request->user->IDUzytkownika,
+                    'Date' => Carbon::now(),
+                    'IDOrder' => $IDOrder,
+                    'status' => 0,
+                ]);
+
+                $makeOrders[] = $IDOrder;
+            } catch (\Throwable $th) {
+                throw $th;
+            }
         }
-        if (isset($data['M3Locations'])) {
-            $update['M3Locations'] = $data['M3Locations'];
-        }
-        if (isset($data['Priority'])) {
-            $update['Priority'] = $data['Priority'];
+
+        if (count($request->selectedOrders) > count($freeOrders)) {
+            $message = "Niektóre (" . (count($request->selectedOrders) - count($freeOrders)) . ") zamówienia zostały już dodane do zbioru";
+        } else {
+            $message = "Zamówienia zostały dodane do zbioru";
         }
 
-        DB::table('WarehouseLocations')->whereIn('IDWarehouseLocation', $IDWarehouseLocation)->update($update);
+        return response()->json([
+            'message' => $message,
+            'makeOrders' => $makeOrders
+        ]);
+    }
 
-        return response()->json(['success' => true]);
+    public function deleteSelectedMakeOrders(Request $request)
+    {
+        $deletedOrders = DB::table('collect')
+            ->whereIn('IDOrder', $request->selectedOrders)
+            ->delete();
+
+        return response()->json([
+            'message' => 'Zamówienia zostały usunięte z zbioru',
+            'makeOrders' => $this->waitOrders($request->user)
+        ]);
+    }
+
+    public function getUserLocation($IDMagazynu, $IDUzytkownika)
+    {
+        $IDWarehouseLocation = DB::table('WarehouseLocations')
+            ->where('IDMagazynu', $IDMagazynu)
+            ->where('LocationCode', 'User' . $IDUzytkownika)
+            ->value('IDWarehouseLocation');
+        if (!$IDWarehouseLocation) {
+            DB::table('WarehouseLocations')->insert([
+                'IDMagazynu' => $IDMagazynu,
+                'LocationCode' => 'User' . $IDUzytkownika,
+            ]);
+            $IDWarehouseLocation = DB::table('WarehouseLocations')
+                ->where('IDMagazynu', $IDMagazynu)
+                ->where('LocationCode', 'User' . $IDUzytkownika)
+                ->value('IDWarehouseLocation');
+        }
+        return $IDWarehouseLocation;
+    }
+
+    private function changeProductsLocation($product, $qty, $toLocation, $IDUzytkownika, $createdDoc = null, $Uwagi = '')
+    {
+
+        $request = new Request([
+            'IDTowaru' => $product['IDItem'],
+            'fromLocation' => $product['fromLocation'],
+            'selectedWarehause' => $product['selectedWarehause'],
+            'qty' => $qty,
+            'toLocation' => $toLocation,
+            'createdDoc' => $createdDoc,
+            'Uwagi' =>  $Uwagi,
+            'IDUzytkownika' => $IDUzytkownika,
+        ]);
+        $response = app('App\Http\Controllers\Api\LocationController')->doRelokacja($request);
+
+        if (isset($response['createdDoc'])) {
+            return $response;
+        } else {
+            Log::error('Error created Doc');
+            throw new \Exception('Error created Doc');
+        }
+    }
+
+    private function getToken($IDMagazynu)
+    {
+        return DB::table('settings')->where('obj_name', 'sklad_token')->where('key', $IDMagazynu)->value('value');
+    }
+
+
+    public function prepareDoc(Request $request)
+    {
+        $messages = [];
+        $productsERROR = [];
+        $listProductsOK = [];
+        $orderERROR = [];
+        $IDsOrderERROR = [];
+        $listOrders = [];
+        $createdDoc = [];
+
+        foreach ($request->IDsWarehouses as $IDMagazynu) {
+
+            if (env('APP_ENV') != 'local') {
+                $token = $this->getToken($IDMagazynu);
+                $token = Crypt::decryptString($token);
+                if ($token) {
+                    $BL = new BaseLinkerController($token);
+                    $bl_user_id = DB::table('settings')->where('obj_name', 'ext_id')->where('for_obj', $IDMagazynu)->where('key', $request->user->IDUzytkownika)->value('value');
+                } else {
+                    $messages[] = 'no token ' . $IDMagazynu;
+                    continue;
+                }
+            } else {
+                $BL = null;
+                $bl_user_id = 0;
+            }
+
+
+
+            $createdDoc[$IDMagazynu] = null;
+            $toLocation['IDWarehouseLocation'] = $this->getUserLocation($IDMagazynu, $request->user->IDUzytkownika);
+
+            foreach ($request->orders as $order) {
+                if ($order['IDWarehouse'] != $IDMagazynu) {
+                    continue;
+                }
+
+                if (env('APP_ENV') != 'local') {
+                    $parameters = [
+                        'order_id' => $order['NumberBL'],
+                        'get_unconfirmed_orders' => true,
+                        'include_custom_extra_fields' => true,
+                    ];
+                    if (!$BL->inRealizacji($parameters)) {
+                        $messages[] = 'Order BL ' . $order['NumberBL'] . ' ne W realizacji';
+                        continue;
+                    }
+                }
+
+                $orderOK = true;
+                $remarks = $order['Remarks'];
+                $products = $this->getListProducts([$order['IDOrder']]);
+                $Uwagi = 'User' . $request->user->IDUzytkownika . ' || ' . $order['Remarks'];
+                try {
+                    DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$products, $remarks) {
+                        $IDsElementuRuchuMagazynowego = [];
+                        $orderProductsOK = [];
+
+                        foreach ($products as $product) {
+
+                            $needqty = $product->Quantity;
+                            $locations = app('App\Http\Controllers\Api\LocationController')->getProductLocations($product->IDItem);
+
+                            if ($locations) {
+                                foreach ($locations as $location) {
+                                    $result = [];
+                                    $item = ['IDItem' => $product->IDItem, 'fromLocation' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']], 'selectedWarehause' => $IDMagazynu];
+                                    $location_ilosc = $location['ilosc'];
+                                    $qtyToMove = min($needqty, $location_ilosc);
+                                    $needqty -= $qtyToMove;
+                                    $orderProductsOK[] = [
+                                        'IDMagazynu' => $IDMagazynu,
+                                        'IDOrder' => $order['IDOrder'],
+                                        'NumberBL' => $order['NumberBL'],
+                                        'IDItem' => $product->IDItem,
+                                        'qty' => $qtyToMove,
+                                        'fromLocaton' => ['IDWarehouseLocation' => $location['IDWarehouseLocation']],
+                                        'locationCode' => $location['LocationCode'],
+                                        'Nazwa' => $product->Nazwa,
+                                        'EAN' => $product->EAN,
+                                        'SKU' => $product->SKU
+                                    ];
+
+                                    $result = $this->changeProductsLocation($item, $qtyToMove, $toLocation, $request->user->IDUzytkownika, $createdDoc[$IDMagazynu], $Uwagi);
+                                    if (isset($result['createdDoc']['idmin'])) {
+                                        $createdDoc[$IDMagazynu] = $result['createdDoc'];
+                                        $IDsElementuRuchuMagazynowego[$product->IDItem]['min'] = array_merge(
+                                            $IDsElementuRuchuMagazynowego[$product->IDItem]['min'] ?? [],
+                                            $result['IDsElementuRuchuMagazynowego']['min']
+                                        );
+                                        $IDsElementuRuchuMagazynowego[$product->IDItem]['pls'] = array_merge(
+                                            $IDsElementuRuchuMagazynowego[$product->IDItem]['pls'] ?? [],
+                                            $result['IDsElementuRuchuMagazynowego']['pls']
+                                        );
+                                    } else {
+                                        $orderOK = false;
+                                        $orderERROR[] = $order;
+                                        $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product['IDItem'], 'qty' => $product['Quantity'], 'Uwagi' => $result->message];
+                                        Log::error('Błąd zmiany lokalizacji produktów #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
+                                        throw new \Exception('Błąd zmiany lokalizacji produktów #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
+                                    }
+                                    if ($needqty <= 0) {
+                                        break;
+                                    }
+                                }
+                            }
+                            if ($needqty > 0) {
+                                $orderOK = false;
+                                $productsERROR[] = ['IDMagazynu' => $IDMagazynu, 'IDOrder' => $order['IDOrder'], 'NumberBL' => $order['NumberBL'], 'IDItem' => $product->IDItem, 'qty' => $product->Quantity, 'Uwagi' => 'za mało produktów'];
+                                $orderERROR[] = $order;
+                                $IDsOrderERROR[] = $order['IDOrder'];
+                                Log::error('Niewystarczająca ilość #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
+                                throw new \Exception('Niewystarczająca ilość #BL: ' . $order['NumberBL'] . ' Nazwa: ' . $product->Nazwa . ' EAN: ' . $product->EAN . ' SKU: ' . $product->SKU);
+                            }
+                        }
+
+                        if ($orderOK) {
+                            $listOrders[] = $order;
+                            $listProductsOK = array_merge($listProductsOK, $orderProductsOK);
+
+                            $inserted = DB::table('collect')->insert([
+                                'IDUzytkownika' => $request->user->IDUzytkownika,
+                                'Date' => Carbon::now(),
+                                'IDOrder' => $order['IDOrder'],
+                                'status' => 0,
+                                'created_doc' => json_encode($createdDoc[$IDMagazynu]),
+                                'IDsElementuRuchuMagazynowego' => json_encode($IDsElementuRuchuMagazynowego),
+                            ]);
+
+                            if (!$inserted) {
+                                throw new \Exception('Error inserting into collect table');
+                            }
+                            if (env('APP_ENV') != 'local') {
+                                $parameters = [
+                                    'order_id' => $order['NumberBL'],
+                                    'status_id' => $BL->status_id_Kompletowanie,
+                                ];
+                                $response = $BL->setOrderStatus($parameters);
+                                //\Log::info('setOrderStatus response in baselinker:', $response);
+                                if (!$response['status'] == 'SUCCESS') {
+                                    $messages[] = 'Error for order: ' . $order['NumberBL'];
+                                    throw new \Exception('Error setting order fields in BL');
+                                }
+
+                                $parameters = [
+                                    'order_id' => $order['NumberBL'],
+                                    'custom_extra_fields' => [$BL->id_exfield_stan => $bl_user_id],
+                                    //'admin_comments' => 'Zamówienie zrealizowane przez system',
+                                ];
+                                $response = $BL->setOrderFields($parameters);
+                                if (!$response['status'] == 'SUCCESS') {
+                                    $messages[] = 'Error for order: ' . $order['NumberBL'];
+                                    throw new \Exception('Error setting order fields in BL');
+                                }
+                            }
+                            $updateted = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                                'IDOrderStatus' => 42,
+                            ]);
+                            if (!$updateted) {
+                                throw new \Exception('Error updateted into Orders table');
+                            }
+                        }
+                    });
+                } catch (\Exception $e) {
+                    Log::error($e->getMessage());
+                    $messages[] = $e->getMessage();
+                    if (env('APP_ENV') != 'local') {
+                        $parameters = [
+                            'order_id' => $order['NumberBL'],
+                            'status_id' => $BL->status_id_Nie_wysylac,
+                        ];
+                        $BL->setOrderStatus($parameters);
+                        $parameters = [
+                            'order_id' => $order['NumberBL'],
+                            'admin_comments' => $e->getMessage(),
+                        ];
+                        $BL->setOrderFields($parameters);
+                    }
+                    DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update([
+                        'IDOrderStatus' => 29, //Nie wysyłać
+                        'Remarks' => $remarks . ' ' . $e->getMessage(),
+                    ]);
+                    //throw $e;
+                }
+            }
+        }
+
+        $result = [];
+
+        //foreach ($listProductsOK as $location) {
+        // \Log::info('location', $location);
+        foreach ($listProductsOK as $item) {
+            //\Log::info('item', $item);
+            $key = $item['EAN'] . '_' . $item['locationCode'];
+            if (isset($result[$key])) {
+                $result[$key]['qty'] += $item['qty'];
+            } else {
+                $result[$key] = [
+                    'qty' => $item['qty'],
+                    'EAN' => $item['EAN'],
+                    'locationCode' => $item['locationCode'],
+                    'Nazwa' => $item['Nazwa'],
+                    'SKU' => $item['SKU'],
+                    'NumberBL' => $item['NumberBL'],
+                    'IDItem' => $item['IDItem'],
+                ];
+            }
+        }
+        // }
+
+        $listProductsOK = array_values($result);
+
+        return response()->json([
+            'messages' => $messages,
+            'createdDoc' => $createdDoc,
+            'productsERROR' => $productsERROR,
+            'orderERROR' => $orderERROR,
+            'listProductsOK' => $listProductsOK,
+            'listOrdersBL' => $listOrders,
+        ]);
+    }
+
+    public function generatePZfromOrder__NOTUSE(Request $request)
+    {
+        $DocumentType = $request->DocumentType;
+        $UserID = $request->UserID;
+        $AmountFlag = $request->AmountFlag;
+        $ElementsGUID = $request->ElementsGUID;
+        $OrderID = $request->OrderID;
+
+        try {
+            DB::beginTransaction();
+
+            $order = DB::table('dbo.Orders')->where('IDOrder', $OrderID)->first();
+            if (!$order) {
+                throw new \Exception('SQL proc - GeneratePZfromOrder: no source document.');
+            }
+
+            $OrderType = $order->IDOrderType;
+            if (DB::table('dbo.GetBaseDocumentTypeID')->where('IDOrderType', $OrderType)->value('IDBaseDocumentType') != 15) {
+                throw new \Exception('SQL proc - [GenerateWZfromOrder]: wrong document type.');
+            }
+            if (DB::table('dbo.GetBaseDocumentTypeID')->where('IDOrderType', $DocumentType)->value('IDBaseDocumentType') != 2) {
+                throw new \Exception('SQL proc - [GenerateWZfromOrder]: wrong dst document type.');
+            }
+
+            $DocDate = Carbon::now();
+            $InvAlgGross = DB::table('Ustawienia')->where('Nazwa', 'InvoiceAlgorithm')->value('Wartosc') == 'Brutto' ? 1 : 0;
+            $PricesModeGross = DB::table('Ustawienia')->where('Nazwa', 'PricesMode')->value('Wartosc') == 'Brutto' ? 1 : 0;
+
+            $WarehouseID = $order->IDWarehouse;
+            $AccountID = $order->IDAccount;
+            $CostID = $order->IDCostType;
+            $TransportID = $order->IDTransport;
+            $TransportNr = $order->TransportNumber;
+            $Remarks = $order->Remarks;
+            $PaymentTypeID = $order->IDPaymentType;
+            $IDCompany = $order->IDCompany;
+            $CurrencyID = $order->IDCurrency;
+            $CurrencyRateID = $order->IDCurrencyRate;
+
+            if (DB::table('Ustawienia')->where('Nazwa', 'UseCurrenciesOnPZ')->value('Wartosc') != 1) {
+                $CurrencyID = null;
+                $CurrencyRateID = null;
+            }
+
+            $DocumentID = $request->DocumentID;
+            if (!DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $DocumentID)->exists()) {
+                $DocumentID = DB::table('dbo.RuchMagazynowy')->insertGetId([
+                    'Data' => $DocDate,
+                    'Uwagi' => $Remarks,
+                    'IDRodzajuRuchuMagazynowego' => $DocumentType,
+                    'IDMagazynu' => $WarehouseID,
+                    'NrDokumentu' => $request->DocumentNumber,
+                    'IDKontrahenta' => $AccountID,
+                    'IDUzytkownika' => $UserID,
+                    'IDGrupyKosztow' => $CostID,
+                    'IDRodzajuTransportu' => $TransportID,
+                    'TransportNumber' => $TransportNr,
+                    'IDPaymentType' => $PaymentTypeID,
+                    'IDCompany' => $IDCompany,
+                    'IDCurrency' => $CurrencyID,
+                    'IDCurrencyRate' => $CurrencyRateID,
+                ]);
+            } else {
+                $existingDocument = DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $DocumentID)->first();
+                if ($existingDocument->IDRodzajuRuchuMagazynowego != $DocumentType) {
+                    throw new \Exception('SQL proc - [GenerateWZfromOrder]: wrong existing dst document type.');
+                }
+                if ($existingDocument->IDMagazynu != $WarehouseID) {
+                    throw new \Exception('SQL proc - [GenerateWZfromOrder]: wrong existing dst document warehouse.');
+                }
+            }
+
+            $orderLines = DB::table('dbo.OrderLines as ol')
+                ->leftJoin('dbo.VatRates as v', 'v.IDVatRate', '=', 'ol.IDVat')
+                ->where('IDOrder', $OrderID)
+                ->when($ElementsGUID, function ($query, $ElementsGUID) {
+                    return $query->whereIn('IDOrderLine', function ($subQuery) use ($ElementsGUID) {
+                        $subQuery->select('IntParam')->from('dbo.Parameters')->where('GUID', $ElementsGUID);
+                    });
+                })
+                ->orderByRaw('COALESCE([DisplayIndex], [IDOrderLine])')
+                ->get();
+
+            foreach ($orderLines as $line) {
+                $IDItem = $line->IDItem;
+                $Amount = $line->Quantity;
+                $PriceNet = $line->PriceNet;
+                $PriceGross = $line->PriceGross;
+                $IDVat = $line->IDVat;
+                $Remarks = $line->Remarks;
+                $Discount = $line->Discount;
+                $FCPriceGross = $line->ForeignCurrencyPriceGross;
+                $FCPriceNet = $line->ForeignCurrencyPriceNet;
+
+                if ($IDItem === null) {
+                    continue;
+                }
+
+                $OnStock = DB::table('stanywdniu')->where('IDTowaru', $IDItem)->value('ilosc') ?? 0;
+
+                $VatRate = DB::table('dbo.VatRates')->where('IDVatRate', $IDVat)->value('Rate');
+                $CurrencyRateBaseToForeign = 1;
+                if ($FCPriceGross > 0 || $FCPriceNet > 0) {
+                    $CurrencyRateBaseToForeign = DB::table('dbo.Orders')->where('IDOrder', $OrderID)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 0)'));
+                }
+
+                if (DB::table('Ustawienia')->where('Nazwa', 'UseDiscounts')->value('Wartosc') == 'Nie') {
+                    $Discount = 0;
+                }
+                if ($FCPriceGross > 0 || $FCPriceNet > 0) {
+                    $Discount = $Discount * DB::table('dbo.Orders')->where('IDOrder', $OrderID)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 1)'));
+                }
+
+                if ($InvAlgGross != $PricesModeGross && $VatRate !== null) {
+                    if ($InvAlgGross == 1 && $PricesModeGross == 0) {
+                        $PriceNet = $PriceGross / (1 + $VatRate / 100) + $Discount;
+                    } else {
+                        $PriceGross = $PriceNet * (1 + $VatRate / 100) - $Discount;
+                    }
+                }
+
+                if (DB::table('Ustawienia')->where('Nazwa', 'PricesMode')->value('Wartosc') == 'Brutto') {
+                    if ($PriceGross != 0) {
+                        $Price = $PriceGross;
+                    } else {
+                        $Price = ($PriceNet - $Discount) * (1 + $VatRate / 100);
+                    }
+                } else {
+                    if ($PriceNet != 0) {
+                        $Price = ($PriceNet - $Discount);
+                    } else {
+                        $Price = $PriceGross / (1 + $VatRate / 100);
+                    }
+                }
+
+                if (($FCPriceGross > 0 || $FCPriceNet > 0) && DB::table('Ustawienia')->where('Nazwa', 'UseCurrenciesOnPZ')->value('Wartosc') == 1) {
+                    $FCPrice = $Price * DB::table('dbo.Orders')->where('IDOrder', $OrderID)->value(DB::raw('dbo.CalculateRate(IDCurrency, IDCurrencyRate, 0)'));
+                }
+
+                if ($AmountFlag == 1) {
+                    $ElementID = DB::table('dbo.ElementRuchuMagazynowego')->insertGetId([
+                        'Ilosc' => 0,
+                        'Uwagi' => $Remarks,
+                        'CenaJednostkowa' => $Price,
+                        'IDRuchuMagazynowego' => $DocumentID,
+                        'IDTowaru' => $IDItem,
+                        'Uzytkownik' => $UserID,
+                        'IDOrderLine' => $line->IDOrderLine,
+                        'CurrencyPrice' => $FCPrice ?? null,
+                    ]);
+                } else {
+                    $AmountRealized = DB::table('dbo.OrderLines')->where('IDOrderLine', $line->IDOrderLine)->value(DB::raw('dbo.OrderLineRealization(IDOrderLine)'));
+                    $Amount -= $AmountRealized;
+
+                    if (($OnStock < $Amount && DB::table('Towar')->where('IDTowaru', $IDItem)->value('Usluga') == 0) || $Amount <= 0) {
+                        if ($AmountFlag == 0) {
+                            continue;
+                        } else {
+                            $Amount = $OnStock;
+                        }
+                    }
+
+                    if (DB::table('Ustawienia')->where('Nazwa', 'SeparateLinesOnWZ')->value('Wartosc') == 'Tak' && DB::table('Towar')->where('IDTowaru', $IDItem)->value('Usluga') != 1) {
+                        $IleDoRozdania = $Amount;
+                        $Method = DB::table('Ustawienia')->where('Nazwa', 'MetodaLiczeniaWartosci')->value('Wartosc');
+
+                        $kursor = DB::table('StanySzczegolowo')->where('IDtowaru', $IDItem)->orderByRaw("
+                        CASE WHEN '$Method' = 'LIFO' THEN Datadokumentu END DESC,
+                        CASE WHEN '$Method' = 'FIFO' THEN Datadokumentu END ASC,
+                        CASE WHEN '$Method' = 'LOCPRIO' THEN LocationPriority END ASC,
+                        CASE WHEN '$Method' = 'EXPIRE' THEN ISNULL(DataWaznosci, 2345678) END ASC
+                    ")->get();
+
+                        foreach ($kursor as $row) {
+                            $PZElementID = $row->IDElementuPZ;
+                            $IleZostalo = $row->Ilosc;
+                            $Cena = $row->CenaJednostkowa;
+
+                            $RoznicaElementow = $IleDoRozdania - $IleZostalo;
+
+                            if ($RoznicaElementow > 0) {
+                                $ElementID = DB::table('dbo.ElementRuchuMagazynowego')->insertGetId([
+                                    'Ilosc' => $IleZostalo,
+                                    'Uwagi' => $Remarks,
+                                    'CenaJednostkowa' => $Price,
+                                    'IDRuchuMagazynowego' => $DocumentID,
+                                    'IDTowaru' => $IDItem,
+                                    'Uzytkownik' => $UserID,
+                                    'IDOrderLine' => $line->IDOrderLine,
+                                    'CurrencyPrice' => $FCPrice ?? null,
+                                ]);
+
+                                DB::statement('EXEC [dbo].[UtworzZaleznoscPZWZ] ?, ?, ?', [$PZElementID, $ElementID, $IleZostalo]);
+                                $IleDoRozdania -= $IleZostalo;
+                            } else {
+                                $ElementID = DB::table('dbo.ElementRuchuMagazynowego')->insertGetId([
+                                    'Ilosc' => $IleDoRozdania,
+                                    'Uwagi' => $Remarks,
+                                    'CenaJednostkowa' => $Price,
+                                    'IDRuchuMagazynowego' => $DocumentID,
+                                    'IDTowaru' => $IDItem,
+                                    'Uzytkownik' => $UserID,
+                                    'IDOrderLine' => $line->IDOrderLine,
+                                    'CurrencyPrice' => $FCPrice ?? null,
+                                ]);
+
+                                DB::statement('EXEC [dbo].[UtworzZaleznoscPZWZ] ?, ?, ?', [$PZElementID, $ElementID, $IleDoRozdania]);
+                                $IleDoRozdania = 0;
+                            }
+
+                            if (DB::table('Ustawienia')->where('Nazwa', 'SalesPricesEqualToPurchasePrices')->value('Wartosc') == 1) {
+                                DB::table('dbo.ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $ElementID)->update([
+                                    'CenaJednostkowa' => $Cena,
+                                    'CurrencyPrice' => $Cena * $CurrencyRateBaseToForeign,
+                                ]);
+                            }
+
+                            if ($IleDoRozdania <= 0) {
+                                break;
+                            }
+                        }
+
+                        if ($IleDoRozdania > 0) {
+                            $ArticleName = DB::table('Towar')->where('IDTowaru', $IDItem)->value('Nazwa');
+                            throw new \Exception('Brak wystarczającej ilości towaru "' . $ArticleName . '" do dokonania wydania');
+                        }
+                    } else {
+                        $ElementID = DB::table('dbo.ElementRuchuMagazynowego')->insertGetId([
+                            'Ilosc' => $Amount,
+                            'Uwagi' => $Remarks,
+                            'CenaJednostkowa' => $Price,
+                            'IDRuchuMagazynowego' => $DocumentID,
+                            'IDTowaru' => $IDItem,
+                            'Uzytkownik' => $UserID,
+                            'IDOrderLine' => $line->IDOrderLine,
+                            'CurrencyPrice' => $FCPrice ?? null,
+                        ]);
+
+                        DB::statement('EXEC [dbo].[UpdateDependencies] ?, ?, ?, ?, ?, ?, ?', [$ElementID, $IDItem, $Amount, $DocDate, null, null, $Price]);
+
+                        if (DB::table('Ustawienia')->where('Nazwa', 'SalesPricesEqualToPurchasePrices')->value('Wartosc') == 1) {
+                            DB::table('dbo.ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $ElementID)->update([
+                                'CenaJednostkowa' => $Price,
+                                'CurrencyPrice' => $Price * $CurrencyRateBaseToForeign,
+                            ]);
+                        }
+                    }
+                }
+
+                DB::statement('EXEC CopyDedicatedFields ?, ?, ?, ?, ?, ?', ['OrderLines', 'IDOrderLine', $line->IDOrderLine, 'ElementRuchuMagazynowego', 'IDElementuRuchuMagazynowego', $ElementID]);
+            }
+
+            DB::statement('EXEC CopyDedicatedFields ?, ?, ?, ?, ?, ?', ['Orders', 'IDOrder', $OrderID, 'RuchMagazynowy', 'IDRuchuMagazynowego', $DocumentID]);
+
+            if (!DB::table('dbo.DocsRels')->where([
+                ['ID1', '=', $DocumentID],
+                ['IDType1', '=', $DocumentType],
+                ['ID2', '=', $OrderID],
+                ['IDType2', '=', $OrderType],
+            ])->exists()) {
+                DB::table('dbo.DocumentRelations')->insert([
+                    'ID1' => $DocumentID,
+                    'IDType1' => $DocumentType,
+                    'ID2' => $OrderID,
+                    'IDType2' => $OrderType,
+                ]);
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            throw $e;
+        }
     }
 }
