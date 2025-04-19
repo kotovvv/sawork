@@ -60,15 +60,40 @@ class BaseLinkerController extends Controller
                 break;
             }
         }
-        \Log::info('getOrderExtraFields response:', $response['extra_fields']);
+
         return $response['extra_fields'];
     }
 
     public function getOrders($parameters)
     {
         $response = $this->sendRequest('getOrders', $parameters);
-        \Log::info('getOrders response:', $response);
+
         return $response;
+    }
+
+
+    public function getStatusId($name_status)
+    {
+        $status_id = '';
+        foreach ($this->statuses as $statusItem) {
+            if ($statusItem['name'] == $name_status) {
+                $status_id = $statusItem['id'];
+                break;
+            }
+        }
+        return $status_id;
+    }
+
+    public function getStatusName($status_id)
+    {
+        $status_name = '';
+        foreach ($this->statuses as $statusItem) {
+            if ($statusItem['id'] == $status_id) {
+                $status_name = $statusItem['name'];
+                break;
+            }
+        }
+        return $status_name;
     }
 
     public function inRealizacji($parameters)
@@ -99,6 +124,18 @@ class BaseLinkerController extends Controller
     {
         $response = $this->sendRequest('setOrderFields', $parameters);
         // \Log::info('setOrderFields response:', $response);
+        return $response;
+    }
+
+    public function getInvoices($parameters)
+    {
+        $response = $this->sendRequest('getInvoices', $parameters);
+        return $response;
+    }
+
+    public function getOrderSources()
+    {
+        $response = $this->sendRequest('getOrderSources');
         return $response;
     }
 }
