@@ -5,6 +5,7 @@ namespace App\Console;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use App\Http\Controllers\Api\SendPDF;
+use App\Http\Controllers\Api\importBLController;
 use Illuminate\Support\Facades\Artisan;
 
 class Kernel extends ConsoleKernel
@@ -27,6 +28,14 @@ class Kernel extends ConsoleKernel
                 Artisan::call('app:check-no-baselink');
             }
         )->hourly();
+        $schedule->call(
+            function () {
+                //if (now()->between(now()->setTime(7, 0), now()->setTime(21, 0))) {
+                $importBLController = new \App\Http\Controllers\Api\importBLController();
+                // $importBLController->index();
+                //}
+            }
+        )->everyMinute()->between('7:00', '22:00');
     }
 
     /**

@@ -11,12 +11,32 @@
             label="Select Warehouse"
             @update:modelValue="filterUsers"
           ></v-select>
-          <v-btn @click="showAddTokenDialog" color="primary">Add Token</v-btn>
-        </v-col>
+          <div v-if="selectedWarehouse">
+            <v-alert v-if="warehouseToken" type="success"> Token: ok </v-alert>
+            <v-alert v-else type="error"> No token</v-alert>
+            <v-btn @click="showAddTokenDialog" color="primary" class="ma-2"
+              >Change Token</v-btn
+            >
+          </div>
 
-        <v-col cols="3" md="1">
-          <v-alert v-if="warehouseToken" type="success"> Token: ok </v-alert>
-          <v-alert v-else type="error"> No token</v-alert>
+          <v-row v-if="selectedWarehouse">
+            <v-col cols="6">
+              <v-text-field
+                v-model="intervalMinutes"
+                label="Interval Minutes"
+                type="number"
+              >
+                <template v-slot:append>
+                  <v-icon @click="saveInterval" class="btn" color="primary"
+                    >mdi-content-save</v-icon
+                  >
+                </template>
+              </v-text-field>
+            </v-col>
+            <v-col cols="6" class="d-flex align-center">
+              {{ lastExecutedAt }}
+            </v-col>
+          </v-row>
         </v-col>
 
         <v-col v-if="selectedWarehouse" cols="12" md="8">
@@ -139,10 +159,20 @@ export default {
         { title: "Stan", value: "value" },
         { title: "Actions", value: "actions", sortable: false },
       ],
+      lastLogId: null,
+      intervalMinutes: null,
+      lastExecutedAt: null,
     };
   },
 
   methods: {
+    saveInterval() {
+      const intervalSetting = {
+        for_obj: this.selectedWarehouse,
+        value: this.intervalMinutes,
+      };
+      axios.post("/api/intervalSetting", intervalSetting);
+    },
     isToken() {
       const warehouse = this.settings.find(
         (wh) =>
@@ -163,6 +193,29 @@ export default {
         (user) =>
           user.for_obj === this.selectedWarehouse && user.obj_name === "ext_id"
       );
+      console.log(this.filteredUsers);
+      this.intervalMinutes =
+        this.settings.filter(
+          (int) =>
+            int.for_obj === this.selectedWarehouse &&
+            int.obj_name === "interval_minutes"
+        )[0]?.value ?? 0;
+      this.settings.filter(
+        (int) =>
+          int.for_obj === this.selectedWarehouse &&
+          int.obj_name === "interval_minutes"
+      ) ?? 0;
+      this.lastExecutedAt =
+        this.settings.filter(
+          (int) =>
+            int.for_obj === this.selectedWarehouse &&
+            int.obj_name === "last_executed_at"
+        )[0]?.value ?? "";
+      this.lastLogId = this.settings.filter(
+        (int) =>
+          int.for_obj === this.selectedWarehouse &&
+          int.obj_name === "last_log_id"
+      );
       this.isToken();
     },
     async createUser() {
@@ -173,7 +226,7 @@ export default {
         value: this.newUser.value,
       };
       const response = await axios.post("/api/settings", newUserSetting);
-      console.log(response.data);
+
       this.settings.push(response.data);
       this.filterUsers();
       this.newUser = { value: null, key: "" };
@@ -215,6 +268,7 @@ export default {
     async addToken() {
       const newTokenSetting = {
         obj_name: "sklad_token",
+        for_obj: this.selectedWarehouse,
         key: this.selectedWarehouse,
         value: this.newToken,
       };

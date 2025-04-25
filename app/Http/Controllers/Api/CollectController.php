@@ -315,7 +315,7 @@ class CollectController extends Controller
 
             if (env('APP_ENV') != 'local') {
                 $token = $this->getToken($IDMagazynu);
-                $token = Crypt::decryptString($token);
+
                 if ($token) {
                     $BL = new BaseLinkerController($token);
                     $bl_user_id = DB::table('settings')->where('obj_name', 'ext_id')->where('for_obj', $IDMagazynu)->where('key', $request->user->IDUzytkownika)->value('value');

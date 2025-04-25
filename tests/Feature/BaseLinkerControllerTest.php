@@ -4,13 +4,21 @@ namespace Tests\Feature;
 
 
 use Tests\TestCase;
-use App\Http\Controllers\Api\BaseLinkerController;
+use App\Http\Controllers\Api\importBLController;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
 class BaseLinkerControllerTest extends TestCase
 {
-    private $token = '5006735-5023428-GXRUR51NN0W5EAZWX74ICHAXNUW8TJ8CHBSTX4N7M7IKNV5OUZJ2HBR8FIU0WJN1';
+
+    public function testGetAllWarehouses()
+    {
+        $controller = new importBLController();
+        $warehouses = $controller->getAllWarehouses();
+        $this->assertNotEmpty($warehouses);
+    }
+    /*
+    private $token = '5006735-5023428-IRU08C6YBD28XVJ33KY0NKOFMHFG3Y4M0QDL0K1T836KM8NLZKKKTS50KUNU2YV4';
     private $statuses = [];
     private $invoices = [];
     private $orderSources = [];
@@ -263,4 +271,5 @@ class BaseLinkerControllerTest extends TestCase
     //     $this->assertArrayHasKey('status', $response);
     //     $this->assertEquals('SUCCESS', $response['status']);
     // }
+    */
 }

@@ -94,6 +94,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::put('settings/{id}', [UsersController::class, 'update']);
     Route::delete('settings/{id}', [UsersController::class, 'destroy']);
     Route::get('uzytkownicy', [UsersController::class, 'uzytkownicy']);
+    Route::post('intervalSetting', [UsersController::class, 'intervalSetting']);
 
     Route::get('getWarehouseLocations/{id}', [LocationController::class, 'getWarehouseLocations']);
     Route::get('getLocationsM3', [LocationController::class, 'getLocationsM3']);
