@@ -18,5 +18,6 @@ class LogOrder extends Model
         'number',
         'message',
         'type',
+        'IDWarehouse'
     ];
 }

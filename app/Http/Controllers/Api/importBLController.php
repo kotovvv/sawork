@@ -412,7 +412,7 @@ HAVING
             // If the product is not recognized, we change the order status to not ship in both systems and comment in BC
 
             // Check the availability of goods in the database
-            $productExists = DB::table('Towar')->where('KodKreskowy', $product['ean'])->where('IDMagazynu', $idMagazynu)->exists();
+            $productExists = DB::table('Towar')->where('KodKreskowy', $product['ean'])->where('KodKreskowy', '!=', '')->where('IDMagazynu', $idMagazynu)->exists();
             if (!$productExists) {
                 // If the product does not exist, add it to the database
                 try {
