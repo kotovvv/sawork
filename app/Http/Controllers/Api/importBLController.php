@@ -35,8 +35,6 @@ class importBLController extends Controller
 
     private function getJournalList($a_warehouse)
     {
-        $this->statuses = $this->BL->statuses;
-        $w_realizacji_id = $this->BL->getStatusId('W realizacji');
         $last_log_id = $a_warehouse->last_log_id;
 
         $parameters = [
@@ -87,12 +85,13 @@ class importBLController extends Controller
         if (DB::table('Orders')->where('_OrdersTempDecimal2', $param['a_log']['order_id'])->exists()) {
             $log_type_name = $this->BL->log_type[$param['a_log']['log_type']];
             $object_id = 0;
-            if ($param['a_log']['object_id'] > 0) {
+            if ($param['a_log']['object_id'] > 0 && $param['a_log']['object_id'] < 19) {
                 $object_id = $this->BL->object_id[$param['a_log']['object_id']];
             }
             $date = Carbon::createFromTimestamp($param['a_log']['date'])->format('Y-m-d H:i:s');
             if (DB::table('Orders')->where('_OrdersTempDecimal2', $param['a_log']['order_id'])->where('IDOrderStatus', 23)->exists()) {
                 LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
                     'type' => $param['a_log']['log_type'],
                     'message' => "Log type: {$log_type_name},  Date: {$date}, Log ID: {$param['a_log']['log_id']}, Object ID: {$object_id}"
@@ -100,6 +99,7 @@ class importBLController extends Controller
                 $this->changeProductsOrder($param);
             } else {
                 LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
                     'type' => $param['a_log']['log_type'],
                     'message' => "Log type: {$log_type_name},  Date: {$date}, Object ID: {$object_id}"
@@ -123,10 +123,42 @@ class importBLController extends Controller
         }
         foreach ($response['orders'] as $order) {
             if ($order['order_status_id'] == $w_realizacji_id) {
-                // уже был этот заказ импортирован интегратором
+
+                /*
+                23|W realizacji - zamiana
+                Sprawdź z nami to zamówienie w tych statusach:
+                16|Nowe zamówienia
+                19|Anulowane
+                27| NIE WYSYŁAJ
+                29|Nie wysyłać
+                32|Zawieszony
+                33|Anulowany
+                43|NIE WYSYŁAJ
+                następnie zmienić status na 23 i towary
+
+                W przeciwnym razie zapisujemy dziennik i nic nie zmieniamy
+
+                */
+
+                // this order has already been imported by the integrator
                 $a_order = DB::table('Orders')->where('_OrdersTempDecimal2', $order['order_id'])->first();
                 if ($a_order) {
+                    if (!in_array($a_order->IDOrderStatus, [16, 19, 23, 27, 29, 32, 33, 43])) {
+                        LogOrder::create([
+                            'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                            'number' => $order['order_id'],
+                            'type' => $param['a_log']['log_type'],
+                            'message' => "Atention!!! Change status Order: {$order['order_id']}. Details: " . $this->BL->getStatusName($order['order_status_id'])
+                        ]);
+                        return;
+                    }
+                    if (in_array($a_order->IDOrderStatus, [16, 19, 27, 29, 32, 33, 43])) {
+                        DB::table('Orders')
+                            ->where('_OrdersTempDecimal2', $order['order_id'])
+                            ->update(['IDOrderStatus' => 23]);
+                    }
                     $uwagi = 'Nr zamówienia w BaseLinker: ' . $order['order_id'] . ' Zmiana zamówienia w BaseLinker ' . $order['user_comments'] ?: $order['admin_comments'] ?: '';
+
                     try {
                         DB::beginTransaction();
                         DB::table('OrderLines')->where('IDOrder', $a_order->IDOrder)->delete();
@@ -134,15 +166,7 @@ class importBLController extends Controller
                         DB::table('Orders')->where('IDOrder', $a_order->IDOrder)->update([
                             'Modified' => now(),
                         ]);
-                        LogOrder::create([
-                            'number' => $param['a_log']['order_id'],
-                            'type' => 18,
-                            'message' => "Log type: {$this->BL->log_type[$param['a_log']['log_type']]}, "
-                                . "Date: " . Carbon::createFromTimestamp($param['a_log']['date'])->format('Y-m-d H:i:s') . ", "
-                                . "Log ID: {$param['a_log']['log_id']}, "
-                                . "Object ID: {$param['a_log']['object_id']}"
 
-                        ]);
                         DB::commit();
                     } catch (\Throwable $th) {
                         DB::rollBack();
@@ -151,6 +175,7 @@ class importBLController extends Controller
                 }
             } else {
                 LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $order['order_id'],
                     'type' => 911,
                     'message' => "Change status Order: {$order['order_id']}. Details: " . $this->BL->getStatusName($order['order_status_id'])
@@ -159,23 +184,20 @@ class importBLController extends Controller
         }
     }
 
-    private function setOrderFields($parameters)
-    {
-        $this->BL = new BaseLinkerController($parameters['token']);
-        $this->statuses = $this->BL->statuses;
-        $w_realizacji_id = $this->BL->getStatusId('W realizacji');
-        $this->orderSources = $this->BL->getOrderSources();
-
-        $response = $this->BL->setOrderFields($parameters);
-    }
+    /**
+     * Check if the task should be executed based on the interval and last execution time.
+     *
+     * @param object $a_warehouse
+     * @return bool
+     */
     private function shouldExecute($a_warehouse)
     {
         if ($a_warehouse->interval_minutes == 0) {
-            return false; // Если интервал не задан или равен 0, не выполнять
+            return false; // If the interval is not specified or is 0, do not execute
         }
 
         if ($a_warehouse->last_executed_at == 0 || $a_warehouse->last_executed_at == '') {
-            return true; // Если задача никогда не выполнялась, запускать
+            return true; // If the task has never been performed, run
         }
 
         $nextExecutionTime = Carbon::parse($a_warehouse->last_executed_at)->addMinutes($a_warehouse->interval_minutes);
@@ -207,16 +229,6 @@ GROUP BY
     for_obj
 HAVING
     MAX(CASE WHEN obj_name = 'sklad_token' THEN value ELSE '' END) != ''");
-
-        // $cacheKey = 'mwarehouses';
-        // return cache()->remember($cacheKey, 3600, function () {
-        //     return DB::table('settings')
-        //         ->where('obj_name', 'sklad_token')
-
-        //         ->whereNotNull('value')
-        //         ->where('value', '!=', '')
-        //         ->get();
-        // });
     }
 
     public function GetOrders($idMagazynu)
@@ -235,7 +247,7 @@ HAVING
         $response = $this->BL->getOrders($parameters);
 
         foreach ($response['orders'] as $order) {
-            // уже был этот заказ импортирован интегратором
+            // this order has already been imported by the integrator
             $wasImported = DB::table('IntegratorTransactions')->where('transId', $order['order_id'])->first();
             if ($wasImported) {
                 continue; // Skip if the transaction already exists
@@ -253,7 +265,7 @@ HAVING
         $year = Carbon::now()->format('y');
         $pattern =  $doc . '%/' . $year . ' - ' . $symbol;
         $patternIndex = strlen($doc);
-        $patternToEndLen = strlen($symbol) + 6; // 6 символов: " - " + год (2 символа) + "/"
+        $patternToEndLen = strlen($symbol) + 6; // 6 characters: " - " + year (2 characters) + "/"
 
         $res = DB::table('Orders')
             ->select(DB::raw('MAX(CAST(SUBSTRING(Number, ' . ($patternIndex + 1) . ', LEN(Number) - ' . ($patternToEndLen + $patternIndex) . ') AS INT)) as max_number'))
@@ -274,7 +286,7 @@ HAVING
             DB::beginTransaction();
 
             $CustomerId = $this->findOrCreateKontrahent($orderData);
-            // Подготовка данных для процедуры
+
             $uwagi = 'Nr zamówienia w BaseLinker: ' . $orderData['order_id'] . ' ' . $orderData['user_comments'] ?: $orderData['admin_comments'] ?: '';
             $orderDate = Carbon::parse($orderData['date_add'])->format('Y-m-d H:i:s');
             $orderStatus = collect($this->statuses)->firstWhere('id', $orderData['order_status_id'])['name'] ?? null;
@@ -321,6 +333,7 @@ HAVING
             } catch (\Exception $e) {
                 if (class_exists(LogOrder::class)) {
                     LogOrder::create([
+                        'IDWarehouse' => $idMagazynu,
                         'number' => $orderData['order_id'],
                         'type' => 911,
                         'message' => "Error executing CreateOrder: {$orderData['order_id']}. Details: " . $e->getMessage()
@@ -335,7 +348,7 @@ HAVING
             // DB::enableQueryLog();
             $this->writeProductsOrder($orderData, $IDOrder, $idMagazynu, $uwagi);
 
-            // dd(DB::getQueryLog());
+
             DB::table('Orders')->where('Number', $Number)->update([
                 '_OrdersTempString1' => $invoice_number,
                 '_OrdersTempDecimal2' => $orderData['order_id'],
@@ -344,21 +357,19 @@ HAVING
                 '_OrdersTempString9' => $orderData['user_login']
             ]);
 
-            // Фиксация транзакции
             DB::commit();
             DB::table('IntegratorTransactions')->insert([
                 'transId' => $orderData['order_id'],
                 'typ' => 3,
             ]);
             LogOrder::create([
+                'IDWarehouse' => $idMagazynu,
                 'number' => $orderData['order_id'],
                 'type' => 3,
                 'message' => "CreateOrder: {$orderData['order_id']}."
             ]);
-            //echo 'Order imported successfully: ' . $orderData['order_id'] . PHP_EOL;
-            // return $orderId;
         } catch (\Exception $e) {
-            // Откат транзакции в случае ошибки
+
             DB::rollBack();
             throw $e;
         }
@@ -367,6 +378,7 @@ HAVING
     private function writeProductsOrder($orderData, $IDOrder, $idMagazynu, $uwagi)
     {
         foreach ($orderData['products'] as $product) {
+
             try {
                 DB::statement(
                     "EXEC CreateOrderLine
@@ -397,12 +409,39 @@ HAVING
             } catch (\Exception $e) {
                 throw new \Exception("Error executing CreateOrderLine for product: {$product['name']}. Details: " . $e->getMessage());
             }
+            // If the product is not recognized, we change the order status to not ship in both systems and comment in BC
+
+            // Check the availability of goods in the database
+            $productExists = DB::table('Towar')->where('KodKreskowy', $product['ean'])->where('IDMagazynu', $idMagazynu)->exists();
+            if (!$productExists) {
+                // If the product does not exist, add it to the database
+                try {
+                    if (env('APP_ENV') != 'local') {
+                        $parameters = [
+                            'order_id' => $orderData['order_id'],
+                            'status_id' => $this->BL->status_id_Nie_wysylac,
+                        ];
+                        $this->BL->setOrderStatus($parameters);
+                        $parameters = [
+                            'order_id' => $orderData['order_id'],
+                            'admin_comments' => 'Тowar ' . $product['ean'] . ' nie istnieje w bazie danych. Proszę o dodanie towaru do bazy danych.',
+                        ];
+                        $this->BL->setOrderFields($parameters);
+                    }
+                    DB::table('Orders')->where('IDOrder',  $IDOrder)->update([
+                        'IDOrderStatus' => 29, //Nie wysyłać
+                        'Remarks' => 'Тowar ' . $product['ean'] . ' nie istnieje w bazie danych. Proszę o dodanie towaru do bazy danych.',
+                    ]);
+                } catch (\Exception $e) {
+                    throw new \Exception("Error inserting product data: " . $e->getMessage());
+                }
+            }
         }
     }
 
     public function findOrCreateKontrahent(array $orderData)
     {
-        // Извлечение данных контрагента из заказа
+        // Extracting counterparty data from an order
         $contractorData = [
             'Nazwa' => $orderData['delivery_fullname'],
             'Email' => $orderData['email'],
@@ -417,7 +456,7 @@ HAVING
             'NIP' => $orderData['invoice_nip'],
         ];
 
-        // Проверка наличия контрагента в базе
+        // Checking the availability of the counterparty in the database
         $existingContractor = DB::table('Kontrahent')
             ->where('Nazwa', $contractorData['Nazwa'])
             ->where('Email', $contractorData['Email'])
@@ -428,11 +467,11 @@ HAVING
             ->first();
 
         if ($existingContractor) {
-            // Если контрагент найден, возвращаем его ID
+            // If the counterparty is found, return its ID
             return $existingContractor->IDKontrahenta;
         }
 
-        // Если контрагент не найден, добавляем его в базу
+        // If the counterparty is not found, add it to the database
 
         try {
             DB::table('Kontrahent')->insert([
@@ -455,9 +494,8 @@ HAVING
                 'Odbiorca' => 1,
                 'Dostawca' => 0,
             ]);
-            //print_r($orderData);
 
-            // Возвращаем ID нового контрагента
+            // Return the ID of a new counterparty
             $existingContractor = DB::table('Kontrahent')
                 ->where('Nazwa', $contractorData['Nazwa'])
                 ->where('Email', $contractorData['Email'])
@@ -470,22 +508,3 @@ HAVING
         }
     }
 }
-/*
-Добавление заказа:
-
-Процедура fulstor.CreateOrder отвечает за создание нового заказа. Она может быть использована для добавления основного объекта заказа в таблицу Orders.
-Добавление товаров в заказ:
-
-Процедура fulstor.CreateOrderLine предназначена для добавления строк товаров в заказ. Она может быть использована для добавления каждого товара из объекта заказа в таблицу OrderLines.
-Добавление контрагента:
-
-Процедура fulstor.DodajTowar или fulstor.DodajTowar2 может быть использована для добавления информации о товарах в таблицу Towar.
-Для добавления контрагента, возможно, потребуется создать отдельную процедуру, если она отсутствует в дампе. Однако, таблица Kontrahent упоминается в других частях дампа, что может указывать на существующие механизмы работы с контрагентами.
-Копирование связанных данных:
-
-Процедура fulstor.CopyDedicatedFields может быть полезна для копирования связанных данных между таблицами, например, при создании связей между заказом и товарами.
-Пример последовательности действий:
-Используйте fulstor.CreateOrder для создания записи заказа.
-Для каждого товара в заказе используйте fulstor.CreateOrderLine для добавления строки товара.
-Если контрагент отсутствует в базе, добавьте его вручную или создайте процедуру для работы с таблицей Kontrahent.
-*/

@@ -65,6 +65,54 @@
           </v-row>
         </v-col>
       </v-row>
+      <v-row v-if="logs.length > 0">
+        <v-col cols="12">
+          <v-data-table
+            ref="logsTable"
+            :headers="[
+              { title: 'Number BL', value: 'number' },
+              { title: 'Message', value: 'message' },
+              { title: 'Type', value: 'type' },
+              { title: 'Created At', value: 'created_at' },
+            ]"
+            :items="logs"
+            item-value="id"
+            class="elevation-1"
+            :search="search"
+            :items-per-page="itemsPerPage"
+            @update:page="getLog"
+          >
+            <template v-slot:top>
+              <v-toolbar flat>
+                <v-toolbar-title>
+                  <v-text-field
+                    v-model="search"
+                    label="Search number BL"
+                    single-line
+                    hide-details
+                    width="300"
+                    clearable
+                    @update:modelValue="getLog(1, search)"
+                  ></v-text-field
+                ></v-toolbar-title>
+                <v-icon @click="getLog(page, search)" color="primary"
+                  >mdi-refresh</v-icon
+                >
+                <v-spacer></v-spacer>
+              </v-toolbar>
+            </template>
+            <template v-slot:bottom>
+              <div class="text-center pt-2">
+                <v-pagination
+                  v-model="page"
+                  :length="pageCount"
+                  @click="getLog(page, search)"
+                ></v-pagination>
+              </div>
+            </template>
+          </v-data-table>
+        </v-col>
+      </v-row>
       <v-dialog v-model="createDialog" persistent max-width="600px">
         <v-btn icon @click="createDialog = false" class="close-btn">
           <v-icon>mdi-close</v-icon>
@@ -162,10 +210,30 @@ export default {
       lastLogId: null,
       intervalMinutes: null,
       lastExecutedAt: null,
+      logs: [],
+      search: "",
+      page: 1,
+      itemsPerPage: 10,
+      pageCount: 0,
     };
   },
 
   methods: {
+    async getLog(page = 1, search = "") {
+      const params = {
+        page,
+        search,
+        IDWarehouse: this.selectedWarehouse,
+        limit: this.itemsPerPage,
+      };
+      const response = await axios.post("/api/log_orders", params);
+      this.logs = response.data.logs;
+      this.logs.forEach((log) => {
+        log.created_at = new Date(log.created_at).toLocaleString();
+      });
+
+      this.pageCount = Math.ceil(response.data.count / params.limit);
+    },
     saveInterval() {
       const intervalSetting = {
         for_obj: this.selectedWarehouse,
@@ -189,6 +257,7 @@ export default {
       this.isToken();
     },
     filterUsers() {
+      this.logs = [];
       this.filteredUsers = this.settings.filter(
         (user) =>
           user.for_obj === this.selectedWarehouse && user.obj_name === "ext_id"
@@ -217,6 +286,7 @@ export default {
           int.obj_name === "last_log_id"
       );
       this.isToken();
+      this.getLog(1, this.search);
     },
     async createUser() {
       const newUserSetting = {
