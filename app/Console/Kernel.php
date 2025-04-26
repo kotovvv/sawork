@@ -30,12 +30,9 @@ class Kernel extends ConsoleKernel
         )->hourly();
         $schedule->call(
             function () {
-                //if (now()->between(now()->setTime(7, 0), now()->setTime(21, 0))) {
-                $importBLController = new \App\Http\Controllers\Api\importBLController();
-                // $importBLController->index();
-                //}
+                new importBLController();
             }
-        )->everyMinute()->between('7:00', '22:00');
+        )->everyMinute();
     }
 
     /**
