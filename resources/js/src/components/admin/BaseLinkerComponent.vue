@@ -213,7 +213,7 @@ export default {
       logs: [],
       search: "",
       page: 1,
-      itemsPerPage: 10,
+      itemsPerPage: 50,
       pageCount: 0,
     };
   },
@@ -257,6 +257,7 @@ export default {
       this.isToken();
     },
     filterUsers() {
+      this.page = 1;
       this.logs = [];
       this.filteredUsers = this.settings.filter(
         (user) =>
