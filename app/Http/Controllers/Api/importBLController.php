@@ -167,6 +167,7 @@ class importBLController extends Controller
                             'Modified' => now(),
                         ]);
 
+
                         DB::commit();
                     } catch (\Throwable $th) {
                         DB::rollBack();
@@ -435,6 +436,29 @@ HAVING
                 } catch (\Exception $e) {
                     throw new \Exception("Error inserting product data: " . $e->getMessage());
                 }
+            }
+        }
+        if ($orderData['delivery_price'] > 0) {
+            $id_delivery = DB::table('Towar')->where('Nazwa', 'Koszty transportu')->where('IDMagazynu', $idMagazynu)->value('IDTowaru');
+            try {
+                if (!$id_delivery) {
+                    DB::table('Towar')->insert([
+                        'Nazwa' => 'Koszty transportu',
+                        'IDMagazynu' => $idMagazynu,
+                        'Usluga' => 1,
+                        'IDJednostkiMiary' => 1,
+                        'IDGrupyTowarow' => DB::table('GrupyTowarow')->where('Nazwa', 'Wszystkie')->where('IDMagazynu', $idMagazynu)->value('IDGrupyTowarow'),
+
+                    ]);
+                    $id_delivery = DB::table('Towar')->where('Nazwa', 'Koszty transportu')->where('IDMagazynu', $idMagazynu)->value('IDTowaru');
+                }
+                DB::table('OrderLines')->where('IDOrder', $IDOrder)->insert([
+                    'IDTowaru' => $id_delivery,
+                    'PriceBrutto' => $orderData['delivery_price'],
+                    'Quantity' => 1,
+                ]);
+            } catch (\Exception $e) {
+                throw new \Exception("Error inserting delivery data: " . $e->getMessage());
             }
         }
     }
