@@ -453,9 +453,10 @@ HAVING
                     $id_delivery = DB::table('Towar')->where('Nazwa', 'Koszty transportu')->where('IDMagazynu', $idMagazynu)->value('IDTowaru');
                 }
                 DB::table('OrderLines')->where('IDOrder', $IDOrder)->insert([
-                    'IDTowaru' => $id_delivery,
-                    'PriceBrutto' => $orderData['delivery_price'],
+                    'IDItem' => $id_delivery,
+                    'PriceGross' => $orderData['delivery_price'],
                     'Quantity' => 1,
+                    'Remarks' => $uwagi
                 ]);
             } catch (\Exception $e) {
                 throw new \Exception("Error inserting delivery data: " . $e->getMessage());
