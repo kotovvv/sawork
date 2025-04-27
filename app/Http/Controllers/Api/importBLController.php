@@ -452,7 +452,8 @@ HAVING
                     ]);
                     $id_delivery = DB::table('Towar')->where('Nazwa', 'Koszty transportu')->where('IDMagazynu', $idMagazynu)->value('IDTowaru');
                 }
-                DB::table('OrderLines')->where('IDOrder', $IDOrder)->insert([
+                DB::table('OrderLines')->insert([
+                    'IDOrder' => $IDOrder,
                     'IDItem' => $id_delivery,
                     'PriceGross' => $orderData['delivery_price'],
                     'Quantity' => 1,
