@@ -12,6 +12,7 @@
             hide-details="auto"
             width="368"
             max-width="400"
+            @update:modelValue="changeWarehouse()"
           ></v-select>
         </v-col>
         <v-col>
@@ -98,6 +99,9 @@
                     hide-details="auto"
                   ></v-text-field>
                 </v-col>
+                <v-btn @click="prepareXLSX()" size="x-large"
+                  >pobieranie XLSX</v-btn
+                >
                 <v-btn
                   @click="createWZfromZO"
                   v-if="selected.length > 0"
@@ -118,6 +122,8 @@ import Datepicker from "vuejs3-datepicker";
 
 import axios from "axios";
 import moment from "moment";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 
 export default {
   name: "zo2wz",
@@ -126,7 +132,7 @@ export default {
   },
   data: () => ({
     loading: false,
-    dateMin: moment().format("YYYY-MM-01"),
+    dateMin: moment().subtract(90, "days").format("YYYY-MM-DD"),
     dateMax: moment().format("YYYY-MM-DD"),
 
     warehouses: [],
@@ -137,14 +143,15 @@ export default {
     headers: [
       { title: "product_Chang", key: "product_Chang" },
       { title: "Powiązane_WZ", key: "Powiązane_WZ", nowrap: true },
-      { title: "Date", key: "Date" },
-      { title: "Number", key: "Number", nowrap: true },
+      { title: "Data WZ", key: "DataWZ" },
+      { title: "Number ZO", key: "Number", nowrap: true },
+      { title: "Data ZO", key: "DataZO" },
+      { title: "Nr_Baselinker", key: "Nr_Baselinker", nowrap: true },
       { title: "Kontrahent", key: "Kontrahent", nowrap: true },
       { title: "Status", key: "Status" },
       { title: "Uwagi", key: "Uwagi", nowrap: true },
       { title: "Zmodyfikowane", key: "Zmodyfikowane", nowrap: true },
       { title: "Rodzaj_transportu", key: "Rodzaj_transportu", nowrap: true },
-      { title: "Nr_Baselinker", key: "Nr_Baselinker", nowrap: true },
       { title: "Nr_Nadania", key: "Nr_Nadania" },
       { title: "Nr_Faktury", key: "Nr_Faktury" },
       { title: "Nr_Zwrotny", key: "Nr_Zwrotny" },
@@ -186,6 +193,10 @@ export default {
     },
   },
   methods: {
+    changeWarehouse() {
+      this.listZO = [];
+      this.getOrders();
+    },
     createWZfromZO() {
       const vm = this;
       vm.loading = true;
@@ -246,6 +257,7 @@ export default {
             vm.warehouses = res.data;
             if (vm.warehouses.length > 0) {
               vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
+              vm.getOrders();
             }
           }
         })
@@ -279,14 +291,35 @@ export default {
             vm.listZO = res.data.orders;
             vm.listZO = vm.listZO.map((order) => {
               order.nr_Baselinker = parseInt(order.nr_Baselinker);
-              order.Date = order.Date.substring(0, 16);
+              order.DataZO = order.DataZO.substring(0, 16);
               order.Zmodyfikowane = order.Zmodyfikowane.substring(0, 16);
+
               return order;
             });
           }
           vm.loading = false;
         })
         .catch((error) => console.log(error));
+    },
+    prepareXLSX() {
+      // Создание новой книги
+      //   this.listZO.forEach((el) => {
+
+      //   });
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(this.listZO);
+      XLSX.utils.book_append_sheet(wb, ws, "");
+
+      // Генерация файла и его сохранение
+      const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      saveAs(
+        new Blob([wbout], { type: "application/octet-stream" }),
+        "ZO " +
+          moment(this.dateMin).format("YYYY-MM-DD") +
+          "_" +
+          moment(this.dateMax).format("YYYY-MM-DD") +
+          ".xlsx"
+      );
     },
   },
 };

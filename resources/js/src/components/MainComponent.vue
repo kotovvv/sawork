@@ -8,7 +8,7 @@
           :items="warehouses"
           item-title="Nazwa"
           item-value="IDMagazynu"
-          @change="clear()"
+          @update:modelValue="clear()"
           hide-details="auto"
         ></v-select>
       </v-col>
