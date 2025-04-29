@@ -52,7 +52,9 @@ class importBLController extends Controller
             return;
         }
 
-        foreach ($response['logs'] as $log) {
+        $logsToProcess = array_slice($response['logs'], 0, 80); // Process only the first 80 logs
+        foreach ($logsToProcess as $log) {
+
             $last_log_id = max($last_log_id, $log['log_id']);
             if ($a_warehouse->last_log_id == $log['log_id']) continue;
             switch ($log['log_type']) {
@@ -167,7 +169,6 @@ class importBLController extends Controller
                             'Modified' => now(),
                         ]);
 
-
                         DB::commit();
                     } catch (\Throwable $th) {
                         DB::rollBack();
@@ -247,7 +248,8 @@ HAVING
 
         $response = $this->BL->getOrders($parameters);
 
-        foreach ($response['orders'] as $order) {
+        $ordersToProcess = array_slice($response['orders'], 0, 80); // Process only the first 80 orders
+        foreach ($ordersToProcess as $order) {
             // this order has already been imported by the integrator
             $wasImported = DB::table('IntegratorTransactions')->where('transId', $order['order_id'])->first();
             if ($wasImported) {
@@ -289,7 +291,7 @@ HAVING
             $CustomerId = $this->findOrCreateKontrahent($orderData);
 
             $uwagi = 'Nr zamówienia w BaseLinker: ' . $orderData['order_id'] . ' ' . $orderData['user_comments'] ?: $orderData['admin_comments'] ?: '';
-            $orderDate = Carbon::parse($orderData['date_add'])->format('Y-m-d H:i:s');
+            $orderDate = Carbon::parse($orderData['date_add'])->addHours(2)->format('Y-m-d H:i:s');
             $orderStatus = collect($this->statuses)->firstWhere('id', $orderData['order_status_id'])['name'] ?? null;
             $paymentType = DB::table('PaymentTypes')->where('Name', $orderData['payment_method'])->value('IDPaymentType');
             $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
