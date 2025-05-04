@@ -83,7 +83,7 @@
                 >
                 <v-btn
                   @click="createWZfromZO"
-                  v-if="selected.length > 0"
+                  v-if="selected.length > 0 && $props.user.IDRoli == 1"
                   size="x-large"
                   >{{ selected.length }} create WZ</v-btn
                 >
