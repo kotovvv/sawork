@@ -15,6 +15,9 @@ class UsersController extends Controller
         $response['settings'] = DB::table('settings')
             ->where('obj_name', 'sklad_token')
             ->orWhere('obj_name', 'ext_id')
+            ->orWhere('obj_name', 'last_log_id')
+            ->orWhere('obj_name', 'interval_minutes')
+            ->orWhere('obj_name', 'last_executed_at')
             ->get();
         $response['users'] = DB::table('Uzytkownik')
             ->select('IDUzytkownika', 'NazwaUzytkownika as title')
@@ -120,5 +123,19 @@ class UsersController extends Controller
             return response()->json(['message' => 'No users found'], 404);
         }
         return response()->json($o_user);
+    }
+
+    public function intervalSetting(Request $request)
+    {
+        $data = $request->all();
+        $warehouseId = $data['for_obj'];
+        $intervalMinutes = $data['value'];
+
+        DB::table('settings')
+            ->updateOrInsert(
+                ['obj_name' => 'interval_minutes', 'for_obj' => $warehouseId, 'key' => $warehouseId],
+                ['value' => $intervalMinutes]
+            );
+        return response()->json(['message' => 'Interval setting updated successfully']);
     }
 }

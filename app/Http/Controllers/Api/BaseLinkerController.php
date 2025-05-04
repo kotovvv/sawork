@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Crypt;
 
 
 class BaseLinkerController extends Controller
@@ -17,10 +18,43 @@ class BaseLinkerController extends Controller
     public $status_id_Kompletowanie = '';
     public $status_id_Nie_wysylac = '';
     public $id_exfield_stan = '';
+    public $log_type = [
+        1 => "Order creation",
+        2 => "DOF download (order confirmation)",
+        3 => "Payment of the order",
+        4 => "Removal of order/invoice/receipt",
+        5 => "Merging the orders",
+        6 => "Splitting the order",
+        7 => "Issuing an invoice",
+        8 => "Issuing a receipt",
+        9 => "Package creation",
+        10 => "Deleting a package",
+        11 => "Editing delivery data",
+        12 => "Adding a product to an order",
+        13 => "Editing the product in the order",
+        14 => "Removing the product from the order",
+        15 => "Adding a buyer to a blacklist",
+        16 => "Editing order data",
+        17 => "Copying an order",
+        18 => "Order status change",
+        19 => "Invoice deletion",
+        20 => "Receipt deletion",
+        21 => "Editing invoice data"
+    ];
+    public  $object_id = [
+        5 => "ID of the merged order",
+        6 => "ID of the new order created by the order separation",
+        7 => "Invoice ID",
+        9 => "Created parcel ID",
+        10 => "Deleted parcel ID",
+        14 => "Deleted product ID",
+        17 => "Created order ID",
+        18 => "Order status ID",
+    ];
 
     public function __construct($token)
     {
-        $this->token = $token;
+        $this->token = Crypt::decryptString($token);;
         $this->statuses = $this->getOrderStatusList();
         $this->ExtraFields = $this->getOrderExtraFields();
     }
@@ -60,15 +94,40 @@ class BaseLinkerController extends Controller
                 break;
             }
         }
-        \Log::info('getOrderExtraFields response:', $response['extra_fields']);
+
         return $response['extra_fields'];
     }
 
     public function getOrders($parameters)
     {
         $response = $this->sendRequest('getOrders', $parameters);
-        \Log::info('getOrders response:', $response);
+
         return $response;
+    }
+
+
+    public function getStatusId($name_status)
+    {
+        $status_id = '';
+        foreach ($this->statuses as $statusItem) {
+            if ($statusItem['name'] == $name_status) {
+                $status_id = $statusItem['id'];
+                break;
+            }
+        }
+        return $status_id;
+    }
+
+    public function getStatusName($status_id)
+    {
+        $status_name = '';
+        foreach ($this->statuses as $statusItem) {
+            if ($statusItem['id'] == $status_id) {
+                $status_name = $statusItem['name'];
+                break;
+            }
+        }
+        return $status_name;
     }
 
     public function inRealizacji($parameters)
@@ -99,6 +158,24 @@ class BaseLinkerController extends Controller
     {
         $response = $this->sendRequest('setOrderFields', $parameters);
         // \Log::info('setOrderFields response:', $response);
+        return $response;
+    }
+
+    public function getInvoices($parameters)
+    {
+        $response = $this->sendRequest('getInvoices', $parameters);
+        return $response;
+    }
+
+    public function getOrderSources()
+    {
+        $response = $this->sendRequest('getOrderSources');
+        return $response;
+    }
+
+    public function getJournalList($parameters)
+    {
+        $response = $this->sendRequest('getJournalList', $parameters);
         return $response;
     }
 }

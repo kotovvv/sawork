@@ -70,6 +70,7 @@ export default {
       { text: "Reporty", name: "report", icon: "mdi-file-chart" },
       { text: "Dostawa do magazynu", name: "coming", icon: "mdi-van-utility" },
       { text: "Zwroty", name: "zwroty", icon: "mdi-database-plus" },
+      { text: "Zamówienia", name: "zo2wz", icon: "mdi-arrange-bring-forward" },
     ],
   }),
   computed: {
@@ -83,6 +84,8 @@ export default {
         return defineAsyncComponent(() =>
           import("../manager/refunds2Component.vue")
         );
+      if (this.theMenu == "zo2wz")
+        return defineAsyncComponent(() => import("./zo2wzComponent.vue"));
     },
   },
 };

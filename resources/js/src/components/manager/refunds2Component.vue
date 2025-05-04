@@ -343,7 +343,13 @@
             auto-grow
           ></v-textarea>
           <v-text-field label="Uwagi" v-model="edit.Uwagi"></v-text-field>
-          <v-text-field label="Ilość" v-model="edit.qty"></v-text-field>
+          <v-text-field
+            label="Ilość"
+            v-model="edit.qty"
+            type="number"
+            :min="0"
+            @blur="edit.qty = edit.qty === '' ? 0 : edit.qty"
+          ></v-text-field>
           <v-select
             v-model="edit.IDWarehouseLocation"
             :items="locations"
@@ -1144,7 +1150,7 @@ export default {
     },
 
     changeCounter: function (item, num) {
-      item.qty += +num;
+      item.qty = parseInt(item.qty) + parseInt(+num);
       if (item.qty < 0) item.qty = 0;
       this.$refs.dProduct.focus;
     },

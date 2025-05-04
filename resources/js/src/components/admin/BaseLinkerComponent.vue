@@ -11,12 +11,32 @@
             label="Select Warehouse"
             @update:modelValue="filterUsers"
           ></v-select>
-          <v-btn @click="showAddTokenDialog" color="primary">Add Token</v-btn>
-        </v-col>
+          <div v-if="selectedWarehouse">
+            <v-alert v-if="warehouseToken" type="success"> Token: ok </v-alert>
+            <v-alert v-else type="error"> No token</v-alert>
+            <v-btn @click="showAddTokenDialog" color="primary" class="ma-2"
+              >Change Token</v-btn
+            >
+          </div>
 
-        <v-col cols="3" md="1">
-          <v-alert v-if="warehouseToken" type="success"> Token: ok </v-alert>
-          <v-alert v-else type="error"> No token</v-alert>
+          <v-row v-if="selectedWarehouse">
+            <v-col cols="6">
+              <v-text-field
+                v-model="intervalMinutes"
+                label="Interval Minutes"
+                type="number"
+              >
+                <template v-slot:append>
+                  <v-icon @click="saveInterval" class="btn" color="primary"
+                    >mdi-content-save</v-icon
+                  >
+                </template>
+              </v-text-field>
+            </v-col>
+            <v-col cols="6" class="d-flex align-center">
+              {{ lastExecutedAt }}
+            </v-col>
+          </v-row>
         </v-col>
 
         <v-col v-if="selectedWarehouse" cols="12" md="8">
@@ -43,6 +63,54 @@
               <v-btn @click="showCreateDialog" color="primary">Add User</v-btn>
             </v-col>
           </v-row>
+        </v-col>
+      </v-row>
+      <v-row v-if="logs.length > 0">
+        <v-col cols="12">
+          <v-data-table
+            ref="logsTable"
+            :headers="[
+              { title: 'Number BL', value: 'number' },
+              { title: 'Message', value: 'message' },
+              { title: 'Type', value: 'type' },
+              { title: 'Created At', value: 'created_at' },
+            ]"
+            :items="logs"
+            item-value="id"
+            class="elevation-1"
+            :search="search"
+            :items-per-page="itemsPerPage"
+            @update:page="getLog"
+          >
+            <template v-slot:top>
+              <v-toolbar flat>
+                <v-toolbar-title>
+                  <v-text-field
+                    v-model="search"
+                    label="Search number BL"
+                    single-line
+                    hide-details
+                    width="300"
+                    clearable
+                    @update:modelValue="getLog(1, search)"
+                  ></v-text-field
+                ></v-toolbar-title>
+                <v-icon @click="getLog(page, search)" color="primary"
+                  >mdi-refresh</v-icon
+                >
+                <v-spacer></v-spacer>
+              </v-toolbar>
+            </template>
+            <template v-slot:bottom>
+              <div class="text-center pt-2">
+                <v-pagination
+                  v-model="page"
+                  :length="pageCount"
+                  @click="getLog(page, search)"
+                ></v-pagination>
+              </div>
+            </template>
+          </v-data-table>
         </v-col>
       </v-row>
       <v-dialog v-model="createDialog" persistent max-width="600px">
@@ -139,10 +207,40 @@ export default {
         { title: "Stan", value: "value" },
         { title: "Actions", value: "actions", sortable: false },
       ],
+      lastLogId: null,
+      intervalMinutes: null,
+      lastExecutedAt: null,
+      logs: [],
+      search: "",
+      page: 1,
+      itemsPerPage: 50,
+      pageCount: 0,
     };
   },
 
   methods: {
+    async getLog(page = 1, search = "") {
+      const params = {
+        page,
+        search,
+        IDWarehouse: this.selectedWarehouse,
+        limit: this.itemsPerPage,
+      };
+      const response = await axios.post("/api/log_orders", params);
+      this.logs = response.data.logs;
+      this.logs.forEach((log) => {
+        log.created_at = new Date(log.created_at).toLocaleString();
+      });
+
+      this.pageCount = Math.ceil(response.data.count / params.limit);
+    },
+    saveInterval() {
+      const intervalSetting = {
+        for_obj: this.selectedWarehouse,
+        value: this.intervalMinutes,
+      };
+      axios.post("/api/intervalSetting", intervalSetting);
+    },
     isToken() {
       const warehouse = this.settings.find(
         (wh) =>
@@ -159,11 +257,37 @@ export default {
       this.isToken();
     },
     filterUsers() {
+      this.page = 1;
+      this.logs = [];
       this.filteredUsers = this.settings.filter(
         (user) =>
           user.for_obj === this.selectedWarehouse && user.obj_name === "ext_id"
       );
+      console.log(this.filteredUsers);
+      this.intervalMinutes =
+        this.settings.filter(
+          (int) =>
+            int.for_obj === this.selectedWarehouse &&
+            int.obj_name === "interval_minutes"
+        )[0]?.value ?? 0;
+      this.settings.filter(
+        (int) =>
+          int.for_obj === this.selectedWarehouse &&
+          int.obj_name === "interval_minutes"
+      ) ?? 0;
+      this.lastExecutedAt =
+        this.settings.filter(
+          (int) =>
+            int.for_obj === this.selectedWarehouse &&
+            int.obj_name === "last_executed_at"
+        )[0]?.value ?? "";
+      this.lastLogId = this.settings.filter(
+        (int) =>
+          int.for_obj === this.selectedWarehouse &&
+          int.obj_name === "last_log_id"
+      );
       this.isToken();
+      this.getLog(1, this.search);
     },
     async createUser() {
       const newUserSetting = {
@@ -173,7 +297,7 @@ export default {
         value: this.newUser.value,
       };
       const response = await axios.post("/api/settings", newUserSetting);
-      console.log(response.data);
+
       this.settings.push(response.data);
       this.filterUsers();
       this.newUser = { value: null, key: "" };
@@ -215,6 +339,7 @@ export default {
     async addToken() {
       const newTokenSetting = {
         obj_name: "sklad_token",
+        for_obj: this.selectedWarehouse,
         key: this.selectedWarehouse,
         value: this.newToken,
       };

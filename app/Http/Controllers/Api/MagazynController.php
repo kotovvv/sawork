@@ -804,29 +804,32 @@ class MagazynController extends Controller
         $dateMax = new Carbon($data['dateMax']);
         $dateMin = $dateMin->setTime(00, 00, 00)->format('Y-m-d H:i:s');
         $dateMax = $dateMax->setTime(23, 59, 59)->format('Y-m-d H:i:s');
-        $empty = $data['empty'];
-        $full = $data['full'];
+        // $empty = $data['empty'];
+        // $full = $data['full'];
 
         $query = DB::table('Orders as ord')
             ->select(
                 'IDOrder',
                 '_OrdersTempString5 as product_Chang',
                 'rm.NrDokumentu as Powiązane_WZ',
-                'Date',
+                'rm.Data as DataWZ',
                 'Number',
+                'Date as DataZO',
                 'con.Nazwa as Kontrahent',
+
                 'os.Name as Status',
                 'ord.Remarks as Uwagi',
                 'ord.Modified as Zmodyfikowane',
                 'rt.Nazwa as Rodzaj_transportu',
-                '_OrdersTempDecimal2 as Nr_Baselinker',
+                DB::raw('CAST(_OrdersTempDecimal2 AS INT) as Nr_Baselinker'),
                 '_OrdersTempString2 as Nr_Nadania',
                 '_OrdersTempString1 as Nr_Faktury',
                 '_OrdersTempString4 as Nr_Zwrotny',
                 '_OrdersTempString3 as Nr_Korekty',
                 '_OrdersTempString7 as Źródło',
                 '_OrdersTempString8 as External_id',
-                '_OrdersTempString9 as Login_klienta'
+                '_OrdersTempString9 as Login_klienta',
+                DB::raw('(SELECT CAST(SUM(ol.PriceGross * ol.Quantity) AS DECIMAL(10,2)) FROM OrderLines ol WHERE ol.IDOrder = ord.IDOrder) as KwotaBrutto')
             )
             ->leftJoin('OrderStatus as os', 'os.IDOrderStatus', 'ord.IDOrderStatus')
             ->leftJoin('Kontrahent as con', 'con.IDKontrahenta', 'ord.IDAccount')
@@ -837,42 +840,45 @@ class MagazynController extends Controller
             ->leftJoin('RuchMagazynowy as rm', 'rm.IDRuchuMagazynowego', 'do.ID1')
             ->leftJoin('RodzajTransportu as rt', 'rt.IDRodzajuTransportu', 'ord.IDTransport')
             ->where('IDWarehouse', $IDWarehouse)
-            ->when(count($data['statuses']) > 0, function ($query) use ($data) {
-                $query->whereIn('ord.IDOrderStatus', $data['statuses']);
-            })
-            ->whereBetween('Date', [$dateMin, $dateMax]);
+            // ->when(count($data['statuses']) > 0, function ($query) use ($data) {
+            //     $query->whereIn('ord.IDOrderStatus', $data['statuses']);
+            // })
+            ->whereBetween('Date', [$dateMin, $dateMax])
+            ->orderBy('Date', 'desc');
 
-        if (count($full) > 0) {
-            foreach ($full as $el) {
-                if ($el == '_OrdersTempDecimal2') {
-                    $query->where(function ($query) use ($el) {
-                        $query->whereNotNull($el);
-                    });
-                } else {
-                    $query->where(function ($query) use ($el) {
-                        $query->whereNotNull($el)->where($el, '!=', '');
-                    });
-                }
-            }
-        }
-        if (count($empty) > 0) {
-            foreach ($empty as $el) {
-                if ($el == '_OrdersTempDecimal2') {
-                    $query->where(
-                        function ($query) use ($el) {
-                            $query->whereNull($el);
-                        }
-                    );
-                } else {
-                    $query->where(
-                        function ($query) use ($el) {
-                            $query->whereNull($el)->orWhere($el, '=', '');
-                        }
-                    );
-                }
-            }
-        }
+        // if (count($full) > 0) {
+        //     foreach ($full as $el) {
+        //         if ($el == '_OrdersTempDecimal2') {
+        //             $query->where(function ($query) use ($el) {
+        //                 $query->whereNotNull($el);
+        //             });
+        //         } else {
+        //             $query->where(function ($query) use ($el) {
+        //                 $query->whereNotNull($el)->where($el, '!=', '');
+        //             });
+        //         }
+        //     }
+        // }
+        // if (count($empty) > 0) {
+        //     foreach ($empty as $el) {
+        //         if ($el == '_OrdersTempDecimal2') {
+        //             $query->where(
+        //                 function ($query) use ($el) {
+        //                     $query->whereNull($el);
+        //                 }
+        //             );
+        //         } else {
+        //             $query->where(
+        //                 function ($query) use ($el) {
+        //                     $query->whereNull($el)->orWhere($el, '=', '');
+        //                 }
+        //             );
+        //         }
+        //     }
+        // }
+
         $res['orders'] = $query->get();
+
 
         return $res;
     }
