@@ -13,26 +13,31 @@ class Kernel extends ConsoleKernel
 
     protected function schedule(Schedule $schedule)
     {
-        $schedule->call(function () {
-            // Instantiate and call the index function of the SendPDF controller
-            $sendPDFController = new SendPDF();
-            $sendPDFController->index();
-        })->dailyAt('17:00'); // Adjust this as per your requirement (e.g., hourly(), weekly(), etc.)
-        $schedule->call(function () {
-            // Instantiate and call the index function of the SendPDF controller
-            $sendPDFController = new SendPDF();
-            $sendPDFController->index();
-        })->dailyAt('23:50'); // Adjust this as per your requirement (e.g., hourly(), weekly(), etc.)
-        $schedule->call(
-            function () {
-                Artisan::call('app:check-no-baselink');
-            }
-        )->hourly();
-        $schedule->call(
-            function () {
-                new importBLController();
-            }
-        )->everyMinute();
+        if (env('APP_ENV') === 'production') {
+            $schedule->call(function () {
+                // Instantiate and call the index function of the SendPDF controller
+                $sendPDFController = new SendPDF();
+                $sendPDFController->index();
+            })->dailyAt('17:00'); // Adjust this as per your requirement (e.g., hourly(), weekly(), etc.)
+
+            $schedule->call(function () {
+                // Instantiate and call the index function of the SendPDF controller
+                $sendPDFController = new SendPDF();
+                $sendPDFController->index();
+            })->dailyAt('23:50'); // Adjust this as per your requirement (e.g., hourly(), weekly(), etc.)
+
+            $schedule->call(
+                function () {
+                    Artisan::call('app:check-no-baselink');
+                }
+            )->hourly();
+
+            $schedule->call(
+                function () {
+                    new importBLController();
+                }
+            )->everyMinute();
+        }
     }
 
     /**
