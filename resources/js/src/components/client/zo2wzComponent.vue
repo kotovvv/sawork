@@ -61,7 +61,7 @@
             :search="searchInTable"
             @click:row="handleClick"
             v-model="selected"
-            show-select
+            :show-select="$attrs.user.IDRoli == 1"
             return-object
             :row-props="colorRowItem"
             height="55vh"
@@ -83,7 +83,7 @@
                 >
                 <v-btn
                   @click="createWZfromZO"
-                  v-if="selected.length > 0 && $props.user.IDRoli == 1"
+                  v-if="selected.length > 0 && $attrs.user.IDRoli == 1"
                   size="x-large"
                   >{{ selected.length }} create WZ</v-btn
                 >
