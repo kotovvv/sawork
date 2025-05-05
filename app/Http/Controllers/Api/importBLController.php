@@ -250,16 +250,30 @@ HAVING
 
         //$ordersToProcess = array_slice($response['orders'], 0, 80); // Process only the first 80 orders
         $i = 80;
-        foreach ($response as $order) {
+        if (!is_array($response) || !isset($response['orders']) || !is_array($response['orders'])) {
+            \Log::error("Error in GetOrders: " . $e->getMessage(), ['exception' => $e]);
+            throw new \Exception("Invalid response data. Expected an array with 'orders'.");
+        }
+
+        foreach ($response['orders'] as $order) {
             // this order has already been imported by the integrator
-            $wasImported = DB::table('IntegratorTransactions')->where('transId', $order['order_id'])->first();
-            if ($wasImported || $i == 0) {
+            if ($i < 0) {
+                break;
+            }
+            if (is_array($order) && isset($order['order_id'])) {
+                $wasImported = DB::table('IntegratorTransactions')->where('transId', $order['order_id'])->exists();
+            } else {
+                \Log::error("Invalid order data encountered.", ['order' => $order]);
+                throw new \Exception("Invalid order data. Expected an array with 'order_id'.");
+            }
+            if ($wasImported) {
                 continue; // Skip if the transaction already exists
             }
             $i--;
             $this->invoices = $this->BL->getInvoices(['order_id' => $order['order_id']]);
             if (!isset($this->invoices['status']) || $this->invoices['status'] != "SUCCESS") continue;
             $this->importOrder($order, $idMagazynu);
+            $i--;
         }
     }
 
