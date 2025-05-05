@@ -36,7 +36,7 @@ class Kernel extends ConsoleKernel
 
             $schedule->call(
                 function () {
-                    new importBLController();
+                    //new importBLController();
                 }
             )->everyMinute();
 
@@ -60,9 +60,9 @@ class Kernel extends ConsoleKernel
                         SELECT Zniszczony
                         FROM dbo.EMailMagazyn
                         WHERE Zniszczony IS NOT NULL
-                    ) AND z.IDElementuWZ NOT IN (32378,230685,142812)
+                    ) AND z.IDElementuWZ NOT IN (32378,230685,142812,173864)
                 ");
-                //,173864
+                //
                 if (!empty($results)) {
                     $emailData = [];
                     foreach ($results as $row) {
@@ -72,13 +72,13 @@ class Kernel extends ConsoleKernel
                         ];
                     }
 
-                    \Mail::send([], [], function ($message) use ($emailData) {
-                        $message->to('kotovvv@gmail.com')
-                            ->subject('Ошибка в локациях')
-                            ->setBody('В следующих заказах: ' . json_encode($emailData), 'text/html');
+                    Mail::send([], [], function ($message) use ($emailData) {
+                        $message->to('khanenko.igor@gmail.com')
+                            ->subject('Błąd lokalizacji. Produkt został pobrany z niedozwolonej lokalizacji')
+                            ->html('W następujących zamówieniach: ' . json_encode($emailData));
                     });
                 }
-            })->dailyAt('18:00');
+            })->dailyAt('03:00');
         }
     }
 
