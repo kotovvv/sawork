@@ -36,7 +36,7 @@ class Kernel extends ConsoleKernel
 
             $schedule->call(
                 function () {
-                    //new importBLController();
+                    new importBLController();
                 }
             )->everyMinute();
 
