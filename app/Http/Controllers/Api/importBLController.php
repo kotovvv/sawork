@@ -248,13 +248,15 @@ HAVING
 
         $response = $this->BL->getOrders($parameters);
 
-        $ordersToProcess = array_slice($response['orders'], 0, 80); // Process only the first 80 orders
-        foreach ($ordersToProcess as $order) {
+        //$ordersToProcess = array_slice($response['orders'], 0, 80); // Process only the first 80 orders
+        $i = 80;
+        foreach ($response as $order) {
             // this order has already been imported by the integrator
             $wasImported = DB::table('IntegratorTransactions')->where('transId', $order['order_id'])->first();
-            if ($wasImported) {
+            if ($wasImported || $i == 0) {
                 continue; // Skip if the transaction already exists
             }
+            $i--;
             $this->invoices = $this->BL->getInvoices(['order_id' => $order['order_id']]);
             if (!isset($this->invoices['status']) || $this->invoices['status'] != "SUCCESS") continue;
             $this->importOrder($order, $idMagazynu);
