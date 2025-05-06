@@ -254,16 +254,20 @@ export default {
       const allLocations = 1;
       vm.productLocations = [];
       axios
-        .get(
-          "/api/getProductLocations/" + vm.product.IDTowaru + "/" + allLocations
-        )
+        .get("/api/getProductLocations/" + vm.product.IDTowaru)
         .then((res) => {
           if (res.status == 200) {
             vm.productLocations = res.data;
-            vm.productLocations = vm.productLocations.map((f) => {
-              f.ilosc = parseInt(f.ilosc);
-              return f;
-            });
+
+            if (vm.productLocations.length == 0) {
+              vm.message = "Brak lokalizacji";
+              vm.snackbar = true;
+            } else {
+              vm.productLocations = vm.productLocations.map((f) => {
+                f.ilosc = parseInt(f.ilosc);
+                return f;
+              });
+            }
           }
         })
         .catch((error) => console.log(error));

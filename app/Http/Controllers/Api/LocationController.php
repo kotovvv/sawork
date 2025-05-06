@@ -387,10 +387,38 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
         return $res;
     }
 
-    public function getProductLocations($id, $allLocations = 0)
+    public function callINLLocations($articleID, $date)
     {
+        $results = DB::select("
+        SELECT *
+        FROM INLLocations(?, ?)
+    ", [$articleID, $date]);
+
+        return $results;
+    }
+
+    public function getProductLocations($id, $all = 0)
+    {
+        if ($all == 1) {
+            $articleID = $id;
+            $date = now()->format('Y-m-d H:i:s');
+
+            $locations = $this->callINLLocations($articleID, $date);
+            $locationsArray = [];
+            if (isset($locations[0]->Locations)) {
+                $locationsArray = collect(explode(',', $locations[0]->Locations))->mapWithKeys(function ($item) {
+                    [$key, $value] = explode(':', $item);
+                    return [$key => (int) $value];
+                })->toArray();
+            }
+            return $locationsArray;
+        }
+
+
         $IDTowaru = intval($id);
+
         $results = $this->getPZ($IDTowaru);
+
 
         $results = collect($results)->groupBy('LocationCode')->map(function ($row) {
             return [
