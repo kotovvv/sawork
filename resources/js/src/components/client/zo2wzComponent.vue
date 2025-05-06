@@ -201,6 +201,7 @@ export default {
     marked: [],
     selected: [],
     headers: [
+      { title: "Powiązane_WZ", key: "Powiązane_WZ", nowrap: true },
       { title: "Data WZ", key: "DataWZ" },
       { title: "Number ZO", key: "Number", nowrap: true, sortable: false },
       { title: "Data ZO", key: "DataZO", nowrap: true },
@@ -231,7 +232,7 @@ export default {
       { title: "Rodzaj_transportu", key: "rt.Nazwa" },
 
       { title: "Uwagi", key: "Remarks" },
-
+      { title: "Powiązane_WZ", key: "rm.NrDokumentu" },
       { title: "Nr_Baselinker", key: "_OrdersTempDecimal2" },
       { title: "Nr_Nadania", key: "_OrdersTempString2" },
       { title: "Nr_Faktury", key: "_OrdersTempString1" },
@@ -253,12 +254,10 @@ export default {
     if (this.$attrs.user.IDRoli == 1) {
       this.headers.unshift(
         { title: "product_Chang", key: "product_Chang" },
-        { title: "Zmodyfikowane", key: "Zmodyfikowane", nowrap: true },
-        { title: "Powiązane_WZ", key: "Powiązane_WZ", nowrap: true }
+        { title: "Zmodyfikowane", key: "Zmodyfikowane", nowrap: true }
       );
       this.fields.push(
         { title: "product_Chang", key: "_OrdersTempString5" },
-        { title: "Powiązane_WZ", key: "rm.NrDokumentu" },
         { title: "Zmodyfikowane", key: "ord.Modified", nowrap: true }
       );
     }
