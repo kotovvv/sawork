@@ -430,8 +430,7 @@ export default {
             vm.message = `Dokumenty przeniesienia zostały utworzone. ${vm.createdDoc.idmin} ${vm.createdDoc.idpls}`;
             vm.snackbar = true;
             vm.$emit("update:products", products);
-          }
-          if (res.status == 400) {
+          } else {
             vm.message_error = res.data.message;
             vm.message = res.data.message;
             vm.snackbar = true;

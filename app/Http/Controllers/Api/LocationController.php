@@ -130,8 +130,9 @@ class LocationController extends Controller
     {
         return  DB::table('dbo.WarehouseLocations')->where('IDMagazynu', $id)->get();
     }
-    private function getPZ($IDTowaru)
+    private function getPZ($IDTowaru, $fromLocation = null)
     {
+
         $DataMax = Carbon::now()->format('Y-m-d H:i:s');
         $IDElementuRuchuMagazynowego = -1;
         $ExcludeElementID = -1;
@@ -152,8 +153,7 @@ ilosc, CenaJednostkowa as Cena, --Jednostka, Wartosc as ''Wartość'',
 NumerSerii, DataWaznosci, NrDokumentu, DataDokumentu, IDWarehouseLocation as Idloc, LocationCode, LocationName,LocationPriority
 FROM StanySzczegolowo(@DataMax)
 WHERE IDTowaru = @IDTowaru
-AND IDElementuPZ <> @ExcludeElementID
-AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''
+AND IDElementuPZ <> @ExcludeElementID" . ($fromLocation ? " AND LocationCode = ''$fromLocation''" : " AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''") . "
 UNION ALL  -- дополнительное существующие элементы
 SELECT PZ.IDElementuRuchuMagazynowego ID, PZWZ.ilosc as Edycja,
 PZWZ.ilosc,ISNULL(PZ.CenaJednostkowa ,0) as Cena,
@@ -169,7 +169,7 @@ LEFT OUTER JOIN WarehouseLocations AS loc ON PZ.IDWarehouseLocation = loc.IDWare
 WHERE
 t.IdTowaru = @IDTowaru
 AND WZ.IDElementuRuchuMagazynowego = @IDElementuRuchuMagazynowego
-AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''
+" . ($fromLocation ? " AND LocationCode = ''$fromLocation''" : " AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%''") . "
 ) X
 INNER JOIN [dbo].[ElementRuchuMagazynowego] ON ElementRuchuMagazynowego.IDElementuRuchuMagazynowego = X.ID
 INNER JOIN [dbo].[RuchMagazynowy] ON RuchMagazynowy.IDRuchuMagazynowego = ElementRuchuMagazynowego.IDRuchuMagazynowego
@@ -275,7 +275,7 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
             }
 
             //2. ElementRuchuMagazynowego
-            $pz = $this->getPZ($IDTowaru);
+            $pz = $this->getPZ($IDTowaru, $fromLocation['LocationCode']);
             $el = [];
             $el['IDTowaru'] = $IDTowaru;
             $qtyToMove = $qty;
