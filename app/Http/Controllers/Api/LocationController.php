@@ -275,7 +275,11 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
             }
 
             //2. ElementRuchuMagazynowego
-            $pz = $this->getPZ($IDTowaru, $fromLocation['LocationCode']);
+            if (isset($fromLocation['LocationCode'])) {
+                $pz = $this->getPZ($IDTowaru, $fromLocation['LocationCode']);
+            } else {
+                $pz = $this->getPZ($IDTowaru);
+            }
             $el = [];
             $el['IDTowaru'] = $IDTowaru;
             $qtyToMove = $qty;
