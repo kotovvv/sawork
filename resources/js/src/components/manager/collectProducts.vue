@@ -82,6 +82,7 @@
           ></v-text-field>
         </div>
       </v-col>
+      <v-col><Pack /></v-col>
       <v-col v-if="makeOrders && makeOrders.length > 0" cols="12" md="2">
         <v-select
           label="Wybrane zamówienia"
@@ -250,10 +251,11 @@ import _ from "lodash";
 import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import Pack from "./UI/Pack.vue";
 
 export default {
   name: "FulstorcollectOrders",
-
+  components: { Pack },
   data() {
     return {
       snackbar: false,

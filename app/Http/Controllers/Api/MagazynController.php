@@ -8,6 +8,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Exception;
+use App\Models\Collect;
 
 
 class MagazynController extends Controller
@@ -904,7 +905,7 @@ class MagazynController extends Controller
 
     private function isInCollect($orderId)
     {
-        $collect = DB::table('collect')->where('IDOrder', $orderId)->where('status', 0)->first();
+        $collect = Collect::query()->where('IDOrder', $orderId)->where('status', 0)->first();
         if ($collect) {
             return true;
         }
@@ -919,7 +920,7 @@ class MagazynController extends Controller
         $DocDate = Carbon::now();
         $InvAlgGross = DB::table('Ustawienia')->where('Nazwa', 'InvoiceAlgorithm')->value('Wartosc') == 'Brutto' ? 1 : 0;
         $PricesModeGross = DB::table('Ustawienia')->where('Nazwa', 'PricesMode')->value('Wartosc') == 'Brutto' ? 1 : 0;
-        $collect = DB::table('collect')->where('IDOrder', $orderId)->where('status', 0)->first();
+        $collect = Collect::query()->where('IDOrder', $orderId)->where('status', 0)->first();
         $order = DB::table('Orders')->where('IDOrder', $orderId)->first();
         $symbol = DB::table('Magazyn')->where('IDMagazynu', $order->IDWarehouse)->value('Symbol');
         $documentNumber = $this->lastNumber('WZ', $symbol);
@@ -1055,7 +1056,7 @@ class MagazynController extends Controller
             if (!$stat) {
                 throw new \Exception('Error creating DocumentRelations for WZ order ID2' . $orderId);
             }
-            DB::table('collect')->where('IDOrder', $orderId)->update(['status' => 1]);
+            Collect::query()->where('IDOrder', $orderId)->update(['status' => 1]);
             DB::commit();
             // });
         } catch (\Exception $e) {

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
+use App\Models\Collect;
 
 class CollectController extends Controller
 {
@@ -45,27 +46,38 @@ class CollectController extends Controller
 
     private function waitOrders($user)
     {
-        $waiteOrders = DB::table('collect')
-            ->leftJoin('Orders as o', 'o.IDOrder', '=', 'collect.IDOrder')
+        $o_waiteOrders = Collect::query()
             ->where([
                 'IDUzytkownika' => $user->IDUzytkownika,
                 'status' => 0,
             ])
-            ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', 'o.Remarks', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport')
+            ->pluck('IDOrder');
+        $waiteOrders = DB::table('orders as o')
+            ->whereIn('o.IDOrder', $o_waiteOrders)
+            ->select(
+                'o.IDOrder',
+                'o.IDAccount',
+                'o.Date',
+                'o.Number',
+                'o.Remarks',
+                DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'),
+                'o.IDWarehouse',
+                'o.IDUser',
+                'o.IDTransport'
+            )
             ->get();
 
         return $waiteOrders;
     }
 
+
     private function freeOrdersFromCollect($orders, $user)
     {
-        $ordersInCollect = DB::table('collect as col')
-            ->whereIn('col.IDOrder', $orders)
+        $ordersInCollect = Collect::query()
+            ->whereIn('IDOrder', $orders)
             ->pluck('IDOrder');
-        $freeOrders = array_diff($orders, $ordersInCollect->toArray());
 
-        // $waiteOrders = $this->waitOrders($user);
-        // $freeOrders = array_merge($freeOrders, $waiteOrders->toArray());
+        $freeOrders = array_diff($orders, $ordersInCollect->toArray());
 
         return $freeOrders;
     }
@@ -209,14 +221,12 @@ class CollectController extends Controller
 
     public function collectOrders(Request $request)
     {
-
         $freeOrders = $this->freeOrdersFromCollect($request->selectedOrders, $request->user);
 
         $makeOrders = [];
         foreach ($freeOrders as $IDOrder) {
-
             try {
-                DB::table('collect')->insert([
+                Collect::create([
                     'IDUzytkownika' => $request->user->IDUzytkownika,
                     'Date' => Carbon::now(),
                     'IDOrder' => $IDOrder,
@@ -243,7 +253,7 @@ class CollectController extends Controller
 
     public function deleteSelectedMakeOrders(Request $request)
     {
-        $deletedOrders = DB::table('collect')
+        $deletedOrders = Collect::query()
             ->whereIn('IDOrder', $request->selectedOrders)
             ->delete();
 
@@ -421,7 +431,7 @@ class CollectController extends Controller
                             $listOrders[] = $order;
                             $listProductsOK = array_merge($listProductsOK, $orderProductsOK);
 
-                            $inserted = DB::table('collect')->insert([
+                            $inserted = Collect::query()->insert([
                                 'IDUzytkownika' => $request->user->IDUzytkownika,
                                 'Date' => Carbon::now(),
                                 'IDOrder' => $order['IDOrder'],
@@ -796,5 +806,65 @@ class CollectController extends Controller
             DB::rollBack();
             throw $e;
         }
+    }
+
+    public function getPackOrders(Request $request)
+    {
+        $res = [];
+        $o_orders = Collect::query()->where('IDUzytkownika', $request->user->IDUzytkownika)
+            ->where('Status', 0)->get();
+
+        $orders = DB::table('Orders as o')
+            ->join('RodzajTransportu as rt', 'o.IDTransport', '=', 'rt.IDRodzajuTransportu')
+            ->join('OrderLines as ol', 'o.IDOrder', '=', 'ol.IDOrder')
+            ->join('Towar as t', 'ol.IDItem', '=', 't.IDTowaru')
+            ->whereIn('o.IDOrder', $o_orders->pluck('IDOrder'))
+            ->where('t.Usluga', '!=', 1)
+            ->select(
+                'o.IDOrder',
+                'o.IDTransport',
+                'rt.Nazwa as TransportCompanyName',
+                'o.Number as OrderNumber',
+                't.IDTowaru',
+                't.Nazwa',
+                't.KodKreskowy',
+                't._TowarTempString1 as sku',
+                't._TowarTempDecimal1 as Waga',
+                't._TowarTempDecimal2 as m3',
+                't.Zdjecie as img',
+                'ol.Quantity as ilosc'
+            )
+            ->orderBy('rt.Nazwa')
+            ->get();
+
+        // Группировка и суммирование на PHP стороне
+        $res['orders'] = $orders->groupBy(function ($item) {
+            return implode('_', [
+                $item->IDOrder,
+                $item->IDTransport,
+                $item->TransportCompanyName,
+                $item->OrderNumber,
+                $item->IDTowaru,
+                $item->Nazwa,
+                $item->KodKreskowy,
+                $item->sku,
+                $item->Waga,
+                $item->m3
+            ]);
+        })->map(function ($group) {
+            $first = $group->first();
+            $first->ilosc = $group->sum('ilosc');
+            return $first;
+        })->values();
+
+        $res['orders'] = $res['orders']->map(function ($item) {
+            $item->qty =  0;
+            if ($item->img) {
+                $item->img =  base64_encode($item->img);
+            }
+            return $item;
+        });
+
+        return response()->json($res);
     }
 }
