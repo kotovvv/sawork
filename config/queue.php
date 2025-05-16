@@ -29,6 +29,14 @@ return [
     */
 
     'connections' => [
+        'second_mysql' => [
+            'driver' => 'database',
+            'connection' => 'second_mysql',
+            'table' => 'jobs',
+            'queue' => 'default',
+            'retry_after' => 90,
+            'after_commit' => false,
+        ],
 
         'sync' => [
             'driver' => 'sync',
