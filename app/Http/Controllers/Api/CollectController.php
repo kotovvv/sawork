@@ -360,7 +360,7 @@ class CollectController extends Controller
                     }
                     $invoices = $BL->getInvoices(['order_id' => $order['NumberBL']]);
 
-                    Log::info("invoices: " . json_encode($invoices));
+                    //Log::info("invoices: " . json_encode($invoices));
                 }
 
                 $orderOK = true;
@@ -434,6 +434,7 @@ class CollectController extends Controller
                             $listOrders[] = $order;
                             $listProductsOK = array_merge($listProductsOK, $orderProductsOK);
                             $invoice_id = collect($invoices['invoices'])->firstWhere('order_id',  $order['NumberBL'])['invoice_id'] ?? null;
+                            $invoice_number = collect($invoices['invoices'])->firstWhere('order_id',  $order['NumberBL'])['number'] ?? null;
                             Log::info("invoice_id", [$invoice_id]);
 
                             $inserted = Collect::query()->insert([
@@ -454,8 +455,8 @@ class CollectController extends Controller
                                 //Download invoice pdf
                                 if ($invoice_id) {
                                     $token = $this->getToken($IDMagazynu);
-                                    Log::info("printing invoice", [$token]);
-                                    \App\Jobs\DownloadInvoicePdf::dispatch($IDMagazynu, $order['IDOrder'], $invoice_id, $token);
+                                    //Log::info("printing invoice", [$token]);
+                                    \App\Jobs\DownloadInvoicePdf::dispatch($IDMagazynu, $invoice_number, $invoice_id, $token);
                                 }
 
                                 $parameters = [
