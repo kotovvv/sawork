@@ -358,7 +358,9 @@ class CollectController extends Controller
                         $messages[] = 'Order BL ' . $order['NumberBL'] . ' ne W realizacji';
                         continue;
                     }
-                    $invoices = $BL->getInvoices(['order_id' => $order['IDOrder']]);
+                    $invoices = $BL->getInvoices(['order_id' => $order['NumberBL']]);
+
+                    Log::info("invoices: " . json_encode($invoices));
                 }
 
                 $orderOK = true;
@@ -431,7 +433,8 @@ class CollectController extends Controller
                         if ($orderOK) {
                             $listOrders[] = $order;
                             $listProductsOK = array_merge($listProductsOK, $orderProductsOK);
-                            $invoice_id = collect($invoices['invoices'])->firstWhere('order_id',  $order['IDOrder'])['invoice_id'] ?? null;
+                            $invoice_id = collect($invoices['invoices'])->firstWhere('order_id',  $order['NumberBL'])['invoice_id'] ?? null;
+                            Log::info("invoice_id", [$invoice_id]);
 
                             $inserted = Collect::query()->insert([
                                 'IDUzytkownika' => $request->user->IDUzytkownika,
@@ -451,6 +454,7 @@ class CollectController extends Controller
                                 //Download invoice pdf
                                 if ($invoice_id) {
                                     $token = $this->getToken($IDMagazynu);
+                                    Log::info("printing invoice", [$token]);
                                     \App\Jobs\DownloadInvoicePdf::dispatch($IDMagazynu, $order['IDOrder'], $invoice_id, $token);
                                 }
 

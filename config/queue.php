@@ -37,6 +37,7 @@ return [
             'queue' => 'default',
             'retry_after' => 90,
             'after_commit' => false,
+
         ],
 
         'sync' => [
@@ -111,7 +112,7 @@ return [
 
     'failed' => [
         'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
-        'database' => env('DB_CONNECTION', 'mysql'),
+        'database' => 'second_mysql',
         'table' => 'failed_jobs',
     ],
 

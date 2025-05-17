@@ -179,7 +179,7 @@ class BaseLinkerController extends Controller
         return $response;
     }
 
-    public static function getInvoiceFile($parameters)
+    public function getInvoiceFile($parameters)
     {
         if (!isset($parameters['invoice_id'])) {
             throw new \InvalidArgumentException('The "invoice_id" parameter is required.');

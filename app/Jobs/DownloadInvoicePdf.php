@@ -8,6 +8,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class DownloadInvoicePdf implements ShouldQueue
 {
@@ -30,8 +31,8 @@ class DownloadInvoicePdf implements ShouldQueue
     {
         $BL = new \App\Http\Controllers\Api\BaseLinkerController($this->token);
         $param = ['invoice_id' => $this->invoice_id];
-        $pdfData = $BL::getInvoiceFile($param);
-
+        $pdfData = $BL->getInvoiceFile($param);
+        Log::info('PDF Data:', ['11111111111111111111111111111111111111111']);
         if ($pdfData && isset($pdfData['invoice'])) {
             $dir = public_path("pdf/{$this->IDMagazynu}");
             if (!is_dir($dir)) {
