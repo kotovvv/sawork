@@ -10,7 +10,8 @@ use App\Http\Controllers\Api\LogController;
 use App\Http\Controllers\Api\ComingController;
 use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\CollectController;
-use App\Http\Controllers\Api\UsersController; // Add this line
+use App\Http\Controllers\Api\UsersController;
+use App\Http\Controllers\Api\PrintController;
 
 /*
 |--------------------------------------------------------------------------
@@ -87,6 +88,12 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('deleteSelectedMakeOrders', [CollectController::class, 'deleteSelectedMakeOrders']);
     Route::post('prepareDoc', [CollectController::class, 'prepareDoc']);
     Route::get('getPackOrders', [CollectController::class, 'getPackOrders']);
+    Route::get('getOrderPackProducts/{IDOrder}', [CollectController::class, 'getOrderPackProducts']);
+    Route::post('setOrderPackProducts', [CollectController::class, 'setOrderPackProducts']);
+    Route::post('writeTTN', [CollectController::class, 'writeTTN']);
+    Route::post('deleteTTN', [CollectController::class, 'deleteTTN']);
+    Route::get('getRodzajTransportu', [CollectController::class, 'getRodzajTransportu']);
+    Route::post('setRodzajTransportu', [CollectController::class, 'setRodzajTransportu']);
 
     // Add routes for UsersController
     Route::get('settings', [UsersController::class, 'index']);
@@ -103,4 +110,5 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('updateLocationsTyp', [LocationController::class, 'updateLocationsTyp']);
 
     Route::post('log_orders', [LogController::class, 'log_orders']);
+    Route::post('print', [PrintController::class, 'print']);
 });

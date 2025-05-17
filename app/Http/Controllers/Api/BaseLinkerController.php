@@ -178,4 +178,13 @@ class BaseLinkerController extends Controller
         $response = $this->sendRequest('getJournalList', $parameters);
         return $response;
     }
+
+    public static function getInvoiceFile($parameters)
+    {
+        if (!isset($parameters['invoice_id'])) {
+            throw new \InvalidArgumentException('The "invoice_id" parameter is required.');
+        }
+        $response = $this->sendRequest('getInvoiceFile', $parameters);
+        return $response;
+    }
 }

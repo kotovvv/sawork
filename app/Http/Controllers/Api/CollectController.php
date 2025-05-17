@@ -358,6 +358,7 @@ class CollectController extends Controller
                         $messages[] = 'Order BL ' . $order['NumberBL'] . ' ne W realizacji';
                         continue;
                     }
+                    $invoices = $BL->getInvoices(['order_id' => $order['IDOrder']]);
                 }
 
                 $orderOK = true;
@@ -365,7 +366,7 @@ class CollectController extends Controller
                 $products = $this->getListProducts([$order['IDOrder']]);
                 $Uwagi = 'User' . $request->user->IDUzytkownika . ' || ' . $order['Remarks'];
                 try {
-                    DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$products, $remarks) {
+                    DB::transaction(function () use ($order, $IDMagazynu, $toLocation, $request, $BL, $bl_user_id, &$messages, &$productsERROR, &$orderERROR, &$IDsOrderERROR, &$listProductsOK, &$listOrders, &$createdDoc, $Uwagi, &$orderOK, &$products, $invoices, $remarks) {
                         $IDsElementuRuchuMagazynowego = [];
                         $orderProductsOK = [];
 
@@ -430,6 +431,7 @@ class CollectController extends Controller
                         if ($orderOK) {
                             $listOrders[] = $order;
                             $listProductsOK = array_merge($listProductsOK, $orderProductsOK);
+                            $invoice_id = collect($invoices['invoices'])->firstWhere('order_id',  $order['IDOrder'])['invoice_id'] ?? null;
 
                             $inserted = Collect::query()->insert([
                                 'IDUzytkownika' => $request->user->IDUzytkownika,
@@ -438,12 +440,20 @@ class CollectController extends Controller
                                 'status' => 0,
                                 'created_doc' => json_encode($createdDoc[$IDMagazynu]),
                                 'IDsElementuRuchuMagazynowego' => json_encode($IDsElementuRuchuMagazynowego),
+                                'invoice_id' =>   $invoice_id
                             ]);
 
                             if (!$inserted) {
                                 throw new \Exception('Error inserting into collect table');
                             }
                             if (env('APP_ENV') != 'local') {
+
+                                //Download invoice pdf
+                                if ($invoice_id) {
+                                    $token = $this->getToken($IDMagazynu);
+                                    \App\Jobs\DownloadInvoicePdf::dispatch($IDMagazynu, $order['IDOrder'], $invoice_id, $token);
+                                }
+
                                 $parameters = [
                                     'order_id' => $order['NumberBL'],
                                     'status_id' => $BL->status_id_Kompletowanie,
@@ -816,55 +826,252 @@ class CollectController extends Controller
 
         $orders = DB::table('Orders as o')
             ->join('RodzajTransportu as rt', 'o.IDTransport', '=', 'rt.IDRodzajuTransportu')
-            ->join('OrderLines as ol', 'o.IDOrder', '=', 'ol.IDOrder')
-            ->join('Towar as t', 'ol.IDItem', '=', 't.IDTowaru')
             ->whereIn('o.IDOrder', $o_orders->pluck('IDOrder'))
-            ->where('t.Usluga', '!=', 1)
+            ->where('o.IDOrderStatus', 42) // Kompletowanie
             ->select(
                 'o.IDOrder',
+                DB::raw('CAST(o._OrdersTempDecimal2 AS INT) as Nr_Baselinker'),
                 'o.IDTransport',
                 'rt.Nazwa as TransportCompanyName',
                 'o.Number as OrderNumber',
-                't.IDTowaru',
-                't.Nazwa',
-                't.KodKreskowy',
-                't._TowarTempString1 as sku',
-                't._TowarTempDecimal1 as Waga',
-                't._TowarTempDecimal2 as m3',
-                't.Zdjecie as img',
-                'ol.Quantity as ilosc'
+
+
             )
             ->orderBy('rt.Nazwa')
             ->get();
+        $res['orders'] = $orders;
 
-        // Группировка и суммирование на PHP стороне
-        $res['orders'] = $orders->groupBy(function ($item) {
-            return implode('_', [
-                $item->IDOrder,
-                $item->IDTransport,
-                $item->TransportCompanyName,
-                $item->OrderNumber,
-                $item->IDTowaru,
-                $item->Nazwa,
-                $item->KodKreskowy,
-                $item->sku,
-                $item->Waga,
-                $item->m3
-            ]);
-        })->map(function ($group) {
-            $first = $group->first();
-            $first->ilosc = $group->sum('ilosc');
-            return $first;
-        })->values();
+        return response()->json($res);
+    }
 
-        $res['orders'] = $res['orders']->map(function ($item) {
-            $item->qty =  0;
-            if ($item->img) {
-                $item->img =  base64_encode($item->img);
+    public function getOrderPackProducts($IDOrder)
+    {
+        $a_pack = [];
+        $IDOrder = (int)$IDOrder;
+        $o_ttn = Collect::query()->where('IDOrder', $IDOrder)->where('ttn', '!=', null)->value('ttn');
+        $decoded_ttn = [];
+        if ($o_ttn) {
+            // If $o_ttn is already an array, use it directly; otherwise, decode JSON
+            $decoded_ttn = is_array($o_ttn) ? $o_ttn : json_decode($o_ttn, true);
+        }
+        $o_pack = Collect::query()->where('IDOrder', $IDOrder)->where('pack', '!=', null)->value('pack');
+        $decoded_pack = [];
+        if ($o_pack) {
+            // If $o_pack is already an array, use it directly; otherwise, decode JSON
+            $decoded_pack = is_array($o_pack) ? $o_pack : json_decode($o_pack, true);
+        }
+
+        $orderLines = DB::table('OrderLines as ol')
+            ->join('Towar as t', 'ol.IDItem', '=', 't.IDTowaru')
+            ->where('t.Usluga', '!=', 1)
+            ->where('ol.IDOrder', $IDOrder)
+            ->select(
+                DB::raw('MAX(ol.IDOrderLine) as IDOrderLine'),
+                DB::raw('SUM(CAST(ol.Quantity AS INT)) as ilosc'),
+                't.Nazwa',
+                't.KodKreskowy',
+                't.IDTowaru',
+                't._TowarTempString1 as sku',
+                't._TowarTempDecimal1 as Waga',
+                't._TowarTempDecimal2 as m3'
+            )
+            ->groupBy('t.KodKreskowy', 't.Nazwa', 't.Usluga', 't._TowarTempString1', 't._TowarTempDecimal1', 't._TowarTempDecimal2', 't.IDTowaru')
+            ->get();
+
+        // Fetch images separately and attach to the result
+        $images = DB::table('Towar')
+            ->whereIn('IDTowaru', $orderLines->pluck('IDTowaru'))
+            ->pluck('Zdjecie', 'IDTowaru');
+
+        $orderLines = $orderLines->map(function ($item) use ($images, $decoded_pack) {
+            if (isset($decoded_pack[0]['products']) && count($decoded_pack[0]['products']) > 0) {
+                // $decoded_pack[0]['products'] is an array of associative arrays with barcode as key
+                $qty = 0;
+                foreach ($decoded_pack[0]['products'] as $product) {
+                    if (array_key_exists($item->KodKreskowy, $product)) {
+                        $qty = $product[$item->KodKreskowy];
+                        break;
+                    }
+                }
+                $item->qty = $qty;
+            } else {
+                $item->qty =  0;
+            }
+            $img = $images[$item->IDTowaru] ?? null;
+            if ($img) {
+                $item->img = base64_encode($img);
+            } else {
+                $item->img = null;
             }
             return $item;
         });
 
-        return response()->json($res);
+
+
+        if (!empty($decoded_ttn)) {
+
+            // Разворачиваем $decoded_ttn и добавляем данные из $orderLines
+            $a_pack['ttn'] = [];
+
+            foreach ($decoded_ttn as $ttn_key => $ttn_entry) {
+                $ttn_products = [];
+                if (isset($ttn_entry['products']) && is_array($ttn_entry['products'])) {
+                    foreach ($ttn_entry['products'] as $product) {
+                        foreach ($product as $barcode => $qty) {
+                            // Найти товар в $orderLines по штрихкоду
+                            $orderLine = $orderLines->first(function ($item) use ($barcode) {
+                                return $item->KodKreskowy == $barcode;
+                            });
+
+                            if ($orderLine) {
+                                $ttn_products[] = [
+                                    'IDTowaru' => $orderLine->IDTowaru,
+                                    'Nazwa' => $orderLine->Nazwa,
+                                    'KodKreskowy' => $barcode,
+                                    'sku' => $orderLine->sku,
+                                    'Waga' => $orderLine->Waga,
+                                    'm3' => $orderLine->m3,
+                                    'qty' => $qty,
+                                    'img' => $orderLine->img ?? null,
+                                ];
+                            } else {
+                                // Если не найден, просто добавить штрихкод и qty
+                                $ttn_products[] = [
+                                    'IDTowaru' => null,
+                                    'Nazwa' => null,
+                                    'KodKreskowy' => $barcode,
+                                    'sku' => null,
+                                    'Waga' => null,
+                                    'm3' => null,
+                                    'qty' => $qty,
+                                    'img' => null,
+                                ];
+                            }
+                        }
+                    }
+                }
+                $a_pack['ttn'][$ttn_key] = [
+                    'weight' => $ttn_entry['weight'] ?? null,
+                    'length' => $ttn_entry['length'] ?? null,
+                    'width' => $ttn_entry['width'] ?? null,
+                    'height' => $ttn_entry['height'] ?? null,
+                    'products' => $ttn_products,
+                    'lastUpdate' => isset($ttn_entry['lastUpdate']) ? Carbon::parse($ttn_entry['lastUpdate'])->format('Y-m-d H:i') : null,
+                ];
+            }
+
+            // $decoded_ttn may have arbitrary numeric keys (not just 0,1,2...)
+            $ttn_products = [];
+            foreach ($decoded_ttn as $ttn_entry) {
+                if (isset($ttn_entry['products']) && is_array($ttn_entry['products'])) {
+                    foreach ($ttn_entry['products'] as $product) {
+                        foreach ($product as $barcode => $qty) {
+                            if (!isset($ttn_products[$barcode])) {
+                                $ttn_products[$barcode] = 0;
+                            }
+                            $ttn_products[$barcode] += $qty;
+                        }
+                    }
+                }
+            }
+            // Now update $orderLines
+            $orderLines = $orderLines->map(function ($item) use ($ttn_products) {
+                if (isset($ttn_products[$item->KodKreskowy])) {
+                    $item->ilosc -= $ttn_products[$item->KodKreskowy];
+                    if ($item->ilosc < 0) {
+                        $item->ilosc = 0;
+                    }
+                }
+                return $item;
+            })->filter(function ($item) {
+                return $item->ilosc > 0;
+            })->values();
+        }
+
+        $a_pack[0] = [
+            'lastUpdate' => Carbon::now()->format('Y-m-d H:i:s'),
+            'products' => $orderLines,
+        ];
+
+        // If 'date_pack' is null, set it to the current date
+        $collect = Collect::query()->where('IDOrder', $IDOrder)->first();
+        if ($collect && is_null($collect->date_pack)) {
+            $collect->date_pack = Carbon::now();
+            $collect->save();
+        }
+
+        return $a_pack;
+    }
+
+    public function setOrderPackProducts(Request $request)
+    {
+        $IDOrder = (int)$request->IDOrder;
+        $pack = $request->o_pack;
+        $pack['0']['lastUpdate'] = Carbon::now()->format('Y-m-d H:i:s');
+        $pack = json_encode($pack);
+        $o_pack = Collect::query()->where('IDOrder', $IDOrder)->update(['pack' => $pack]);
+        if ($o_pack) {
+            return response()->json(['status' => 'success']);
+        }
+        return response()->json(['status' => 'error']);
+    }
+
+    public function writeTTN(Request $request)
+    {
+        $IDOrder = (int)$request->IDOrder;
+        $ttn = $request->o_ttn;
+        $nttn =  $request->nttn;
+
+        $ttn[$nttn]['lastUpdate'] = Carbon::now()->format('Y-m-d H:i:s');
+        // $ttn = json_encode($ttn);
+        $existingTtn = Collect::query()->where('IDOrder', $IDOrder)->value('ttn');
+        if ($existingTtn) {
+            $existingTtnArr = json_decode($existingTtn, true);
+            if (is_object($existingTtnArr)) {
+                $existingTtnArr = (array)$existingTtnArr;
+            }
+            if (is_array($existingTtnArr)) {
+                // Use array union to preserve keys from both arrays
+                $ttn = $existingTtnArr + $ttn;
+            }
+        }
+        $ttn = Collect::query()->where('IDOrder', $IDOrder)->update(['ttn' => $ttn]);
+        if ($ttn) {
+            return response()->json(['status' => 'success']);
+        }
+        return response()->json(['status' => 'error']);
+    }
+
+    public function deleteTTN(Request $request)
+    {
+        $IDOrder = (int)$request->IDOrder;
+        $nttn =  $request->nttn;
+        $existingTtn = Collect::query()->where('IDOrder', $IDOrder)->value('ttn');
+        if ($existingTtn) {
+            $existingTtnArr = json_decode($existingTtn, true);
+            if (is_object($existingTtnArr)) {
+                $existingTtnArr = (array)$existingTtnArr;
+            }
+            if (is_array($existingTtnArr)) {
+                unset($existingTtnArr[$nttn]);
+                $ttn = json_encode($existingTtnArr);
+                Collect::query()->where('IDOrder', $IDOrder)->update(['ttn' => $ttn]);
+            }
+        }
+        return response()->json(['status' => 'success']);
+    }
+
+
+    public function getRodzajTransportu(Request $request)
+    {
+        return DB::table('RodzajTransportu')->select("IDRodzajuTransportu", "Nazwa", "IDgroup")->get();
+    }
+
+    public function setRodzajTransportu(Request $request)
+    {
+        $IDgroup = (int)$request->IDgroup;
+        $group = $request->group;
+        DB::table('RodzajTransportu')->whereIn('IDRodzajuTransportu', $group)->update(['IDgroup' => $IDgroup]);
+        return DB::table('RodzajTransportu')->select("IDRodzajuTransportu", "Nazwa", "IDgroup")->get();
     }
 }

@@ -6,6 +6,7 @@
       <v-tab value="setprice">Set price</v-tab>
       <v-tab value="bltab">BaseLinker</v-tab>
       <v-tab value="locations">Locations</v-tab>
+      <v-tab value="rt">RodzajuTransportu</v-tab>
     </v-tabs>
 
     <v-card-text>
@@ -26,6 +27,9 @@
         <v-tabs-window-item value="locations">
           <Locations />
         </v-tabs-window-item>
+        <v-tabs-window-item value="rt">
+          <RodzajuTransportu />
+        </v-tabs-window-item>
       </v-tabs-window>
     </v-card-text>
   </v-card>
@@ -36,8 +40,16 @@ import MagazynPrice from "./MagazynPrice.vue";
 import SetPrice from "./setPrice.vue";
 import BL from "./BaseLinkerComponent.vue";
 import Locations from "./warehouseLocations.vue";
+import RodzajuTransportu from "./RodzajTransportu.vue";
 export default {
-  components: { MagazynEmail, MagazynPrice, SetPrice, BL, Locations },
+  components: {
+    MagazynEmail,
+    MagazynPrice,
+    SetPrice,
+    BL,
+    Locations,
+    RodzajuTransportu,
+  },
   data: () => ({
     tab: null,
   }),

@@ -30,11 +30,13 @@ class Collect extends Model
         'status',
         'created_doc',
         'IDsElementuRuchuMagazynowego',
+        'pack'
     ];
 
     // Cast attributes to specific data types
     protected $casts = [
         'Date' => 'datetime',
         'IDsElementuRuchuMagazynowego' => 'array', // JSON field
+        'pack' => 'array', // JSON field
     ];
 }
