@@ -435,7 +435,7 @@ class CollectController extends Controller
                             $listProductsOK = array_merge($listProductsOK, $orderProductsOK);
                             $invoice_id = collect($invoices['invoices'])->firstWhere('order_id',  $order['NumberBL'])['invoice_id'] ?? null;
                             $invoice_number = collect($invoices['invoices'])->firstWhere('order_id',  $order['NumberBL'])['number'] ?? null;
-                            Log::info("invoice_id", [$invoice_id]);
+                            //Log::info("invoice_id", [$invoice_id]);
 
                             $inserted = Collect::query()->insert([
                                 'IDUzytkownika' => $request->user->IDUzytkownika,
