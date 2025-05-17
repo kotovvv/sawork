@@ -21,7 +21,30 @@ class CollectController extends Controller
         //get free orders
         $allOrders = DB::table('dbo.Orders as o')
             ->leftJoin('dbo.RodzajTransportu as rt', 'rt.IDRodzajuTransportu', '=', 'o.IDTransport')
-            ->select('o.IDOrder', 'o.IDAccount', 'o.Date', 'o.Number', 'o.Remarks', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 'o.IDUser', 'o.IDTransport', 'rt.Nazwa as transport_name')
+            ->select(
+                'o.IDOrder',
+                'o.IDAccount',
+                'o.Date',
+                'o.Number',
+                'o.Remarks',
+                DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'),
+                'o.IDWarehouse',
+                'o.IDUser',
+                DB::raw("
+                    CASE
+                    WHEN rt.IDgroup IS NULL THEN rt.IDRodzajuTransportu
+                    ELSE rt.IDgroup
+                    END as IDTransport
+                "),
+                DB::raw("
+                    CASE
+                    WHEN rt.IDgroup IS NULL THEN rt.Nazwa
+                    ELSE (
+                        SELECT Nazwa FROM RodzajTransportu WHERE IDRodzajuTransportu = rt.IDgroup
+                    )
+                    END as transport_name
+                ")
+            )
             ->where('o.IDOrderType', 15)
             ->where('o.IDOrderStatus', 23)
             ->when($IDsWaiteOrders, function ($query, $IDsWaiteOrders) {
@@ -829,6 +852,7 @@ class CollectController extends Controller
         $o_orders = Collect::query()->where('IDUzytkownika', $request->user->IDUzytkownika)
             ->where('Status', 0)->get();
 
+
         $orders = DB::table('Orders as o')
             ->join('RodzajTransportu as rt', 'o.IDTransport', '=', 'rt.IDRodzajuTransportu')
             ->whereIn('o.IDOrder', $o_orders->pluck('IDOrder'))
@@ -836,13 +860,24 @@ class CollectController extends Controller
             ->select(
                 'o.IDOrder',
                 DB::raw('CAST(o._OrdersTempDecimal2 AS INT) as Nr_Baselinker'),
-                'o.IDTransport',
-                'rt.Nazwa as TransportCompanyName',
+                DB::raw("
+                    CASE
+                    WHEN rt.IDgroup IS NULL THEN rt.IDRodzajuTransportu
+                    ELSE rt.IDgroup
+                    END as IDTransport
+                "),
+                DB::raw("
+                    CASE
+                    WHEN rt.IDgroup IS NULL THEN rt.Nazwa
+                    ELSE (
+                        SELECT Nazwa FROM RodzajTransportu WHERE IDRodzajuTransportu = rt.IDgroup
+                    )
+                    END as transport_name
+                "),
                 'o.Number as OrderNumber',
-
-
+                'o._OrdersTempString1 as invoice_number'
             )
-            ->orderBy('rt.Nazwa')
+            ->orderBy('transport_name')
             ->get();
         $res['orders'] = $orders;
 
@@ -1074,7 +1109,7 @@ class CollectController extends Controller
 
     public function setRodzajTransportu(Request $request)
     {
-        $IDgroup = (int)$request->IDgroup;
+        $IDgroup = isset($request->IDgroup) ? (int)$request->IDgroup : null;
         $group = $request->group;
         DB::table('RodzajTransportu')->whereIn('IDRodzajuTransportu', $group)->update(['IDgroup' => $IDgroup]);
         return DB::table('RodzajTransportu')->select("IDRodzajuTransportu", "Nazwa", "IDgroup")->get();

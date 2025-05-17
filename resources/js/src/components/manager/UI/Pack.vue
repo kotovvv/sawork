@@ -385,12 +385,8 @@ export default {
   },
   methods: {
     print() {
-      let forTN = {};
-      forTN.weght = this.weight;
-      forTN.length = this.length;
-      forTN.width = this.width;
-      forTN.height = this.height;
       axios.post("/api/print", {
+        doc: "invoice",
         order: this.transOrders[this.indexTransOrders],
         forTN: forTN,
       });
@@ -403,6 +399,7 @@ export default {
       forTN.width = this.productsOrder[0].ttn[ttnNumber].width;
       forTN.height = this.productsOrder[0].ttn[ttnNumber].height;
       axios.post("/api/print", {
+        doc: "ttn",
         order: this.transOrders[this.indexTransOrders],
         forTN: forTN,
         ttn: ttnNumber,
@@ -795,7 +792,7 @@ export default {
             vm.transCompany = _.uniqBy(
               vm.orders.map((order) => ({
                 key: order.IDTransport,
-                title: order.TransportCompanyName,
+                title: order.transport_name,
               })),
               "title"
             );

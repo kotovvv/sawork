@@ -39,13 +39,13 @@
               max-height="80vh"
               style="max-height: 80vh; overflow: auto"
             >
+              <v-radio label="Brak grupy" :value="null" />
               <v-radio
                 v-for="group in groups"
                 :key="group.id"
                 :label="group.name"
                 :value="group.id"
               />
-              <v-radio label="Brak grupy" :value="null" />
             </v-radio-group>
           </v-card-text>
         </v-card>
