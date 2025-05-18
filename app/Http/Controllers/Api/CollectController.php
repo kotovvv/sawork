@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Collect;
 
 class CollectController extends Controller
@@ -859,6 +860,7 @@ class CollectController extends Controller
             ->where('o.IDOrderStatus', 42) // Kompletowanie
             ->select(
                 'o.IDOrder',
+                'o.IDWarehouse',
                 DB::raw('CAST(o._OrdersTempDecimal2 AS INT) as Nr_Baselinker'),
                 DB::raw("
                     CASE
@@ -884,11 +886,35 @@ class CollectController extends Controller
         return response()->json($res);
     }
 
-    public function getOrderPackProducts($IDOrder)
+    public function getOrderPackProducts(Request $request, $IDOrder)
     {
         $a_pack = [];
         $IDOrder = (int)$IDOrder;
-        $o_ttn = Collect::query()->where('IDOrder', $IDOrder)->where('ttn', '!=', null)->value('ttn');
+        $collect = Collect::query()->where('IDOrder', $IDOrder)->first();
+        $o_ttn = $collect->where('ttn', '!=', null)->value('ttn');
+
+        //for get pdf invoice
+        $userId = $request->user->IDUzytkownika;
+        $order = DB::table('Orders as o')->where('o.IDOrder', $IDOrder)
+            ->select(
+                'o.IDWarehouse as IDMagazynu',
+                DB::raw('CAST(o._OrdersTempDecimal2 AS INT) as Nr_Baselinker'),
+                'o._OrdersTempString1 as invoice_number'
+            )
+            ->first();
+
+        $IDMagazynu = $order->IDMagazynu;
+        $symbol = DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol');
+        $fileName =  str_replace(['/', '\\'], '_', $order->invoice_number);
+        $fileName = "pdf/{$symbol}/{$fileName}.pdf";
+        //$path = storage_path('app/public/' . $fileName);
+        //Download invoice pdf
+        if (!Storage::disk('public')->exists($fileName)) {
+            $token = $this->getToken($IDMagazynu);
+            //Log::info("printing invoice", [$token]);
+            \App\Jobs\DownloadInvoicePdf::dispatch($IDMagazynu, $order->invoice_number, $collect->invoice_id, $token);
+        }
+
         $decoded_ttn = [];
         if ($o_ttn) {
             // If $o_ttn is already an array, use it directly; otherwise, decode JSON

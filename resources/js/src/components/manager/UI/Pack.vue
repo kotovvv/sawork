@@ -162,6 +162,7 @@
                   >Utwórz TTN</v-btn
                 >
                 <v-btn class="btn" @click="anuluy">Anulowanie pakowania</v-btn>
+                <v-btn class="btn" @click="print">Print faktura</v-btn>
               </v-col>
               <v-spacer></v-spacer>
               <GetQrCode @result="handleResult" />
@@ -388,9 +389,7 @@ export default {
       axios.post("/api/print", {
         doc: "invoice",
         order: this.transOrders[this.indexTransOrders],
-        forTN: forTN,
       });
-      this.anuluy();
     },
     printTTN(ttnNumber) {
       let forTN = {};
@@ -545,6 +544,7 @@ export default {
             this.snackbar = true;
           } else {
             this.print();
+            this.anuluy();
             this.dialogWeight = false;
             this.snackbar = true;
             this.message = response.data.message;
@@ -720,6 +720,8 @@ export default {
           IDOrder: order.IDOrder,
           OrderNumber: order.OrderNumber,
           Nr_Baselinker: order.Nr_Baselinker,
+          invoice_number: order.invoice_number,
+          IDWarehouse: order.IDWarehouse,
         }))
         // Remove duplicates by IDOrder
         .filter(
