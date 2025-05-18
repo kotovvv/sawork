@@ -555,8 +555,6 @@ export default {
             this.message_error = response.data.message;
             this.snackbar = true;
           } else {
-            this.print();
-            this.anuluy();
             this.dialogWeight = false;
             this.snackbar = true;
             this.message = response.data.message;
@@ -609,8 +607,9 @@ export default {
       this.setOrderPackProducts(o_pack);
 
       if (allDone) {
-        this.message = "Zamówienie zrealizowane";
+        this.message = "Zamówienie zapakowany";
         this.snackbar = true;
+        this.print();
         this.$nextTick(() => {
           this.dialogWeight = true;
         });
