@@ -579,8 +579,9 @@ export default {
       });
 
       if (allDone) {
-        this.message = "Zamówienie zrealizowane";
+        this.message = "Zamówienie zapakowany";
         this.snackbar = true;
+        this.print();
         this.$nextTick(() => {
           this.dialogWeight = true;
         });
@@ -609,7 +610,7 @@ export default {
       if (allDone) {
         this.message = "Zamówienie zapakowany";
         this.snackbar = true;
-        this.print();
+
         this.$nextTick(() => {
           this.dialogWeight = true;
         });
