@@ -146,13 +146,12 @@
 
           <v-card-text>
             <v-row>
-              <v-col
-                v-if="
-                  productsOrder[0]?.products &&
-                  productsOrder[0].products.some((product) => product.qty > 0)
-                "
-              >
+              <v-col>
                 <v-btn
+                  v-if="
+                    productsOrder[0]?.products &&
+                    productsOrder[0].products.some((product) => product.qty > 0)
+                  "
                   class="btn"
                   @click="
                     dialogWeight = true;
@@ -161,8 +160,21 @@
                   "
                   >Utwórz TTN</v-btn
                 >
-                <v-btn class="btn" @click="anuluy">Anulowanie pakowania</v-btn>
-                <v-btn class="btn" @click="print">Print faktura</v-btn>
+                <v-btn
+                  class="btn"
+                  @click="anuluy"
+                  v-if="
+                    productsOrder[0]?.products &&
+                    productsOrder[0].products.some((product) => product.qty > 0)
+                  "
+                  >Anulowanie pakowania</v-btn
+                >
+                <v-btn
+                  class="btn"
+                  @click="print"
+                  v-if="productsOrder[0]?.products.length == 0"
+                  >Print faktura</v-btn
+                >
               </v-col>
               <v-spacer></v-spacer>
               <GetQrCode @result="handleResult" />
