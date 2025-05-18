@@ -581,7 +581,7 @@ export default {
       if (allDone) {
         this.message = "Zamówienie zapakowany";
         this.snackbar = true;
-        this.print();
+
         this.$nextTick(() => {
           this.dialogWeight = true;
         });
@@ -608,9 +608,9 @@ export default {
       this.setOrderPackProducts(o_pack);
 
       if (allDone) {
-        this.message = "Zamówienie zapakowany";
+        this.message = "Zamówienie zapakowany i gotowe do wysyłki";
         this.snackbar = true;
-
+        this.print();
         this.$nextTick(() => {
           this.dialogWeight = true;
         });
