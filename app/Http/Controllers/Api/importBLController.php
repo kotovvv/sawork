@@ -364,6 +364,7 @@ HAVING
             }
 
             $IDOrder = DB::table('Orders')->where('Number', $Number)->value('IDOrder');
+            $this->saveOrderDetails($orderData, $IDOrder);
             // DB::enableQueryLog();
             $this->writeProductsOrder($orderData, $IDOrder, $idMagazynu, $uwagi);
 
@@ -390,6 +391,61 @@ HAVING
         } catch (\Exception $e) {
 
             DB::rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Save order details to the database.
+     *
+     * @param array $orderData
+     * @return void
+     */
+    public function saveOrderDetails(array $orderData, $IDOrder)
+    {
+        try {
+            DB::connection('second_mysql')->table('OrderDetails')->updateOrInsert(
+                ['order_id' => $IDOrder],
+                [
+                    'currency' => $orderData['currency'] ?? null,
+                    'payment_method' => $orderData['payment_method'] ?? null,
+                    'payment_method_cod' => $orderData['payment_method_cod'] ?? null,
+                    'payment_done' => $orderData['payment_done'] ?? null,
+                    'delivery_method' => $orderData['delivery_method'] ?? null,
+                    'delivery_price' => $orderData['delivery_price'] ?? null,
+                    'delivery_package_module' => $orderData['delivery_package_module'] ?? null,
+                    'delivery_package_nr' => $orderData['delivery_package_nr'] ?? null,
+                    'delivery_fullname' => $orderData['delivery_fullname'] ?? null,
+                    'delivery_company' => $orderData['delivery_company'] ?? null,
+                    'delivery_address' => $orderData['delivery_address'] ?? null,
+                    'delivery_city' => $orderData['delivery_city'] ?? null,
+                    'delivery_state' => $orderData['delivery_state'] ?? null,
+                    'delivery_postcode' => $orderData['delivery_postcode'] ?? null,
+                    'delivery_country_code' => $orderData['delivery_country_code'] ?? null,
+                    'delivery_point_id' => $orderData['delivery_point_id'] ?? null,
+                    'delivery_point_name' => $orderData['delivery_point_name'] ?? null,
+                    'delivery_point_address' => $orderData['delivery_point_address'] ?? null,
+                    'delivery_point_postcode' => $orderData['delivery_point_postcode'] ?? null,
+                    'delivery_point_city' => $orderData['delivery_point_city'] ?? null,
+                    'invoice_fullname' => $orderData['invoice_fullname'] ?? null,
+                    'invoice_company' => $orderData['invoice_company'] ?? null,
+                    'invoice_nip' => $orderData['invoice_nip'] ?? null,
+                    'invoice_address' => $orderData['invoice_address'] ?? null,
+                    'invoice_city' => $orderData['invoice_city'] ?? null,
+                    'invoice_state' => $orderData['invoice_state'] ?? null,
+                    'invoice_postcode' => $orderData['invoice_postcode'] ?? null,
+                    'invoice_country_code' => $orderData['invoice_country_code'] ?? null,
+                    'delivery_country' => $orderData['delivery_country'] ?? null,
+                    'invoice_country' => $orderData['invoice_country'] ?? null,
+                    'updated_at' => now(),
+                    'created_at' => now(),
+                ]
+            );
+        } catch (\Exception $e) {
+            \Log::error('OrderDetails updateOrInsert failed', [
+                'order_id' => $IDOrder,
+                'error' => $e->getMessage(),
+            ]);
             throw $e;
         }
     }
