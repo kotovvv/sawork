@@ -76,17 +76,41 @@ class OrderController extends Controller
         return response($res);
     }
 
-    public function getOrderProducts($idOrder)
+    public function getOrderProducts($IDOrder)
     {
-        $listProducts = DB::table('dbo.OrderLines as ol')
-            ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
-            ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
-            ->select('ol.IDItem', DB::raw('CAST(ol.Quantity AS INT) as Quantity'),  'ol.IDOrder', DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'), 'o.IDWarehouse', 't.Nazwa', 't.KodKreskowy as EAN', 't._TowarTempString1 as SKU', 't._TowarTempDecimal1 as Waga', 't._TowarTempDecimal2 as m3')
-            ->where('t.Usluga', '!=', 1)
-            ->whereIn('ol.IDOrder', $idOrder)
-
+        $orderLines = DB::table('OrderLines as ol')
+            ->join('Towar as t', 'ol.IDItem', '=', 't.IDTowaru')
+            ->where('ol.IDOrder', $IDOrder)
+            ->select(
+                'ol.IDOrderLine',
+                DB::raw('CAST(ol.PriceGross as decimal(16,2)) as PriceGross'),
+                DB::raw('CAST(ol.Quantity AS INT) as ilosc'),
+                't.Nazwa',
+                't.KodKreskowy',
+                't.IDTowaru',
+                't.Usluga',
+                't._TowarTempString1 as sku',
+                't._TowarTempDecimal1 as Waga',
+                't._TowarTempDecimal2 as m3'
+            )
             ->get();
 
-        return $listProducts;
+        // Fetch images separately and attach to the result
+        $images = DB::table('Towar')
+            ->whereIn('IDTowaru', $orderLines->pluck('IDTowaru'))
+            ->pluck('Zdjecie', 'IDTowaru');
+
+        $orderLines = $orderLines->map(function ($item) use ($images) {
+
+            $img = $images[$item->IDTowaru] ?? null;
+            if ($img) {
+                $item->img = base64_encode($img);
+            } else {
+                $item->img = null;
+            }
+            return $item;
+        });
+
+        return  $orderLines;
     }
 }
