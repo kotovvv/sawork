@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\FileController;
 use App\Http\Controllers\Api\CollectController;
 use App\Http\Controllers\Api\UsersController;
 use App\Http\Controllers\Api\PrintController;
+use App\Http\Controllers\Api\OrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -51,7 +52,6 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::get('getClients', [MagazynController::class, 'getClients']);
     Route::get('setCenaWZkFromWZ', [MagazynController::class, 'setCenaWZkFromWZ']);
     Route::get('setCenaZLfromPZ', [MagazynController::class, 'setCenaZLfromPZ']);
-    Route::post('getOrder', [ReturnController::class, 'getOrder']);
     Route::get('getProduct/{id}', [LocationController::class, 'getProduct']);
     Route::post('doWz', [ReturnController::class, 'doWz']);
     Route::post('getDocsWZk', [ReturnController::class, 'getDocsWZk']);
@@ -68,6 +68,8 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('doRelokacja', [LocationController::class, 'doRelokacja']);
     Route::post('refreshLocations', [LocationController::class, 'refreshLocations']);
     Route::get('getProductLocations/{id}', [LocationController::class, 'getProductLocations']);
+    Route::post('getOrder', [OrderController::class, 'getOrder']);
+    Route::post('getOrderProducts', [OrderController::class, 'getOrderProducts']);
 
     Route::get('/logs/useReport', [LogController::class, 'getUseReportLog']);
     Route::get('/logs/users', [LogController::class, 'getUsersLog']);
@@ -83,7 +85,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('deleteFile', [FileController::class, 'deleteFile']);
 
     Route::get('getAllOrders', [CollectController::class, 'getAllOrders']);
-    Route::post('getOrderProducts', [CollectController::class, 'getOrderProducts']);
+    Route::post('getOrderProductsToCollect', [CollectController::class, 'getOrderProductsToCollect']);
     Route::post('collectOrders', [CollectController::class, 'collectOrders']);
     Route::post('deleteSelectedMakeOrders', [CollectController::class, 'deleteSelectedMakeOrders']);
     Route::post('prepareDoc', [CollectController::class, 'prepareDoc']);

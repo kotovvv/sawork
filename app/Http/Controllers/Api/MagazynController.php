@@ -841,46 +841,10 @@ class MagazynController extends Controller
             ->leftJoin('RuchMagazynowy as rm', 'rm.IDRuchuMagazynowego', 'do.ID1')
             ->leftJoin('RodzajTransportu as rt', 'rt.IDRodzajuTransportu', 'ord.IDTransport')
             ->where('IDWarehouse', $IDWarehouse)
-            // ->when(count($data['statuses']) > 0, function ($query) use ($data) {
-            //     $query->whereIn('ord.IDOrderStatus', $data['statuses']);
-            // })
             ->whereBetween('Date', [$dateMin, $dateMax])
             ->orderBy('Date', 'desc');
 
-        // if (count($full) > 0) {
-        //     foreach ($full as $el) {
-        //         if ($el == '_OrdersTempDecimal2') {
-        //             $query->where(function ($query) use ($el) {
-        //                 $query->whereNotNull($el);
-        //             });
-        //         } else {
-        //             $query->where(function ($query) use ($el) {
-        //                 $query->whereNotNull($el)->where($el, '!=', '');
-        //             });
-        //         }
-        //     }
-        // }
-        // if (count($empty) > 0) {
-        //     foreach ($empty as $el) {
-        //         if ($el == '_OrdersTempDecimal2') {
-        //             $query->where(
-        //                 function ($query) use ($el) {
-        //                     $query->whereNull($el);
-        //                 }
-        //             );
-        //         } else {
-        //             $query->where(
-        //                 function ($query) use ($el) {
-        //                     $query->whereNull($el)->orWhere($el, '=', '');
-        //                 }
-        //             );
-        //         }
-        //     }
-        // }
-
         $res['orders'] = $query->get();
-
-
         return $res;
     }
 

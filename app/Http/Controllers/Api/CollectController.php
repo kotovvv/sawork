@@ -106,7 +106,7 @@ class CollectController extends Controller
         return $freeOrders;
     }
 
-    public function getOrderProducts(Request $request)
+    public function getOrderProductsToCollect(Request $request)
     {
 
         $freeOrders = $this->freeOrdersFromCollect($request->IDsOrder, $request->user);

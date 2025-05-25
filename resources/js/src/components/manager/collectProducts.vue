@@ -454,7 +454,7 @@ export default {
         .map((item) => item.IDOrder);
       vm.loading = true;
       axios
-        .post("/api/getOrderProducts", {
+        .post("/api/getOrderProductsToCollect", {
           IDsOrder: IDsOrder,
           maxProducts: vm.maxProducts,
           maxWeight: vm.maxWeight,

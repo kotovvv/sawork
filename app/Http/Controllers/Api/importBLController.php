@@ -24,7 +24,6 @@ class importBLController extends Controller
 
         foreach ($this->warehouses as $a_warehouse) {
             if ($this->shouldExecute($a_warehouse)) {
-
                 $this->BL = new BaseLinkerController($a_warehouse->sklad_token);
                 $this->GetOrders($a_warehouse->warehouse_id);
                 $this->getJournalList($a_warehouse);
@@ -194,7 +193,7 @@ class importBLController extends Controller
      */
     private function shouldExecute($a_warehouse)
     {
-        if ($a_warehouse->interval_minutes == 0) {
+        if ($a_warehouse->interval_minutes < 1) {
             return false; // If the interval is not specified or is 0, do not execute
         }
 
@@ -261,15 +260,34 @@ HAVING
                 break;
             }
             if (is_array($order) && isset($order['order_id'])) {
-                $wasImported = DB::table('IntegratorTransactions')->where('transId', $order['order_id'])->exists();
+                // Check if transaction exists for this order_id and warehouse
+                $existingOrder = DB::table('IntegratorTransactions')
+                    ->where('transId', $order['order_id'])
+                    ->first();
+
+                if ($existingOrder) {
+                    // If IDWarehouse is null, update it
+                    if (is_null($existingOrder->IDWarehouse)) {
+                        DB::table('IntegratorTransactions')
+                            ->where('transId', $order['order_id'])
+                            ->update(['IDWarehouse' => $idMagazynu]);
+                    }
+                    // Now check if transaction exists for this order_id and warehouse
+                    $wasImported = DB::table('IntegratorTransactions')
+                        ->where('transId', $order['order_id'])
+                        ->where('IDWarehouse', $idMagazynu)
+                        ->exists();
+                } else {
+                    $wasImported = false;
+                }
             } else {
                 \Log::error("Invalid order data encountered.", ['order' => $order]);
                 throw new \Exception("Invalid order data. Expected an array with 'order_id'.");
             }
             if ($wasImported) {
-                continue; // Skip if the transaction already exists
+                continue;
             }
-            $i--;
+
             $this->invoices = $this->BL->getInvoices(['order_id' => $order['order_id']]);
             if (!isset($this->invoices['status']) || $this->invoices['status'] != "SUCCESS") continue;
             $this->importOrder($order, $idMagazynu);
@@ -300,7 +318,7 @@ HAVING
 
     public function importOrder(array $orderData, $idMagazynu)
     {
-
+        \Log::info('Importing order', ['order_id' => $orderData['order_id']]);
         try {
             DB::beginTransaction();
 
@@ -380,6 +398,7 @@ HAVING
             DB::commit();
             DB::table('IntegratorTransactions')->insert([
                 'transId' => $orderData['order_id'],
+                'IDWarehouse' => $idMagazynu,
                 'typ' => 3,
             ]);
             LogOrder::create([
@@ -404,7 +423,7 @@ HAVING
     public function saveOrderDetails(array $orderData, $IDOrder)
     {
         try {
-            DB::connection('second_mysql')->table('OrderDetails')->updateOrInsert(
+            DB::connection('second_mysql')->table('order_details')->updateOrInsert(
                 ['order_id' => $IDOrder],
                 [
                     'currency' => $orderData['currency'] ?? null,

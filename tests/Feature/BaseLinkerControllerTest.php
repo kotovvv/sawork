@@ -15,6 +15,7 @@ class BaseLinkerControllerTest extends TestCase
     {
         $controller = new importBLController();
         $warehouses = $controller->getAllWarehouses();
+        var_dump($warehouses); // Uncomment for debugging
         $this->assertNotEmpty($warehouses);
     }
     /*

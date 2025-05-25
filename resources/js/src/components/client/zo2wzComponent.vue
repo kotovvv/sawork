@@ -169,6 +169,12 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+    <OrderComponent
+      v-if="dialogOrder && selectedOrderId"
+      v-model:dialog="dialogOrder"
+      :orderId="selectedOrderId"
+      :orderWarehouse="IDWarehouse"
+    />
   </div>
 </template>
 
@@ -179,11 +185,13 @@ import axios from "axios";
 import moment from "moment";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import OrderComponent from "./orderComponent.vue"; // Import the order component
 
 export default {
   name: "zo2wz",
   components: {
     Datepicker,
+    OrderComponent, //: () => import("./orderComponent.vue"),
   },
   data: () => ({
     loading: false,
@@ -246,6 +254,8 @@ export default {
     workStatuses: [],
     filterStatus: [],
     showFilterDialog: false,
+    dialogOrder: false,
+    selectedOrderId: null,
   }),
 
   mounted() {
@@ -384,14 +394,19 @@ export default {
     },
     colorRowItem(item) {
       if (
-        item.item.IDTowaru != undefined &&
-        item.item.IDTowaru == this.marked[0]
+        item.item.IDOrder != undefined &&
+        item.item.IDOrder == this.marked[0]
       ) {
-        return { class: "bg-red-darken-4" };
+        return { class: "bg-grey-lighten-2" };
       }
     },
-    handleClick(event, row) {
-      this.marked = [row.item.IDTowaru];
+    async handleClick(event, row) {
+      this.marked = [row.item.IDOrder];
+      this.selectedOrderId = row.item.IDOrder;
+      // Можно добавить индикатор загрузки
+      //   this.dialogOrder = false;
+      //   await this.$nextTick(); // чтобы OrderComponent размонтировался
+      this.dialogOrder = true;
     },
     getWarehouse() {
       const vm = this;
@@ -448,15 +463,11 @@ export default {
         .catch((error) => console.log(error));
     },
     prepareXLSX() {
-      // Создание новой книги
-      //   this.listZO.forEach((el) => {
-
-      //   });
       const wb = XLSX.utils.book_new();
       const ws = XLSX.utils.json_to_sheet(this.filteredListZO);
       XLSX.utils.book_append_sheet(wb, ws, "");
 
-      // Генерация файла и его сохранение
+      // File generation and saving
       const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       saveAs(
         new Blob([wbout], { type: "application/octet-stream" }),
