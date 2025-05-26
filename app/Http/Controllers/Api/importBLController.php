@@ -257,9 +257,7 @@ HAVING
 
         foreach ($response['orders'] as $order) {
             // this order has already been imported by the integrator
-            if ($i < 0) {
-                break;
-            }
+
             if (is_array($order) && isset($order['order_id'])) {
                 $wasImported = DB::table('IntegratorTransactions')->where('transId', $order['order_id'])->exists();
             } else {
@@ -269,11 +267,13 @@ HAVING
             if ($wasImported) {
                 continue; // Skip if the transaction already exists
             }
-            $i--;
+
             $this->invoices = $this->BL->getInvoices(['order_id' => $order['order_id']]);
             if (!isset($this->invoices['status']) || $this->invoices['status'] != "SUCCESS") continue;
             $this->importOrder($order, $idMagazynu);
-            $i--;
+            if ($i-- < 0) {
+                break;
+            }
         }
     }
 
