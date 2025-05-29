@@ -70,6 +70,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::get('getProductLocations/{id}', [LocationController::class, 'getProductLocations']);
     Route::post('getOrder', [OrderController::class, 'getOrder']);
     Route::post('getOrderProducts', [OrderController::class, 'getOrderProducts']);
+    Route::get('getOrderPack/{IDOrder}', [OrderController::class, 'getOrderPack']);
 
     Route::get('/logs/useReport', [LogController::class, 'getUseReportLog']);
     Route::get('/logs/users', [LogController::class, 'getUsersLog']);
@@ -90,7 +91,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('deleteSelectedMakeOrders', [CollectController::class, 'deleteSelectedMakeOrders']);
     Route::post('prepareDoc', [CollectController::class, 'prepareDoc']);
     Route::get('getPackOrders', [CollectController::class, 'getPackOrders']);
-    Route::get('getOrderPackProducts/{IDOrder}', [CollectController::class, 'getOrderPackProducts']);
+    Route::post('getOrderPackProducts/{IDOrder}', [CollectController::class, 'getOrderPackProducts']);
     Route::post('setOrderPackProducts', [CollectController::class, 'setOrderPackProducts']);
     Route::post('writeTTN', [CollectController::class, 'writeTTN']);
     Route::post('deleteTTN', [CollectController::class, 'deleteTTN']);

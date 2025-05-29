@@ -182,115 +182,62 @@
             <h5 class="text-red" v-if="message_error">{{ message_error }}</h5>
             <h5 class="text-green" v-if="message">{{ message }}</h5>
 
-            <div
-              class="product_line border my-3"
-              v-for="(product, index) in productsOrder[0]?.products"
-              :key="product.IDTowaru"
-            >
-              <v-row>
-                <v-col>
-                  <div class="d-flex">
-                    {{ index + 1 }}.
-                    <img
-                      v-if="product.img"
-                      :src="'data:image/jpeg;base64,' + product.img"
-                      alt="pic"
-                      style="height: 3em"
-                    />
-                    <span
-                      ><h5>
-                        {{ product.Nazwa }}<br />cod: {{ product.KodKreskowy }},
-                        sku: {{ product.sku }}
-                      </h5>
-                    </span>
-                  </div>
-                </v-col>
-
-                <v-col>
-                  <div class="d-flex justify-end">
-                    <div class="btn border" @click="changeCounter(product, -1)">
-                      -
-                    </div>
-                    <div
-                      :id="product.IDTowaru"
-                      class="border qty text-h5 text-center"
-                      :class="{
-                        'bg-red-darken-4': product.qty > product.ilosc,
-                        'bg-green-lighten-4': product.qty == product.ilosc,
-                      }"
-                    >
-                      {{ product.qty }} z
-                      {{ parseInt(product.ilosc) }}
-                    </div>
-                    <div class="btn border" @click="changeCounter(product, 1)">
-                      +
-                    </div>
-                  </div>
-                </v-col>
-              </v-row>
-            </div>
-            <div v-if="productsOrder.ttn">
-              <div
-                v-for="(ttnData, ttnNumber) in productsOrder.ttn"
-                :key="ttnNumber"
-                class="mb-4 bg-grey-lighten-3"
-              >
-                <v-card
-                  class="pa-3 mb-2 bg-grey-lighten-3"
-                  outlined
-                  max-height="60vh"
-                >
-                  <div class="gap-2 d-flex flex-wrap align-center">
-                    <strong>TTN:</strong> {{ ttnNumber }},
-                    <strong>Waga:</strong> {{ ttnData.weight }},
-                    <strong>Długość:</strong> {{ ttnData.length }},
-                    <strong>Szerokość:</strong> {{ ttnData.width }},
-                    <strong>Wysokość:</strong> {{ ttnData.height }},
-                    <strong>Date:</strong>
-                    {{ ttnData.lastUpdate }}
-                    <v-btn
-                      icon="mdi-file-document-remove-outline"
-                      @click="deleteTTN(ttnNumber)"
-                    >
-                    </v-btn>
-                    <v-btn
-                      icon="mdi-printer-pos-outline"
-                      @click="printTTN(ttnNumber)"
-                    >
-                    </v-btn>
-                  </div>
-                  <v-row
-                    class="product_line border my-0"
-                    v-for="(product, index) in ttnData.products"
-                    :key="product.IDTowaru"
-                  >
-                    <v-col cols="10">
-                      <div class="d-flex">
-                        {{ index + 1 }}.
-                        <img
-                          v-if="product.img"
-                          :src="'data:image/jpeg;base64,' + product.img"
-                          alt="pic"
-                          style="height: 3em"
-                        />
-                        <span>
-                          {{ product.Nazwa }}<br />cod:
-                          {{ product.KodKreskowy }}, sku: {{ product.sku }}
-                        </span>
-                      </div>
-                    </v-col>
-
-                    <v-col cols="2">
-                      <div class="d-flex justify-start">
-                        <div :id="product.IDTowaru" class="text-center">
-                          {{ product.qty }}
-                        </div>
-                      </div>
-                    </v-col>
-                  </v-row>
-                </v-card>
-              </div>
-            </div>
+            <PackProductList
+              :products="productsOrder[0]?.products || []"
+              :ttn="productsOrder.ttn"
+              :showBtns="true"
+              @change-counter="changeCounter"
+              @delete-ttn="deleteTTN"
+              @print-ttn="printTTN"
+            />
+            <v-dialog v-model="dialogWeight" max-width="500">
+              <v-card>
+                <v-card-title> Wprowadź wagę i wymiary paczki </v-card-title>
+                <v-card-text>
+                  <v-form ref="weightForm">
+                    <v-text-field
+                      v-model="TTN"
+                      label="TTN"
+                      required
+                    ></v-text-field>
+                    <v-text-field
+                      v-model="weight"
+                      label="Waga (kg)"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                    ></v-text-field>
+                    <v-text-field
+                      v-model="length"
+                      label="Długość (cm)"
+                      type="number"
+                      min="0"
+                      required
+                    ></v-text-field>
+                    <v-text-field
+                      v-model="width"
+                      label="Szerokość (cm)"
+                      type="number"
+                      min="0"
+                      required
+                    ></v-text-field>
+                    <v-text-field
+                      v-model="height"
+                      label="Wysokość (cm)"
+                      type="number"
+                      min="0"
+                      required
+                    ></v-text-field>
+                  </v-form>
+                </v-card-text>
+                <v-card-actions>
+                  <v-spacer></v-spacer>
+                  <v-btn color="primary" @click="workTTN">Zapisz</v-btn>
+                  <v-btn text @click="dialogWeight = false">Anulowanie</v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-dialog>
           </v-card-text>
 
           <v-progress-linear
@@ -302,50 +249,6 @@
         </v-card>
       </v-container>
     </v-dialog>
-    <v-dialog v-model="dialogWeight" max-width="500">
-      <v-card>
-        <v-card-title> Wprowadź wagę i wymiary paczki </v-card-title>
-        <v-card-text>
-          <v-form ref="weightForm">
-            <v-text-field v-model="TTN" label="TTN" required></v-text-field>
-            <v-text-field
-              v-model="weight"
-              label="Waga (kg)"
-              type="number"
-              min="0"
-              step="0.01"
-              required
-            ></v-text-field>
-            <v-text-field
-              v-model="length"
-              label="Długość (cm)"
-              type="number"
-              min="0"
-              required
-            ></v-text-field>
-            <v-text-field
-              v-model="width"
-              label="Szerokość (cm)"
-              type="number"
-              min="0"
-              required
-            ></v-text-field>
-            <v-text-field
-              v-model="height"
-              label="Wysokość (cm)"
-              type="number"
-              min="0"
-              required
-            ></v-text-field>
-          </v-form>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="primary" @click="workTTN">Zapisz</v-btn>
-          <v-btn text @click="dialogWeight = false">Anulowanie</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
   </div>
 </template>
 
@@ -354,10 +257,12 @@ import axios from "axios";
 import _ from "lodash";
 
 import GetQrCode from "../../UI/GetQrCode.vue";
+import PackProductList from "./PackProductList.vue";
 export default {
   name: "PackOrders",
   components: {
     GetQrCode,
+    PackProductList,
   },
 
   data() {
@@ -583,6 +488,7 @@ export default {
         this.snackbar = true;
 
         this.$nextTick(() => {
+          this.clearValueTtn();
           this.dialogWeight = true;
         });
       } else {
@@ -612,6 +518,7 @@ export default {
         this.snackbar = true;
         this.print();
         this.$nextTick(() => {
+          this.clearValueTtn();
           this.dialogWeight = true;
         });
       }
@@ -703,7 +610,7 @@ export default {
       this.test = "";
       this.loading = true;
       axios
-        .get("/api/getOrderPackProducts/" + id)
+        .post("/api/getOrderPackProducts/" + id)
         .then((response) => {
           if (response.data.status == "error") {
             this.message_error = response.data.message;
@@ -793,6 +700,8 @@ export default {
       this.message = "";
       this.message_error = "";
       this.test = "";
+      this.orders = [];
+      this.transOrders = [];
 
       let url = "/api/getPackOrders/";
       axios

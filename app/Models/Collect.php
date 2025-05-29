@@ -26,11 +26,14 @@ class Collect extends Model
     protected $fillable = [
         'IDUzytkownika',
         'IDOrder',
+        'invoice_id',
         'Date',
         'status',
         'created_doc',
         'IDsElementuRuchuMagazynowego',
-        'pack'
+        'pack',
+        'date_pack',
+        'ttn'
     ];
 
     // Cast attributes to specific data types
@@ -38,5 +41,6 @@ class Collect extends Model
         'Date' => 'datetime',
         'IDsElementuRuchuMagazynowego' => 'array', // JSON field
         'pack' => 'array', // JSON field
+        'ttn' => 'array' // JSON field
     ];
 }

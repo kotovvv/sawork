@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Collect;
 
 class OrderController extends Controller
 {
@@ -69,6 +70,7 @@ class OrderController extends Controller
                 ->first();
             $res['products'] = $this->getOrderProducts([$data['IDOrder']]);
             $res['client'] = DB::table('Kontrahent')->where('IDKontrahenta', $res['order']->IDAccount)->first();
+            $res['statuses'] = DB::table('OrderStatus')->select('Name as title', 'IDOrderStatus as value')->get();
 
             $res['delivery'] = DB::connection('second_mysql')->table('order_details')->where('order_id', $data['IDOrder'])->first();
         }
@@ -112,5 +114,18 @@ class OrderController extends Controller
         });
 
         return  $orderLines;
+    }
+
+    public function getOrderPack($IDOrder)
+    {
+        $res = [];
+        $res['pack'] = Collect::where('IDOrder', $IDOrder)
+            ->first();
+        $Uzytkownik = DB::table('Uzytkownik')
+            ->where('IDUzytkownika', $res['pack']->IDUzytkownika)
+            ->pluck('NazwaUzytkownika');
+        $res['pack']->Uzytkownik = $Uzytkownik->first();
+
+        return $res;
     }
 }

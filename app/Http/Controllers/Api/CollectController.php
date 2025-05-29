@@ -245,6 +245,7 @@ class CollectController extends Controller
 
     public function collectOrders(Request $request)
     {
+        Carbon::setLocale('pl');
         $freeOrders = $this->freeOrdersFromCollect($request->selectedOrders, $request->user);
 
         $makeOrders = [];
@@ -371,7 +372,7 @@ class CollectController extends Controller
                 if ($order['IDWarehouse'] != $IDMagazynu) {
                     continue;
                 }
-
+                $invoices = [];
                 if (env('APP_ENV') != 'local') {
                     $parameters = [
                         'order_id' => $order['NumberBL'],
@@ -457,8 +458,21 @@ class CollectController extends Controller
                         if ($orderOK) {
                             $listOrders[] = $order;
                             $listProductsOK = array_merge($listProductsOK, $orderProductsOK);
-                            $invoice_id = collect($invoices['invoices'])->firstWhere('order_id',  $order['NumberBL'])['invoice_id'] ?? null;
-                            $invoice_number = collect($invoices['invoices'])->firstWhere('order_id',  $order['NumberBL'])['number'] ?? null;
+                            if (isset($invoices['invoices'])) {
+                                $invoice_id = collect($invoices['invoices'])->firstWhere('order_id',  $order['NumberBL'])['invoice_id'] ?? null;
+                                $invoice_number = collect($invoices['invoices'])->firstWhere('order_id',  $order['NumberBL'])['number'] ?? null;
+                            } else {
+                                $invoice_id =  null;
+                                $invoice_number = null;
+                                $messages[] = 'Error getting invoices for order: ' . $order['NumberBL'];
+                                //throw new \Exception('Error getting invoices for order: ' . $order['NumberBL']);
+                            }
+
+
+
+
+
+
                             //Log::info("invoice_id", [$invoice_id]);
 
                             $inserted = Collect::query()->insert([
@@ -888,31 +902,35 @@ class CollectController extends Controller
 
     public function getOrderPackProducts(Request $request, $IDOrder)
     {
+        Carbon::setLocale('pl');
+        $showInOrder = $request->showInOrder ?? false;
         $a_pack = [];
         $IDOrder = (int)$IDOrder;
         $collect = Collect::query()->where('IDOrder', $IDOrder)->first();
         $o_ttn = $collect->where('ttn', '!=', null)->value('ttn');
 
-        //for get pdf invoice
-        $userId = $request->user->IDUzytkownika;
-        $order = DB::table('Orders as o')->where('o.IDOrder', $IDOrder)
-            ->select(
-                'o.IDWarehouse as IDMagazynu',
-                DB::raw('CAST(o._OrdersTempDecimal2 AS INT) as Nr_Baselinker'),
-                'o._OrdersTempString1 as invoice_number'
-            )
-            ->first();
+        if (!$showInOrder) {
+            //for get pdf invoice
+            $userId = $request->user->IDUzytkownika;
+            $order = DB::table('Orders as o')->where('o.IDOrder', $IDOrder)
+                ->select(
+                    'o.IDWarehouse as IDMagazynu',
+                    DB::raw('CAST(o._OrdersTempDecimal2 AS INT) as Nr_Baselinker'),
+                    'o._OrdersTempString1 as invoice_number'
+                )
+                ->first();
 
-        $IDMagazynu = $order->IDMagazynu;
-        $symbol = DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol');
-        $fileName =  str_replace(['/', '\\'], '_', $order->invoice_number);
-        $fileName = "pdf/{$symbol}/{$fileName}.pdf";
-        //$path = storage_path('app/public/' . $fileName);
-        //Download invoice pdf
-        if (!Storage::disk('public')->exists($fileName)) {
-            $token = $this->getToken($IDMagazynu);
-            //Log::info("printing invoice", [$token]);
-            \App\Jobs\DownloadInvoicePdf::dispatch($IDMagazynu, $order->invoice_number, $collect->invoice_id, $token);
+            $IDMagazynu = $order->IDMagazynu;
+            $symbol = DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol');
+            $fileName =  str_replace(['/', '\\'], '_', $order->invoice_number);
+            $fileName = "pdf/{$symbol}/{$fileName}.pdf";
+            //$path = storage_path('app/public/' . $fileName);
+            //Download invoice pdf
+            if (!Storage::disk('public')->exists($fileName)) {
+                $token = $this->getToken($IDMagazynu);
+                //Log::info("printing invoice", [$token]);
+                \App\Jobs\DownloadInvoicePdf::dispatch($IDMagazynu, $order->invoice_number, $collect->invoice_id, $token);
+            }
         }
 
         $decoded_ttn = [];
@@ -971,7 +989,6 @@ class CollectController extends Controller
             }
             return $item;
         });
-
 
 
         if (!empty($decoded_ttn)) {
@@ -1058,12 +1075,13 @@ class CollectController extends Controller
             'lastUpdate' => Carbon::now()->format('Y-m-d H:i:s'),
             'products' => $orderLines,
         ];
-
-        // If 'date_pack' is null, set it to the current date
-        $collect = Collect::query()->where('IDOrder', $IDOrder)->first();
-        if ($collect && is_null($collect->date_pack)) {
-            $collect->date_pack = Carbon::now();
-            $collect->save();
+        if (!$showInOrder) {
+            // If 'date_pack' is null, set it to the current date
+            $collect = Collect::query()->where('IDOrder', $IDOrder)->first();
+            if ($collect && is_null($collect->date_pack)) {
+                $collect->date_pack = Carbon::now();
+                $collect->save();
+            }
         }
 
         return $a_pack;
@@ -1090,18 +1108,27 @@ class CollectController extends Controller
 
         $ttn[$nttn]['lastUpdate'] = Carbon::now()->format('Y-m-d H:i:s');
         // $ttn = json_encode($ttn);
+        // Get existing 'ttn' and 'pack' columns
+
         $existingTtn = Collect::query()->where('IDOrder', $IDOrder)->value('ttn');
         if ($existingTtn) {
-            $existingTtnArr = json_decode($existingTtn, true);
-            if (is_object($existingTtnArr)) {
-                $existingTtnArr = (array)$existingTtnArr;
+            // $existingTtnArr = json_decode($existingTtn, true);
+            if (is_object($existingTtn)) {
+                $existingTtn = (array)$existingTtn;
             }
-            if (is_array($existingTtnArr)) {
+            if (is_array($existingTtn)) {
                 // Use array union to preserve keys from both arrays
-                $ttn = $existingTtnArr + $ttn;
+                $ttn = $existingTtn + $ttn;
             }
         }
-        $ttn = Collect::query()->where('IDOrder', $IDOrder)->update(['ttn' => $ttn]);
+        // Update 'pack' column with JSON string: [{"products":[],"lastUpdate":"YYYY-DD-MM HH:ii:ss"}]
+        $packJson = json_encode([[
+            'products' => [],
+            'lastUpdate' => Carbon::now()->format('Y-m-d H:i:s')
+        ]]);
+
+        // Update 'ttn' column
+        $ttn = Collect::query()->where('IDOrder', $IDOrder)->update(['ttn' => $ttn, 'pack' => $packJson]);
         if ($ttn) {
             return response()->json(['status' => 'success']);
         }
@@ -1114,13 +1141,13 @@ class CollectController extends Controller
         $nttn =  $request->nttn;
         $existingTtn = Collect::query()->where('IDOrder', $IDOrder)->value('ttn');
         if ($existingTtn) {
-            $existingTtnArr = json_decode($existingTtn, true);
-            if (is_object($existingTtnArr)) {
-                $existingTtnArr = (array)$existingTtnArr;
+
+            if (is_object($existingTtn)) {
+                $existingTtn = (array)$existingTtn;
             }
-            if (is_array($existingTtnArr)) {
-                unset($existingTtnArr[$nttn]);
-                $ttn = json_encode($existingTtnArr);
+            if (is_array($existingTtn)) {
+                unset($existingTtn[$nttn]);
+                $ttn = json_encode($existingTtn);
                 Collect::query()->where('IDOrder', $IDOrder)->update(['ttn' => $ttn]);
             }
         }

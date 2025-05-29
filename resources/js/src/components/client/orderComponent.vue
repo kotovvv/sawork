@@ -1,6 +1,14 @@
 <template>
   <v-dialog v-model="localDialog" max-width="1600" persistent>
     <v-alert v-if="error" type="error" dense>{{ error }}</v-alert>
+    <v-btn
+      icon
+      variant="text"
+      @click="closeDialog"
+      style="position: absolute; right: 16px; top: 16px; z-index: 2"
+    >
+      <v-icon>mdi-close</v-icon>
+    </v-btn>
 
     <div class="pa-4">
       <template v-if="loading">
@@ -29,6 +37,7 @@
           <v-tabs v-model="tab" background-color="primary" dark>
             <v-tab value="order">Zamawianie</v-tab>
             <v-tab value="products">Produkty</v-tab>
+            <v-tab value="pack">Opakowanie</v-tab>
           </v-tabs>
           <v-tabs-window v-model="tab">
             <v-tabs-window-item value="order">
@@ -88,13 +97,19 @@
                 </v-col>
                 <v-col cols="12" md="5">
                   <div class="d-flex align-center mb-2">
-                    <b>Status: {{ order.IDOrderStatus || "" }}</b>
+                    <b
+                      >Status:
+                      {{
+                        statuses.find((s) => s.value == order.IDOrderStatus)
+                          .title || ""
+                      }}</b
+                    >
                     <v-select
                       class="ms-2"
                       density="compact"
                       hide-details
                       style="max-width: 180px"
-                      :items="['W realizacji', 'Przenieś']"
+                      :items="statuses"
                       v-model="status"
                       variant="outlined"
                       color="primary"
@@ -276,6 +291,11 @@
                 </v-row>
               </div>
             </v-tabs-window-item>
+            <v-tabs-window-item value="pack">
+              <div class="pa-4">
+                <InfoPack :order="order" />
+              </div>
+            </v-tabs-window-item>
           </v-tabs-window>
         </v-card-text>
         <v-card-actions>
@@ -289,10 +309,12 @@
 
 <script>
 import axios from "axios";
-
+import InfoPack from "./UI/infoPack.vue";
 export default {
   name: "FulstorOrderComponent",
-
+  components: {
+    InfoPack,
+  },
   props: {
     dialog: Boolean,
     orderId: [Number, String],
@@ -303,6 +325,8 @@ export default {
     return {
       localDialog: this.dialog,
       order: null,
+      status: null,
+      statuses: [],
       client: null,
       delivery: null,
       products: [],
@@ -359,6 +383,7 @@ export default {
         this.delivery = orderRes.data.delivery;
         this.client = orderRes.data.client;
         this.order = orderRes.data.order;
+        this.statuses = orderRes.data.statuses || [];
         this.products = orderRes.data.products || [];
         this.sumDoc = this.products.reduce((acc, product) => {
           return acc + (product.PriceGross || 0) * (product.ilosc || 0);
