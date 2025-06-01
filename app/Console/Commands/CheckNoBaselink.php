@@ -58,7 +58,7 @@ _TowarTempBool1 = 1';
             $message = str_replace('Products not found in Baselinker: ', '', $s_produsts->message);
             $a_productsCod = explode(',', $message);
             foreach ($a_productsCod as $key => $s_productsCod) {
-                $productsCod[] = $s_productsCod;
+                $productsCod[$s_produsts->IDMagazynu][] = $s_productsCod;
                 DB::table('Towar')
                     ->where('KodKreskowy', $s_productsCod)
                     ->where('IDMagazynu', $s_produsts->IDMagazynu)
