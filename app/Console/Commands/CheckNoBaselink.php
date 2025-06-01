@@ -31,7 +31,7 @@ _TowarTempBool1 = 1';
 
         DB::table('dbo.Towar')
             ->where('_TowarTempBool1', 1)
-            ->update(['_TowarTempBool1' => 0]);
+            ->update(['_TowarTempBool1' => NULL]);
 
         $oneHourAgo = Carbon::now()->subHour();
 
