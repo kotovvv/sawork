@@ -14,7 +14,7 @@
       <template v-if="loading">
         <v-skeleton-loader type="article" />
       </template>
-      <v-card v-else-if="order && delivery" class="pa-0" color="#232b32" dark>
+      <v-card v-else-if="order" class="pa-0" color="#232b32" dark>
         <v-card-title>
           <span class="text-h6"
             >Zamawianie
@@ -328,7 +328,7 @@ export default {
       status: null,
       statuses: [],
       client: null,
-      delivery: null,
+      delivery: {},
       products: [],
       loading: false,
       error: null,
@@ -388,9 +388,9 @@ export default {
         this.sumDoc = this.products.reduce((acc, product) => {
           return acc + (product.PriceGross || 0) * (product.ilosc || 0);
         }, 0);
-        if (!this.order || !this.delivery) {
-          this.localDialog = false;
-        }
+        // if (!this.order || !this.delivery) {
+        //   this.localDialog = false;
+        // }
       } catch (err) {
         console.error("Błąd podczas pobierania:", err);
         this.error = "Błąd ładowania danych: " + (err.message || err);

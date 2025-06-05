@@ -72,7 +72,44 @@ class OrderController extends Controller
             $res['client'] = DB::table('Kontrahent')->where('IDKontrahenta', $res['order']->IDAccount)->first();
             $res['statuses'] = DB::table('OrderStatus')->select('Name as title', 'IDOrderStatus as value')->get();
 
-            $res['delivery'] = DB::connection('second_mysql')->table('order_details')->where('order_id', $data['IDOrder'])->first();
+            $delivery = DB::connection('second_mysql')->table('order_details')->where('order_id', $data['IDOrder'])->first();
+            if ($delivery) {
+                $res['delivery'] = $delivery;
+            } else {
+                $res['delivery'] = (object)[
+                    'order_id' => $data['IDOrder'],
+                    'currency' => '',
+                    'payment_method' => '',
+                    'payment_method_cod' => '',
+                    'payment_done' => '',
+                    'delivery_method' => '',
+                    'delivery_price' => '',
+                    'delivery_package_module' => '',
+                    'delivery_package_nr' => '',
+                    'delivery_fullname' => '',
+                    'delivery_company' => '',
+                    'delivery_address' => '',
+                    'delivery_city' => '',
+                    'delivery_state' => '',
+                    'delivery_postcode' => '',
+                    'delivery_country_code' => '',
+                    'delivery_point_id' => '',
+                    'delivery_point_name' => '',
+                    'delivery_point_address' => '',
+                    'delivery_point_postcode' => '',
+                    'delivery_point_city' => '',
+                    'invoice_fullname' => '',
+                    'invoice_company' => '',
+                    'invoice_nip' => '',
+                    'invoice_address' => '',
+                    'invoice_city' => '',
+                    'invoice_state' => '',
+                    'invoice_postcode' => '',
+                    'invoice_country_code' => '',
+                    'delivery_country' => '',
+                    'invoice_country' => '',
+                ];
+            }
         }
 
         return response($res);
