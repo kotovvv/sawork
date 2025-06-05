@@ -122,11 +122,12 @@ export default {
       { title: "SKU", key: "sku" },
       { title: "Wartość", key: "wartosc" },
       { title: "Stan", key: "stan" },
+      { title: "Przyjęcie", key: "przyjęcie" },
       { title: "Rezerv", key: "rezerv" },
       { title: "Zniszczony", key: "Zniszczony" },
       { title: "Naprawa", key: "Naprawa" },
 
-      { title: "Pozostać", key: "pozostać" },
+      { title: "Dostępne", key: "pozostać" },
     ],
   }),
   mounted() {
@@ -178,8 +179,11 @@ export default {
             // console.log(vm.dataforxsls);
             vm.dataforxsls[0][1].forEach((el) => {
               el.stan = parseInt(el.stan);
-              el.pozostać = parseInt(el.pozostać);
-              el.rezerv = parseInt(el.rezerv);
+              el.przyjęcie =
+                parseInt(el.przyjęcie) === 0 ? "" : parseInt(el.przyjęcie);
+              el.pozostać =
+                parseInt(el.pozostać) === 0 ? "" : parseInt(el.pozostać);
+              el.rezerv = parseInt(el.rezerv) === 0 ? "" : parseInt(el.rezerv);
               el.wartosc = parseFloat(el.wartosc).toFixed(2);
               el.m3xstan = parseFloat(el.m3xstan).toFixed(2);
             });
@@ -193,39 +197,38 @@ export default {
         });
     },
     prepareXLSX() {
-      let all = [];
-      let sum = 0;
       // Создание новой книги
       const wb = XLSX.utils.book_new();
 
-      if (this.$attrs.user.IDRoli == "1") {
-        // get sum
-        this.dataforxsls.forEach((sheet) => {
-          let m3 = sheet[1].reduce((acc, o) => acc + parseFloat(o.m3xstan), 0);
-          sum += parseFloat(m3 * 2.1);
-          all.push({ day: sheet[0], m3: m3, zl: m3 * 2.1 });
+      // Указываем нужные заголовки
+      const headers = [
+        "Nazwa",
+        "KodKreskowy",
+        "sku",
+        "wartosc",
+        "stan",
+        "przyjęcie",
+        "rezerv",
+        "Zniszczony",
+        "Naprawa",
+        "pozostać",
+      ];
+      // Формируем только нужные поля для экспорта
+      const exportData = this.dataforxsls[0][1].map((item) => {
+        const obj = {};
+        headers.forEach((key) => {
+          obj[key] = item[key];
         });
-        all.push({ day: "Итого", m3: "", zl: sum });
-
-        const ws = XLSX.utils.json_to_sheet(all);
-        XLSX.utils.book_append_sheet(wb, ws, "Итого");
-      }
-
-      this.dataforxsls.forEach((sheet) => {
-        sheet[1].forEach((item) => {
-          item.stan = parseFloat(item.stan);
-          item.wartosc = parseFloat(item.wartosc);
-          item.m3xstan = parseFloat(item.m3xstan);
-        });
-        const ws = XLSX.utils.json_to_sheet(sheet[1]);
-        XLSX.utils.book_append_sheet(wb, ws, sheet[0]);
+        return obj;
       });
+      const ws = XLSX.utils.json_to_sheet(exportData, { header: headers });
+      XLSX.utils.book_append_sheet(wb, ws, "");
 
       // Генерация файла и его сохранение
       const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       saveAs(
         new Blob([wbout], { type: "application/octet-stream" }),
-        "Зберігання " +
+        "stan " +
           this.date.toLocaleString().substring(0, 10).replaceAll(".", "_") +
           ".xlsx"
       );

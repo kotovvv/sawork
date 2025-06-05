@@ -162,7 +162,7 @@
                 >
                 <v-btn
                   class="btn"
-                  @click="anuluy"
+                  @click="ConfirmAnuluy()"
                   v-if="
                     productsOrder[0]?.products &&
                     productsOrder[0].products.some((product) => product.qty > 0)
@@ -187,7 +187,7 @@
               :ttn="productsOrder.ttn"
               :showBtns="true"
               @change-counter="changeCounter"
-              @delete-ttn="deleteTTN"
+              @delete-ttn="ConfirmdeleteTTN"
               @print-ttn="printTTN"
             />
             <v-dialog v-model="dialogWeight" max-width="500">
@@ -249,6 +249,7 @@
         </v-card>
       </v-container>
     </v-dialog>
+    <ConfirmDlg ref="confirm" />
   </div>
 </template>
 
@@ -258,9 +259,11 @@ import _ from "lodash";
 
 import GetQrCode from "../../UI/GetQrCode.vue";
 import PackProductList from "./PackProductList.vue";
+import ConfirmDlg from "../../UI/ConfirmDlg.vue";
 export default {
   name: "PackOrders",
   components: {
+    ConfirmDlg,
     GetQrCode,
     PackProductList,
   },
@@ -328,7 +331,16 @@ export default {
       this.height = "";
       this.TTN = "";
     },
-
+    async ConfirmdeleteTTN(ttnNumber) {
+      if (
+        await this.$refs.confirm.open(
+          "Numer TTN zostanie usunięty!",
+          "Czy na pewno chcesz usunąć ten TTN?"
+        )
+      ) {
+        await this.deleteTTN(ttnNumber);
+      }
+    },
     deleteTTN(ttnNumber) {
       axios
         .post("/api/deleteTTN", {
@@ -538,6 +550,16 @@ export default {
         .catch((error) => {
           console.log(error);
         });
+    },
+    async ConfirmAnuluy() {
+      if (
+        await this.$refs.confirm.open(
+          "Nie resetuj liczby zapakowanych towarów do zera!",
+          "Czy na pewno chcesz anulować pakowanie?"
+        )
+      ) {
+        await this.anuluy();
+      }
     },
     anuluy() {
       this.productsOrder[0].products.forEach((product) => {

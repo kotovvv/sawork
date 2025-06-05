@@ -208,6 +208,36 @@ class MagazynController extends Controller
 
         return response('No default warehouse', 404);
     }
+    private function getProductsInPrzyjęcie($idwarehouse, $date = null)
+    {
+        if (!$date) {
+            $date = Carbon::now()->format('Y/m/d H:i:s');
+        }
+        $productsInLocation = [];
+        $loc_names = DB::table('WarehouseLocations')
+            ->where('IDMagazynu', $idwarehouse)
+            ->where('TypLocations', 3)
+            ->pluck('IDWarehouseLocation', 'LocationCode')
+            ->toArray();
+
+        foreach ($loc_names as $loc_name => $loc_id) {
+            $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
+            $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
+            $result = DB::select($query, [$loc_id, $date, $param]);
+            $resultString = $result[0]->Stock ?? null;
+            $array = [];
+
+            if ($resultString) {
+                $pairs = explode(', ', $resultString);
+                foreach ($pairs as $pair) {
+                    list($key, $value) = explode(': ', $pair);
+                    $array[$key] = (int) $value;
+                }
+                $productsInLocation[$loc_name] = $array;
+            }
+        }
+        return $productsInLocation;
+    }
 
     private function getProductsInLocation($idwarehouse, $date = null)
     {
@@ -248,7 +278,7 @@ class MagazynController extends Controller
             $date = Carbon::parse($day)->setTime(23, 59, 59)->format('m.d.Y H:i:s');
 
             $productsInLocation = $this->getProductsInLocation($idwarehouse, $date);
-
+            $productsInPrzyjęcie = $this->getProductsInPrzyjęcie($idwarehouse, $date);
             $products = $this->getWarehouseData($date, $idwarehouse);
             foreach ($products as $product) {
                 $kodKreskowy = $product->KodKreskowy;
@@ -258,10 +288,24 @@ class MagazynController extends Controller
                     if (isset($locationData[$kodKreskowy])) {
                         // Add the loc_name column to the product
                         $product->$loc_name = $locationData[$kodKreskowy];
+
                         $product->pozostać -= $locationData[$kodKreskowy];
                     } else {
                         // If KodKreskowy does not exist in the location data, set the column to null or 0
                         $product->$loc_name = null; // or 0, depending on your requirements
+                    }
+                }
+                $product->przyjęcie = 0; // Initialize przyjęcie to 0
+                foreach ($productsInPrzyjęcie as $loc_namep => $locationData) {
+                    // Check if the product's KodKreskowy exists in the location data
+                    if (isset($locationData[$kodKreskowy])) {
+                        // Add the loc_name column to the product
+                        $product->$loc_namep = $locationData[$kodKreskowy];
+                        $product->przyjęcie += $locationData[$kodKreskowy]; // Initialize dostawa to 0
+                        $product->pozostać -= $locationData[$kodKreskowy];
+                    } else {
+                        // If KodKreskowy does not exist in the location data, set the column to null or 0
+                        $product->$loc_namep = null; // or 0, depending on your requirements
                     }
                 }
             }

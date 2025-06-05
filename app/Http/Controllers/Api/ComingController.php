@@ -210,49 +210,94 @@ class ComingController extends Controller
 
     public function get_PZproducts(Request $request)
     {
+        $res = ['products' => [], 'productsDM' => []];
         $data = $request->all();
         $IDRuchuMagazynowego = $data['IDRuchuMagazynowego'];
         $IDDM = $data['IDDM'];
-        $products =  DB::table('dbo.ElementRuchuMagazynowego as erm')
-            ->select(
-                'erm.IDElementuRuchuMagazynowego',
-                'erm.IDRuchuMagazynowego',
-                'erm.IDTowaru',
-                DB::raw('CAST(erm.Ilosc as INT) as Ilosc'),
+        if ($IDRuchuMagazynowego === null) {
+            $IDRuchuMagazynowego = $IDDM;
+            $res['productsDM'] =  DB::table('dbo.ElementRuchuMagazynowego as erm')
+                ->select(
+                    'erm.IDElementuRuchuMagazynowego',
+                    'erm.IDRuchuMagazynowego',
+                    'erm.IDTowaru',
+                    DB::raw('CAST(erm.Ilosc as INT) as Ilosc'),
 
-                'erm.IDWarehouseLocation',
-                'wl.LocationCode',
-                't.Nazwa',
-                't.KodKreskowy as KodKreskowy',
-                't._TowarTempBool1 as noBaselink',
-                DB::raw('t._TowarTempString1 as sku'),
-            )
-            ->leftJoin('dbo.Towar as t', 't.IDTowaru', '=', 'erm.IDTowaru')
-            ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
-            ->where('t.Usluga', '!=', 1)
-            ->leftJoin('dbo.WarehouseLocations as wl', 'wl.IDWarehouseLocation', '=', 'erm.IDWarehouseLocation')
-            ->get();
+                    'erm.IDWarehouseLocation',
+                    'wl.LocationCode',
+                    't.Nazwa',
+                    't.KodKreskowy as KodKreskowy',
+                    't._TowarTempBool1 as noBaselink',
+                    DB::raw('t._TowarTempString1 as sku'),
+                )
+                ->leftJoin('dbo.Towar as t', 't.IDTowaru', '=', 'erm.IDTowaru')
+                ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
+                ->where('t.Usluga', '!=', 1)
+                ->leftJoin('dbo.WarehouseLocations as wl', 'wl.IDWarehouseLocation', '=', 'erm.IDWarehouseLocation')
+                ->get();
+        } else {
+            $res['productsDM'] =  DB::table('dbo.ElementRuchuMagazynowego as erm')
+                ->select(
+                    'erm.IDElementuRuchuMagazynowego',
+                    'erm.IDRuchuMagazynowego',
+                    'erm.IDTowaru',
+                    DB::raw('CAST(erm.Ilosc as INT) as Ilosc'),
 
-        $sumAllProducts = 0;
-        foreach ($products as $product) {
-            $sumAllProducts += $product->Ilosc;
-        }
+                    'erm.IDWarehouseLocation',
+                    'wl.LocationCode',
+                    't.Nazwa',
+                    't.KodKreskowy as KodKreskowy',
+                    't._TowarTempBool1 as noBaselink',
+                    DB::raw('t._TowarTempString1 as sku'),
+                )
+                ->leftJoin('dbo.Towar as t', 't.IDTowaru', '=', 'erm.IDTowaru')
+                ->where('IDRuchuMagazynowego', $IDDM)
+                ->where('t.Usluga', '!=', 1)
+                ->leftJoin('dbo.WarehouseLocations as wl', 'wl.IDWarehouseLocation', '=', 'erm.IDWarehouseLocation')
+                ->get();
+            $products =  DB::table('dbo.ElementRuchuMagazynowego as erm')
+                ->select(
+                    'erm.IDElementuRuchuMagazynowego',
+                    'erm.IDRuchuMagazynowego',
+                    'erm.IDTowaru',
+                    DB::raw('CAST(erm.Ilosc as INT) as Ilosc'),
 
-        $IDWarehouseLocation = $products[0]->IDWarehouseLocation;
-        $inLocation = $this->getProductsInLocation($IDWarehouseLocation);
+                    'erm.IDWarehouseLocation',
+                    'wl.LocationCode',
+                    't.Nazwa',
+                    't.KodKreskowy as KodKreskowy',
+                    't._TowarTempBool1 as noBaselink',
+                    DB::raw('t._TowarTempString1 as sku'),
+                )
+                ->leftJoin('dbo.Towar as t', 't.IDTowaru', '=', 'erm.IDTowaru')
+                ->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)
+                ->where('t.Usluga', '!=', 1)
+                ->leftJoin('dbo.WarehouseLocations as wl', 'wl.IDWarehouseLocation', '=', 'erm.IDWarehouseLocation')
+                ->get();
 
-        $sum = 0;
-        foreach ($products as $key => $product) {
-            if (isset($inLocation[$product->KodKreskowy])) {
-                $products[$key]->inLocation = $inLocation[$product->KodKreskowy];
-                $sum += $inLocation[$product->KodKreskowy];
-            } else {
-                $products[$key]->inLocation = 0;
+            $sumAllProducts = 0;
+            foreach ($products as $product) {
+                $sumAllProducts += $product->Ilosc;
             }
+
+            $IDWarehouseLocation = $products[0]->IDWarehouseLocation;
+            $inLocation = $this->getProductsInLocation($IDWarehouseLocation);
+
+            $sum = 0;
+            foreach ($products as $key => $product) {
+                if (isset($inLocation[$product->KodKreskowy])) {
+                    $products[$key]->inLocation = $inLocation[$product->KodKreskowy];
+                    $sum += $inLocation[$product->KodKreskowy];
+                } else {
+                    $products[$key]->inLocation = 0;
+                }
+            }
+            $ready = ($sumAllProducts - $sum) * 100 / $sumAllProducts;
+            $this->setReady($IDDM, $ready);
+            $res['products'] = $products;
         }
-        $ready = ($sumAllProducts - $sum) * 100 / $sumAllProducts;
-        $this->setReady($IDDM, $ready);
-        return $products;
+
+        return $res;
     }
 
     private function getProductsInLocation($IDWarehouseLocation)
