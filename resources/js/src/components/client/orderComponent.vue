@@ -128,7 +128,10 @@
                   <div class="mb-2">
                     <b>Data złożenia:</b> {{ order.Created || "" }}
                   </div>
-                  <div class="mb-2"><b>Data WZ:</b> ?????</div>
+                  <div class="mb-2">
+                    <b>Data WZ:</b> {{ wz.Data || "" }}
+                    {{ wz.NrDokumentu || "" }}
+                  </div>
                   <!-- <div class="mb-2">
               <b>Stany magazynowe: ???</b>
               <span class="text-success ms-2">✔ Zrealizowane (ściągnięte)</span>
@@ -334,6 +337,7 @@ export default {
       error: null,
       tab: "order",
       sumDoc: 0,
+      wz: { Data: "", NrDokumentu: "" },
     };
   },
   mounted() {
@@ -380,9 +384,10 @@ export default {
         };
         const orderRes = await axios.post("/api/getOrder", params);
 
+        this.order = orderRes.data.order;
+        this.wz = orderRes.data.wz || { Data: "", NrDokumentu: "" };
         this.delivery = orderRes.data.delivery;
         this.client = orderRes.data.client;
-        this.order = orderRes.data.order;
         this.statuses = orderRes.data.statuses || [];
         this.products = orderRes.data.products || [];
         this.sumDoc = this.products.reduce((acc, product) => {

@@ -64,6 +64,13 @@ class OrderController extends Controller
         }
 
         if (isset($data['IDOrder']) && isset($data['IDWarehouse'])) {
+            $res['wz'] = collect(
+                DB::select('SELECT [ID1] as ID FROM [dbo].[DocumentRelations] WHERE [ID2] = ' . $data['IDOrder'] . ' AND [IDType1] = 2')
+            )->first();
+            if ($res['wz']) {
+                $res['wz'] = DB::table('RuchMagazynowy')->where('IDRuchuMagazynowego',  $res['wz']->ID)->select('Data', 'NrDokumentu')->first();
+            }
+
             $res['order'] = DB::table('Orders')
                 ->where('IDOrder', $data['IDOrder'])
                 ->where('IDWarehouse', $data['IDWarehouse'])
