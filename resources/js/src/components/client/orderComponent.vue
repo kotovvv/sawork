@@ -126,10 +126,12 @@
               > -->
                   </div>
                   <div class="mb-2">
-                    <b>Data złożenia:</b> {{ order.Created || "" }}
+                    <b>Data złożenia:</b>
+                    {{ order.Created ? order.Created.substring(0, 16) : "" }}
                   </div>
                   <div class="mb-2">
-                    <b>Data WZ:</b> {{ wz.Data || "" }}
+                    <b>Data WZ:</b>
+                    {{ wz.Data ? wz.Data.substring(0, 16) : "" }}
                     {{ wz.NrDokumentu || "" }}
                   </div>
                   <!-- <div class="mb-2">
