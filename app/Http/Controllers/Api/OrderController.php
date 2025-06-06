@@ -163,10 +163,14 @@ class OrderController extends Controller
     public function getOrderPack($IDOrder)
     {
         $res = [];
-        $res['pack'] = Collect::where('IDOrder', $IDOrder)
+        $pack = Collect::where('IDOrder', $IDOrder)
             ->first();
+        if (!$pack) {
+            return response()->json(['error' => 'Pack not found'], 404);
+        }
+        $res['pack'] = $pack;
         $Uzytkownik = DB::table('Uzytkownik')
-            ->where('IDUzytkownika', $res['pack']->IDUzytkownika)
+            ->where('IDUzytkownika', $pack->IDUzytkownika)
             ->pluck('NazwaUzytkownika');
         $res['pack']->Uzytkownik = $Uzytkownik->first();
 
