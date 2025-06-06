@@ -907,7 +907,7 @@ class CollectController extends Controller
         $a_pack = [];
         $IDOrder = (int)$IDOrder;
         $collect = Collect::query()->where('IDOrder', $IDOrder)->first();
-        $o_ttn = $collect->where('ttn', '!=', null)->value('ttn');
+        $o_ttn = Collect::query()->where('IDOrder', $IDOrder)->where('ttn', '!=', null)->value('ttn');
 
         if (!$showInOrder) {
             //for get pdf invoice
