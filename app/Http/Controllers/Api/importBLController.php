@@ -258,8 +258,7 @@ HAVING
         }
         //$ordersToProcess = array_slice($response['orders'], 0, 80); // Process only the first 80 orders
         $i = 80;
-        $hm_wasimported = 0;
-        $hm_imported = 0;
+
         if (!is_array($response) || !isset($response['orders']) || !is_array($response['orders'])) {
             \Log::error("Error in GetOrders: " . $e->getMessage(), ['exception' => $e]);
             throw new \Exception("Invalid response data. Expected an array with 'orders'.");
@@ -296,7 +295,6 @@ HAVING
                 throw new \Exception("Invalid order data. Expected an array with 'order_id'.");
             }
             if ($wasImported) {
-                $hm_wasimported++;
                 // \Log::info("Order already imported", ['order_id' => $order['order_id'], 'warehouse_id' => $idMagazynu,'$i'=> $i]);
                 continue;
             }
@@ -304,17 +302,8 @@ HAVING
             $this->invoices = $this->BL->getInvoices(['order_id' => $order['order_id']]);
             if (!isset($this->invoices['status']) || $this->invoices['status'] != "SUCCESS") continue;
             $this->importOrder($order, $idMagazynu);
-            $hm_imported++;
             $i--;
-            // \Log::info("Order imported successfully", ['order_id' => $order['order_id'], 'warehouse_id' => $idMagazynu, 'remaining' => $i]);
         }
-        \Log::info("Import completed", [
-            'warehouse_id' => $idMagazynu,
-            'total_orders' => count($response['orders']),
-            'imported' => $hm_imported,
-            'was_imported' => $hm_wasimported,
-            'remaining' => $i
-        ]);
     }
 
     public function lastNumber($doc, $IDWarehouse)
