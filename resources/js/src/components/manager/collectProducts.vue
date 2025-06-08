@@ -214,7 +214,13 @@
         </p>
       </v-col>
     </v-row>
-    <v-row v-if="ordersPropucts.length && currentFunction == 'prepareDoc'">
+    <v-row
+      v-if="
+        ordersPropucts.length &&
+        currentFunction == 'prepareDoc' &&
+        loading == false
+      "
+    >
       <v-col cols="12">
         <!-- <v-btn @click="prepareXLSX()" size="x-large">pobieranie XLSX</v-btn> -->
         <v-btn @click="generatePDF()" size="x-large">Pobieranie PDF</v-btn>
@@ -441,7 +447,7 @@ export default {
     },
     getOrderProducts() {
       const vm = this;
-      vm.showBtn = true;
+
       vm.ordersPropucts = [];
       vm.selectedOrders = [];
       vm.endParamas = [];
@@ -467,6 +473,7 @@ export default {
             vm.selectedOrders = res.data.selectedOrders;
             vm.endParamas = res.data.endParamas;
             vm.loading = false;
+            vm.showBtn = true;
           }
         })
         .catch((error) => console.log(error));
