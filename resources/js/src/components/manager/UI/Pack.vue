@@ -572,7 +572,7 @@ export default {
       this.message = "";
       this.message_error = "";
       this.test = "";
-      this.productsOrder.forEach((product) => {
+      this.productsOrder[0].products.forEach((product) => {
         if (
           product.KodKreskowy == this.imputCod &&
           product.qty + 1 <= product.ilosc
