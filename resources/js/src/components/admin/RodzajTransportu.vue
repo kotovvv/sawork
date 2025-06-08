@@ -86,6 +86,8 @@ export default {
           IDgroup: this.selectedGroup,
         })
         .then(() => {
+          this.selected = []; // Reset selected after assignment
+          this.selectedGroup = null; // Reset selected group after assignment
           this.getRodzajTransportu();
         });
     },
