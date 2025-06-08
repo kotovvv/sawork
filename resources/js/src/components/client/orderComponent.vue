@@ -69,7 +69,7 @@
                       <div><b>E-mail:</b> {{ client.Email || "..." }}</div>
                       <div><b>Telefon:</b> {{ client.Telefon || "..." }}</div>
                       <div>
-                        <b>Źródło:</b> {{ client._OrdersTempString7 || "" }}
+                        <b>Źródło:</b> {{ order._OrdersTempString7 || "" }}
                       </div>
                     </v-col>
                     <v-col cols="6">
