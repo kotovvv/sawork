@@ -246,6 +246,16 @@ HAVING
         ];
 
         $response = $this->BL->getOrders($parameters);
+        if (count($response['orders']) == 100) {
+            // в $response['orders'] найти максимальное поле "date_confirmed" unix формат
+            $maxDateConfirmed = max(array_column($response['orders'], 'date_confirmed'));
+            $parameters = [
+                'date_confirmed_from' => $maxDateConfirmed + 1, // +1 to get orders after the last confirmed order
+                'status_id' => $w_realizacji_id,
+            ];
+
+            $response = $this->BL->getOrders($parameters);
+        }
         //$ordersToProcess = array_slice($response['orders'], 0, 80); // Process only the first 80 orders
         $i = 80;
         $hm_wasimported = 0;
@@ -258,7 +268,6 @@ HAVING
         foreach ($response['orders'] as $order) {
             // this order has already been imported by the integrator
             if ($i < 0) {
-                \Log::info("Limit of orders reached for warehouse ID: {$idMagazynu}. Stopping further processing. is: {$i}");
                 break;
             }
             if (is_array($order) && isset($order['order_id'])) {
@@ -331,7 +340,6 @@ HAVING
 
     public function importOrder(array $orderData, $idMagazynu)
     {
-        \Log::info('Importing order', ['order_id' => $orderData['order_id']]);
         try {
             DB::beginTransaction();
 
