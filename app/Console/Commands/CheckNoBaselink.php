@@ -35,11 +35,16 @@ _TowarTempBool1 = 1';
 
         $oneHourAgo = Carbon::now()->subHour();
 
-        $latestRecords = DB::table('lomag_baselinker_sync_app_dlq')
-            ->select('client', 'message', DB::raw('ROW_NUMBER() OVER (PARTITION BY client ORDER BY created_date DESC) AS rn'))
-            ->where('status', 'BUSINESS_ERROR')
-            ->where('message', 'like', 'Products not found in Baselinker%')
-            ->where('created_date', '>=', $oneHourAgo);
+        $latestRecords = DB::table('lomag_baselinker_sync_app_dlq as l')
+            ->selectRaw("CASE
+            WHEN l.client = 'Waudog2' THEN (SELECT IDMagazynu FROM magazyn WHERE Symbol = 'Waudog')
+            WHEN l.client = 'BLRetail' THEN (SELECT IDMagazynu FROM magazyn WHERE Symbol = 'BC RETAIL')
+            WHEN l.client = 'SPS-modern' THEN (SELECT IDMagazynu FROM magazyn WHERE Symbol = 'SPS')
+            ELSE (SELECT IDMagazynu FROM magazyn WHERE Symbol = l.client)
+        END AS IDMagazynu, l.message, ROW_NUMBER() OVER (PARTITION BY l.client ORDER BY l.created_date DESC) AS rn")
+            ->where('l.status', 'BUSINESS_ERROR')
+            ->where('l.message', 'like', 'Products not found in Baselinker%')
+            ->where('l.created_date', '>=', $oneHourAgo);
 
 
         $results = DB::table(DB::raw("({$latestRecords->toSql()}) as LatestRecords"))
@@ -53,9 +58,10 @@ _TowarTempBool1 = 1';
             $message = str_replace('Products not found in Baselinker: ', '', $s_produsts->message);
             $a_productsCod = explode(',', $message);
             foreach ($a_productsCod as $key => $s_productsCod) {
-                $productsCod[] = $s_productsCod;
+                $productsCod[$s_produsts->IDMagazynu][] = $s_productsCod;
                 DB::table('Towar')
                     ->where('KodKreskowy', $s_productsCod)
+                    ->where('IDMagazynu', $s_produsts->IDMagazynu)
                     ->update(['_TowarTempBool1' => 1]);
             }
         }
