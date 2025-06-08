@@ -427,6 +427,8 @@ HAVING
                 ['order_id' => $IDOrder],
                 [
                     'currency' => $orderData['currency'] ?? null,
+                    'order_source' => $orderData['order_source'] ?? null,
+                    'order_source_id' => $orderData['order_source_id'] ?? null,
                     'payment_method' => $orderData['payment_method'] ?? null,
                     'payment_method_cod' => $orderData['payment_method_cod'] ?? null,
                     'payment_done' => $orderData['payment_done'] ?? null,

@@ -85,6 +85,8 @@ class OrderController extends Controller
             } else {
                 $res['delivery'] = (object)[
                     'order_id' => $data['IDOrder'],
+                    'order_source' => '',
+                    'order_source_id' => '',
                     'currency' => '',
                     'payment_method' => '',
                     'payment_method_cod' => '',
