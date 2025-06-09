@@ -246,15 +246,26 @@ HAVING
         ];
 
         $response = $this->BL->getOrders($parameters);
+
         if (count($response['orders']) == 100) {
-            // в $response['orders'] найти максимальное поле "date_confirmed" unix формат
-            $maxDateConfirmed = max(array_column($response['orders'], 'date_confirmed'));
+
+            $cacheKey = "max_date_confirmed_{$idMagazynu}";
+
+            if (cache()->has($cacheKey)) {
+                $maxDateConfirmed = cache()->get($cacheKey);
+            } else {
+                $maxDateConfirmed = max(array_column($response['orders'], 'date_confirmed'));
+                cache()->put($cacheKey, $maxDateConfirmed, 900);
+            }
+
             $parameters = [
                 'date_confirmed_from' => $maxDateConfirmed + 1, // +1 to get orders after the last confirmed order
                 'status_id' => $w_realizacji_id,
             ];
 
             $response = $this->BL->getOrders($parameters);
+            $maxDateConfirmed = max(array_column($response['orders'], 'date_confirmed'));
+            cache()->put($cacheKey, $maxDateConfirmed, 900);
         }
         //$ordersToProcess = array_slice($response['orders'], 0, 80); // Process only the first 80 orders
         $i = 80;
