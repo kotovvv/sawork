@@ -933,8 +933,9 @@ class MagazynController extends Controller
         $symbol = DB::table('Magazyn')->where('IDMagazynu', $order->IDWarehouse)->value('Symbol');
         $documentNumber = $this->lastNumber('WZ', $symbol);
         $DocumentID = 0;
-
-        $o_collectIDsElements = json_decode($collect->IDsElementuRuchuMagazynowego);
+        $o_collectIDsElements = is_array($collect->IDsElementuRuchuMagazynowego)
+            ? $collect->IDsElementuRuchuMagazynowego
+            : json_decode($collect->IDsElementuRuchuMagazynowego);
 
         // get order products
         $products = DB::table('OrderLines as ol')->join('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')->where('t.Usluga', 0)->where('IDOrder', $orderId)->get();
@@ -976,7 +977,7 @@ class MagazynController extends Controller
                 $product = $products->filter(function ($product) use ($IDItem) {
                     return $product->IDItem == $IDItem;
                 })->first();
-                foreach ($IDElement->pls as  $ZL_IDElementuRuchuMagazynowego) {
+                foreach ($IDElement['pls'] as  $ZL_IDElementuRuchuMagazynowego) {
                     $Element = DB::table('ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $ZL_IDElementuRuchuMagazynowego)->first();
                     $PriceNet = $product->PriceNet;
                     $PriceGross = $product->PriceGross;
@@ -1046,7 +1047,19 @@ class MagazynController extends Controller
                     }
 
                     //Log::info('UtworzZaleznoscPZWZ: ' . $ZL_IDElementuRuchuMagazynowego . ' ' . $ElementID . ' ' . $product->Quantity);
-                    DB::statement('EXEC [dbo].[UtworzZaleznoscPZWZ] ?, ?, ?', [$ZL_IDElementuRuchuMagazynowego, $ElementID, $Element->Ilosc]);
+                    // Check if both elements have the same IDTowaru before creating the relation
+                    $relatedElement = DB::table('ElementRuchuMagazynowego')->where('IDElementuRuchuMagazynowego', $ZL_IDElementuRuchuMagazynowego)->first();
+                    if ($relatedElement && $relatedElement->IDTowaru == $IDItem) {
+                        DB::statement('EXEC [dbo].[UtworzZaleznoscPZWZ] ?, ?, ?', [$ZL_IDElementuRuchuMagazynowego, $ElementID, $Element->Ilosc]);
+                    } else {
+                        Log::warning('Skipped UtworzZaleznoscPZWZ: Items have different IDTowaru', [
+                            'ZL_IDElementuRuchuMagazynowego' => $ZL_IDElementuRuchuMagazynowego,
+                            'ElementID' => $ElementID,
+                            'ElementIlosc' => $Element->Ilosc,
+                            'related_IDTowaru' => $relatedElement->IDTowaru ?? null,
+                            'current_IDTowaru' => $IDItem
+                        ]);
+                    }
                     $forlog = DB::table('RuchMagazynowy')->where('IDRuchuMagazynowego', $DocumentID)->value('IDRuchuMagazynowego');
                     if ($forlog == null) {
                         Log::error('Error creating UtworzZaleznoscPZWZ for WZ order ID' . $orderId . ' IDRuchuMagazynowego' . $DocumentID);
