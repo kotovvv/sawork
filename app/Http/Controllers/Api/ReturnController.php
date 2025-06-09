@@ -360,10 +360,10 @@ class ReturnController extends Controller
                 't.KodKreskowy',
                 'e.Uwagi',
                 'e.IDElementuRuchuMagazynowego',
-                DB::raw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE e.Ilosc-pzwz.Ilosc END) as ilosc')
+                DB::raw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) as ilosc')
             )
             ->groupBy('t.IDTowaru', 'r.NrDokumentu', 'r.Data', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy', 'e.Uwagi', 'e.IDElementuRuchuMagazynowego')
-            ->havingRaw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE e.Ilosc-pzwz.Ilosc END) > 0');
+            ->havingRaw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) > 0');
 
         // Основной запрос для получения деталей товаров
         $details = DB::table(DB::raw("({$subQuery->toSql()}) as Q"))
