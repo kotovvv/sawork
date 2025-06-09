@@ -237,7 +237,7 @@
               </v-row>
             </v-tabs-window-item>
             <v-tabs-window-item value="products">
-              <div class="pa-4">
+              <div class="pa-4 overflow-auto" style="height: 400px">
                 <v-row class="product_line border my-0">
                   <v-col cols="6">
                     <div class="d-flex">

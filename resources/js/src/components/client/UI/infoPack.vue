@@ -1,5 +1,5 @@
 <template>
-  <div class="info-pack">
+  <div class="info-pack overflow-auto" style="max-height: 400px">
     <v-alert v-if="error" type="error" dense>{{ error }}</v-alert>
 
     <p v-if="message">{{ message }}</p>
