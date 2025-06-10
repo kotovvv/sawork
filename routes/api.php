@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\CollectController;
 use App\Http\Controllers\Api\UsersController;
 use App\Http\Controllers\Api\PrintController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\ForTTNController;
+use App\Http\Controllers\Api\BaseLinkerController;
 
 /*
 |--------------------------------------------------------------------------
@@ -114,4 +116,8 @@ Route::middleware(['jwt.verify'])->group(function () {
 
     Route::post('log_orders', [LogController::class, 'log_orders']);
     Route::post('print', [PrintController::class, 'print']);
+
+    Route::apiResource('for-ttn', ForTTNController::class);
+    Route::get('for-ttn/get-codes-from-bl/{id_warehouse}', [ForTTNController::class, 'getCodesFromBL']);
+    Route::get('for-ttn/get-accounts-from-bl/{id_warehouse}/{courier_code}', [ForTTNController::class, 'getAccountsFromBL']);
 });

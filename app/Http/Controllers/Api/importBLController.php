@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\BaseLinkerController;
 use App\Models\LogOrder; // Ensure this model exists in the App\Models namespace
+use App\Models\ForTtn; // Add this line to import the ForTtn model
 use Illuminate\Support\Facades\DB;
 
 use Carbon\Carbon;
@@ -403,7 +404,8 @@ HAVING
             }
 
             $IDOrder = DB::table('Orders')->where('Number', $Number)->value('IDOrder');
-            $this->saveOrderDetails($orderData, $IDOrder);
+            $this->saveOrderDetails($orderData, $IDOrder, $idMagazynu);
+            $this->saveOrderForTtn($orderData, $IDOrder, $idMagazynu);
             // DB::enableQueryLog();
             $this->writeProductsOrder($orderData, $IDOrder, $idMagazynu, $uwagi);
 
@@ -435,17 +437,54 @@ HAVING
         }
     }
 
+
+    public function saveOrderForTtn(array $orderData, $IDOrder, $idMagazynu)
+    {
+        try {
+            $forttn = [
+                'id_warehouse' => $idMagazynu,
+                'delivery_method' => $orderData['delivery_method'] ?? '',
+                'order_source' => $orderData['order_source'] ?? '',
+                'order_source_id' => $orderData['order_source_id'] ?? 0,
+                'order_source_name' => collect($this->orderSources['sources'][$orderData['order_source']] ?? [])->get($orderData['order_source_id']) ?? '',
+                'api_service_id' => 0,
+                'courier_code' => '',
+                'account_id' => 0,
+                'info_account' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            // Insert if not exists
+            $exists = ForTtn::where('id_warehouse', $forttn['id_warehouse'])
+                ->where('order_source', $forttn['order_source'])
+                ->where('order_source_id', $forttn['order_source_id'])
+                ->where('order_source_name', $forttn['order_source_name'])
+                ->exists();
+
+            if (!$exists) {
+                ForTtn::insert($forttn);
+            }
+        } catch (\Exception $e) {
+            \Log::error('ForTtn Insert failed', [
+                'order_id' => $IDOrder,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
     /**
      * Save order details to the database.
      *
      * @param array $orderData
      * @return void
      */
-    public function saveOrderDetails(array $orderData, $IDOrder)
+    public function saveOrderDetails(array $orderData, $IDOrder, $idMagazynu)
     {
         try {
             DB::connection('second_mysql')->table('order_details')->updateOrInsert(
-                ['order_id' => $IDOrder],
+                ['IDWarehouse' => $idMagazynu, 'order_id' => $IDOrder],
                 [
                     'currency' => $orderData['currency'] ?? null,
                     'order_source' => $orderData['order_source'] ?? null,

@@ -79,12 +79,13 @@ class OrderController extends Controller
             $res['client'] = DB::table('Kontrahent')->where('IDKontrahenta', $res['order']->IDAccount)->first();
             $res['statuses'] = DB::table('OrderStatus')->select('Name as title', 'IDOrderStatus as value')->get();
 
-            $delivery = DB::connection('second_mysql')->table('order_details')->where('order_id', $data['IDOrder'])->first();
+            $delivery = DB::connection('second_mysql')->table('order_details')->where('order_id', $data['IDOrder'])->where('IDWarehouse', $data['IDWarehouse'])->first();
             if ($delivery) {
                 $res['delivery'] = $delivery;
             } else {
                 $res['delivery'] = (object)[
                     'order_id' => $data['IDOrder'],
+                    'IDWarehouse' => $data['IDWarehouse'],
                     'order_source' => '',
                     'order_source_id' => '',
                     'currency' => '',

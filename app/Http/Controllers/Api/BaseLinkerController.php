@@ -101,7 +101,6 @@ class BaseLinkerController extends Controller
     public function getOrders($parameters)
     {
         $response = $this->sendRequest('getOrders', $parameters);
-
         return $response;
     }
 
@@ -185,6 +184,19 @@ class BaseLinkerController extends Controller
             throw new \InvalidArgumentException('The "invoice_id" parameter is required.');
         }
         $response = $this->sendRequest('getInvoiceFile', $parameters);
+        return $response;
+    }
+    public function getCouriersList($parameters)
+    {
+        $response = $this->sendRequest('getCouriersList', $parameters);
+        return $response;
+    }
+    public function getCourierAccounts($parameters)
+    {
+        if (!isset($parameters['courier_code'])) {
+            throw new \InvalidArgumentException('The "courier_code" parameter is required.');
+        }
+        $response = $this->sendRequest('getCourierAccounts', $parameters);
         return $response;
     }
 }

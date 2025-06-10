@@ -7,6 +7,7 @@
       <v-tab value="bltab">BaseLinker</v-tab>
       <v-tab value="locations">Locations</v-tab>
       <v-tab value="rt">RodzajuTransportu</v-tab>
+      <v-tab value="ttn">TTN</v-tab>
     </v-tabs>
 
     <v-card-text>
@@ -30,6 +31,9 @@
         <v-tabs-window-item value="rt">
           <RodzajuTransportu />
         </v-tabs-window-item>
+        <v-tabs-window-item value="ttn">
+          <TTN />
+        </v-tabs-window-item>
       </v-tabs-window>
     </v-card-text>
   </v-card>
@@ -41,6 +45,7 @@ import SetPrice from "./setPrice.vue";
 import BL from "./BaseLinkerComponent.vue";
 import Locations from "./warehouseLocations.vue";
 import RodzajuTransportu from "./RodzajTransportu.vue";
+import TTN from "./TTNComponent.vue"; // Assuming you have a TTN component
 export default {
   components: {
     MagazynEmail,
@@ -49,6 +54,7 @@ export default {
     BL,
     Locations,
     RodzajuTransportu,
+    TTN,
   },
   data: () => ({
     tab: null,
