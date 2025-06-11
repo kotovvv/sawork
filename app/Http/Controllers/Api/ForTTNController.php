@@ -12,7 +12,16 @@ class ForTTNController extends Controller
     // List all rows
     public function index()
     {
-        return ForTtn::get();
+        $rows = ForTtn::get();
+        $warehouseIds = $rows->pluck('id_warehouse')->unique()->toArray();
+        $symbols = DB::table('Magazyn')
+            ->whereIn('IDMagazynu', $warehouseIds)
+            ->pluck('Symbol', 'IDMagazynu');
+
+        foreach ($rows as $row) {
+            $row->symbol = $symbols[$row->id_warehouse] ?? null;
+        }
+        return $rows;
     }
 
     // Store new row

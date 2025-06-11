@@ -155,6 +155,7 @@ export default {
         { title: "ID", value: "id" },
         { title: "API Service ID", value: "api_service_id" },
         { title: "Warehouse ID", value: "id_warehouse" },
+        { title: "Warehouse", value: "symbol" },
         { title: "Delivery Method", value: "delivery_method" },
         { title: "Order Source", value: "order_source" },
         { title: "Order Source ID", value: "order_source_id" },
