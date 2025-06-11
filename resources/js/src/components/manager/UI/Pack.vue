@@ -382,64 +382,64 @@ export default {
           .catch((error) => {
             if (error.request.status == 404) {
               this.dialogWeight = false;
-              //                this.message = error.request.response;
+              // this.message = error.request.response;
               this.message_error = error.request.response;
               this.snackbar = true;
-
-              console.log(error.request.response);
             }
             console.log(error);
           });
       }
     },
     print() {
-      axios.post("/api/print", {
-        doc: "invoice",
-        order: this.transOrders[this.indexTransOrders],
-      })
-      .then((response) => {
-        // handle success if needed
-      })
-      .catch((error) => {
-        if (
-          error.response &&
-          error.response.status === 400 &&
-          error.response.data &&
-          error.response.data.message === "Printer not ready"
-        ) {
-          this.message_error = error.response.data.message;
-          this.snackbar = true;
-        } else {
-          // handle other errors
-          this.message_error = error.message || "Printing error";
-          this.snackbar = true;
-        }
-      });
+      axios
+        .post("/api/print", {
+          doc: "invoice",
+          order: this.transOrders[this.indexTransOrders],
+        })
+        .then((response) => {
+          // handle success if needed
+        })
+        .catch((error) => {
+          if (
+            error.response &&
+            error.response.status === 400 &&
+            error.response.data &&
+            error.response.data.message === "Printer not ready"
+          ) {
+            this.message_error = error.response.data.message;
+            this.snackbar = true;
+          } else {
+            // handle other errors
+            this.message_error = error.message || "Printing error";
+            this.snackbar = true;
+          }
+        });
     },
-    },
+
     printTTN(ttnNumber) {
-      axios.post("/api/print", {
-        doc: "ttn",
-        path: this.filepath,
-      })
-      .then((response) => {
-        // handle success if needed
-      })
-      .catch((error) => {
-        if (
-          error.response &&
-          error.response.status === 400 &&
-          error.response.data &&
-          error.response.data.message === "Printer not ready"
-        ) {
-          this.message_error = error.response.data.message;
-          this.snackbar = true;
-        } else {
-          // handle other errors
-          this.message_error = error.message || "Printing error";
-          this.snackbar = true;
-        }
-      });
+      axios
+        .post("/api/print", {
+          doc: "ttn",
+          path: this.filepath,
+        })
+        .then((response) => {
+          // handle success if needed
+        })
+        .catch((error) => {
+          if (
+            error.response &&
+            error.response.status === 400 &&
+            error.response.data &&
+            error.response.data.message === "Printer not ready"
+          ) {
+            this.message_error = error.response.data.message;
+            this.snackbar = true;
+          } else {
+            // handle other errors
+            this.message_error = error.message || "Printing error";
+            this.snackbar = true;
+          }
+        });
     },
     clearValueTtn() {
       this.weight = "";
@@ -465,22 +465,16 @@ export default {
           nttn: ttnNumber,
         })
         .then((response) => {
-          if (response.data.status == "error") {
-            this.message_error = response.data.message;
-            this.snackbar = true;
-          } else {
-            this.getOrderPackProducts(
-              this.transOrders[this.indexTransOrders].IDOrder
-            );
-            this.snackbar = true;
-            this.message = response.data.message;
-          }
+          this.getOrderPackProducts(
+            this.transOrders[this.indexTransOrders].IDOrder
+          );
+          this.snackbar = true;
+          this.message = response.data.message;
         })
         .catch((error) => {
           if (error.request.status == 404) {
             this.message = error.request.response;
             this.snackbar = true;
-            console.log(error.request.response);
           }
           console.log(error);
         });
