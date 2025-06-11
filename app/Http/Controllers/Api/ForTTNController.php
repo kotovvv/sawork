@@ -183,8 +183,27 @@ class ForTTNController extends Controller
             'IDOrder' => 'required|integer',
             'IDWarehouse' => 'required|integer',
             'forttn.order_id' => 'required|integer',
+            'Nr_Baselinker' => 'required|string|max:50',
             // add other rules for nested fields if needed
         ]);
+
+        $token = $this->getToken($data['IDWarehouse']);
+        if (!$token) {
+            return response()->json(['error' => 'Token not found'], 404);
+        }
+
+        $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
+
+        $parameters = [
+            'order_id' => $data['Nr_Baselinker'],
+            'get_unconfirmed_orders' => true,
+            'include_custom_extra_fields' => true,
+        ];
+        if (!$BL->inKompletowanie($parameters)) {
+            $messages[] = 'Order BL ' . $data['Nr_Baselinker'] . ' ne Kompletowanie';
+            return response()->json(['error' => 'Order not in Kompletowanie status'], 404);
+        }
+
         $forttn = $request->input('forttn', []);
 
         $orderInfo = $this->getOrderInfo($data['IDOrder'], $data['IDWarehouse']);
@@ -203,12 +222,6 @@ class ForTTNController extends Controller
             unset($field);
         }
 
-        $token = $this->getToken($data['IDWarehouse']);
-        if (!$token) {
-            return response()->json(['error' => 'Token not found'], 404);
-        }
-
-        $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
         $createdTTN = $BL->createPackage($forttn);
 
         if ($createdTTN['status'] == 'ERROR') {

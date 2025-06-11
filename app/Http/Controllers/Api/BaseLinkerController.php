@@ -146,6 +146,23 @@ class BaseLinkerController extends Controller
         return $status == 'W realizacji' ? true : false; //W realizacji
     }
 
+    public function inKompletowanie($parameters)
+    {
+        $a_orders = $this->sendRequest('getOrders', $parameters);
+        $o_status_id = $a_orders['orders'][0];
+        $order_status_id = $o_status_id['order_status_id'];
+        // \Log::info('order_status_id:', ['order_status_id' => $order_status_id]);
+        $status = '';
+        foreach ($this->statuses as $statusItem) {
+            if ($statusItem['id'] == $order_status_id) {
+                $status = $statusItem['name'];
+                break;
+            }
+        }
+        //\Log::info('getOrders status:', ['status' => $status == 'W realizacji' ? 'true' : 'false']);
+        return $status == 'Kompletowanie' ? true : false; //W realizacji
+    }
+
     public function setOrderStatus($parameters)
     {
         $response = $this->sendRequest('setOrderStatus', $parameters);

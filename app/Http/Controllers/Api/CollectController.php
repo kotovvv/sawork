@@ -1102,9 +1102,18 @@ class CollectController extends Controller
 
     public function writeTTN(Request $request)
     {
+
         $IDOrder = (int)$request->IDOrder;
         $ttn = $request->o_ttn;
         $nttn =  $request->nttn;
+        $IDWarehouse = (int)$request->IDWarehouse;
+        $token = $this->getToken($IDWarehouse);
+        if (!$token) {
+            return response()->json(['error' => 'Token not found'], 404);
+        }
+
+        $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
+
 
         $ttn[$nttn]['lastUpdate'] = Carbon::now()->format('Y-m-d H:i:s');
         // $ttn = json_encode($ttn);

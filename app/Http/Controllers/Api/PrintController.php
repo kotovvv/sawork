@@ -8,11 +8,12 @@ use Illuminate\Support\Facades\DB;
 
 class PrintController extends Controller
 {
-    private $usersPrinters = [
-        '4' => ['invoice' => 'HP-LaserJet-Pro-Stan1', 'ttn' => 'HP-LaserJet-Pro-Stan1'],
-        '3' => ['invoice' => 'HP-LaserJet-Pro-Stan1', 'ttn' => 'HP-LaserJet-Pro-Stan1'],
-    ];
 
+    private $usersPrinters = [
+        '4' => ['invoice' => 'HP-LaserJet-Pro-Stan2', 'ttn' => 'HP-LaserJet-Pro-Stan2'],
+        '3' => ['invoice' => 'HP-LaserJet-Pro-Stan1', 'ttn' => 'HP-LaserJet-Pro-Stan1'],
+        '1012' => ['invoice' => 'HP-LaserJet-Pro-Stan3', 'ttn' => 'HP-LaserJet-Pro-Stan3'],
+    ];
 
     public function print(Request $request)
     {

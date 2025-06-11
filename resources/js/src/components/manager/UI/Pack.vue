@@ -381,8 +381,11 @@ export default {
           })
           .catch((error) => {
             if (error.request.status == 404) {
-              this.message = error.request.response;
+              this.dialogWeight = false;
+              //                this.message = error.request.response;
+              this.message_error = error.request.response;
               this.snackbar = true;
+
               console.log(error.request.response);
             }
             console.log(error);
@@ -393,12 +396,49 @@ export default {
       axios.post("/api/print", {
         doc: "invoice",
         order: this.transOrders[this.indexTransOrders],
+      })
+      .then((response) => {
+        // handle success if needed
+      })
+      .catch((error) => {
+        if (
+          error.response &&
+          error.response.status === 400 &&
+          error.response.data &&
+          error.response.data.message === "Printer not ready"
+        ) {
+          this.message_error = error.response.data.message;
+          this.snackbar = true;
+        } else {
+          // handle other errors
+          this.message_error = error.message || "Printing error";
+          this.snackbar = true;
+        }
       });
+    },
     },
     printTTN(ttnNumber) {
       axios.post("/api/print", {
         doc: "ttn",
         path: this.filepath,
+      })
+      .then((response) => {
+        // handle success if needed
+      })
+      .catch((error) => {
+        if (
+          error.response &&
+          error.response.status === 400 &&
+          error.response.data &&
+          error.response.data.message === "Printer not ready"
+        ) {
+          this.message_error = error.response.data.message;
+          this.snackbar = true;
+        } else {
+          // handle other errors
+          this.message_error = error.message || "Printing error";
+          this.snackbar = true;
+        }
       });
     },
     clearValueTtn() {
@@ -437,6 +477,11 @@ export default {
           }
         })
         .catch((error) => {
+          if (error.request.status == 404) {
+            this.message = error.request.response;
+            this.snackbar = true;
+            console.log(error.request.response);
+          }
           console.log(error);
         });
     },
@@ -538,18 +583,22 @@ export default {
           IDOrder: this.transOrders[this.indexTransOrders].IDOrder,
           nttn: this.package_number,
           o_ttn: o_ttn,
+          IDWarehouse: this.transOrders[this.indexTransOrders].IDWarehouse,
+          Nr_Baselinker: this.transOrders[this.indexTransOrders].Nr_Baselinker,
         })
         .then((response) => {
-          if (response.data.status == "error") {
-            this.message_error = response.data.message;
-            this.snackbar = true;
-          } else {
-            this.dialogWeight = false;
-            this.snackbar = true;
-            this.message = response.data.message;
-          }
+          this.dialogWeight = false;
+          this.snackbar = true;
+          this.message = response.data.message;
         })
         .catch((error) => {
+          if (error.request.status == 404) {
+            this.message = error.request.response;
+            this.message_error = error.request.response;
+            this.snackbar = true;
+            this.dialogWeight = false;
+            console.log(error.request.response);
+          }
           console.log(error);
         });
     },
@@ -613,13 +662,11 @@ export default {
           IDOrder: this.transOrders[this.indexTransOrders].IDOrder,
           o_pack: o_pack,
         })
-        .then((response) => {
-          if (response.data.status == "error") {
-            this.message_error = response.data.message;
-            this.snackbar = true;
-          }
-        })
+        .then((response) => {})
         .catch((error) => {
+          this.message = error.request.response;
+          this.message_error = error.request.response;
+          this.snackbar = true;
           console.log(error);
         });
     },
@@ -706,15 +753,14 @@ export default {
       axios
         .post("/api/getOrderPackProducts/" + id)
         .then((response) => {
-          if (response.data.status == "error") {
-            this.message_error = response.data.message;
-            this.snackbar = true;
-          } else {
-            this.productsOrder = response.data;
-          }
+          this.productsOrder = response.data;
+
           this.loading = false;
         })
         .catch((error) => {
+          this.message = error.request.response;
+          this.message_error = error.request.response;
+          this.snackbar = true;
           console.log(error);
           this.loading = false;
         });
@@ -801,22 +847,20 @@ export default {
       axios
         .get(url)
         .then((response) => {
-          if (response.data.status == "error") {
-            vm.message_error = response.data.message;
-            vm.snackbar = true;
-          } else {
-            vm.orders = response.data.orders;
-            vm.transCompany = _.uniqBy(
-              vm.orders.map((order) => ({
-                key: order.IDTransport,
-                title: order.transport_name,
-              })),
-              "title"
-            );
-          }
+          vm.orders = response.data.orders;
+          vm.transCompany = _.uniqBy(
+            vm.orders.map((order) => ({
+              key: order.IDTransport,
+              title: order.transport_name,
+            })),
+            "title"
+          );
           vm.loading = false;
         })
         .catch((error) => {
+          this.message = error.request.response;
+          this.message_error = error.request.response;
+          this.snackbar = true;
           console.log(error);
           this.loading = false;
         });
