@@ -119,7 +119,7 @@ class ForTTNController extends Controller
             }
 
             $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
-            $response = $BL->getCouriersList([]);
+            $response = $BL->getCourierAccounts(['courier_code' => $courier_code]);
             if (!$response['status'] == 'SUCCESS') {
                 $messages[] = 'error getAccountsFromBL: ';
                 throw new \Exception('Error getAccountsFromBL in BL');
