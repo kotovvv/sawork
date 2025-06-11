@@ -43,7 +43,7 @@ class PrintController extends Controller
                 exec("lpr -P " . escapeshellarg($printer) . " " . escapeshellarg($path));
             } else {
                 $token = $this->getToken($IDMagazynu);
-                \App\Jobs\DownloadInvoicePdf::dispatch($IDMagazynu, $orders['invoice_number'], $orders['invoice_id'], $token)
+                \App\Jobs\DownloadInvoicePdf::dispatch($IDMagazynu, $order['invoice_number'], $order['invoice_id'], $token)
                     ->chain([
                         function () use ($printer, $path) {
                             if (file_exists($path)) {
@@ -51,6 +51,24 @@ class PrintController extends Controller
                             }
                         }
                     ]);
+            }
+        }
+        if ($request->input('doc') == 'label') {
+            $printer = $this->usersPrinters[$userId]['ttn'];
+            $printerStatus = [];
+            exec("lpstat -p " . escapeshellarg($printer), $printerStatus);
+            $isReady = false;
+            foreach ($printerStatus as $line) {
+                if (strpos($line, 'is idle') !== false || strpos($line, 'is ready') !== false) {
+                    $isReady = true;
+                    break;
+                }
+            }
+            if (!$isReady) {
+                return response()->json(['status' => 'error', 'message' => 'Printer not ready'], 400);
+            }
+            if (file_exists($request->path)) {
+                exec("lpr -P " . escapeshellarg($printer) . " " . escapeshellarg($request->path));
             }
         }
 

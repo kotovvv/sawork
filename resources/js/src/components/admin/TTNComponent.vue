@@ -96,6 +96,18 @@
               clearable
               :error-messages="accountSelectError"
             />
+            <v-btn
+              class="mt-2"
+              color="primary"
+              @click="
+                getAccountsFromBL(
+                  editedItem.courier_code,
+                  editedItem.id_warehouse
+                )
+              "
+            >
+              Refresh Accounts
+            </v-btn>
             <v-textarea
               v-model="editedItem.info_account"
               label="Info Account (JSON)"
@@ -140,19 +152,19 @@ export default {
       accountsBL: [],
       accountSelectError: "",
       headers: [
-        { text: "ID", value: "id" },
-        { text: "API Service ID", value: "api_service_id" },
-        { text: "Warehouse ID", value: "id_warehouse" },
-        { text: "Delivery Method", value: "delivery_method" },
-        { text: "Order Source", value: "order_source" },
-        { text: "Order Source ID", value: "order_source_id" },
-        { text: "Order Source Name", value: "order_source_name" },
-        { text: "Courier Code", value: "courier_code" },
-        { text: "Account ID", value: "account_id" },
-        { text: "Info Account", value: "info_account" },
-        // { text: "Created At", value: "created_at" },
-        // { text: "Updated At", value: "updated_at" },
-        { text: "Actions", value: "actions", sortable: false },
+        { title: "ID", value: "id" },
+        { title: "API Service ID", value: "api_service_id" },
+        { title: "Warehouse ID", value: "id_warehouse" },
+        { title: "Delivery Method", value: "delivery_method" },
+        { title: "Order Source", value: "order_source" },
+        { title: "Order Source ID", value: "order_source_id" },
+        { title: "Order Source Name", value: "order_source_name" },
+        { title: "Courier Code", value: "courier_code" },
+        { title: "Account ID", value: "account_id" },
+        { title: "Info Account", value: "info_account" },
+        // { title: "Created At", value: "created_at" },
+        // { title: "Updated At", value: "updated_at" },
+        { title: "Actions", value: "actions", sortable: false },
       ],
     };
   },

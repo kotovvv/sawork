@@ -199,4 +199,20 @@ class BaseLinkerController extends Controller
         $response = $this->sendRequest('getCourierAccounts', $parameters);
         return $response;
     }
+    public function createPackage($parameters)
+    {
+        if (!isset($parameters['courier_code'])) {
+            throw new \InvalidArgumentException('The "courier_code" parameter is required.');
+        }
+        $response = $this->sendRequest('createPackage', $parameters);
+        return $response;
+    }
+    public function getLabel($parameters)
+    {
+        if (!isset($parameters['courier_code']) || !isset($parameters['package_number'])) {
+            throw new \InvalidArgumentException('The "courier_code" and "package_number" parameters are required.');
+        }
+        $response = $this->sendRequest('getLabel', $parameters);
+        return $response;
+    }
 }

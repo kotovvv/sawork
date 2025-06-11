@@ -156,7 +156,7 @@
                   @click="
                     dialogWeight = true;
                     workTTN;
-                    this.clearValueTtn();
+                    clearValueTtn();
                   "
                   >Utwórz TTN</v-btn
                 >
@@ -192,14 +192,26 @@
             />
             <v-dialog v-model="dialogWeight" max-width="500">
               <v-card>
-                <v-card-title> Wprowadź wagę i wymiary paczki </v-card-title>
+                <v-card-title>
+                  Wprowadź wagę i wymiary paczki
+                  <v-spacer />
+                  <v-btn
+                    icon
+                    class="close-btn"
+                    @click="dialogWeight = false"
+                    style="position: absolute; top: 8px; right: 8px"
+                  >
+                    <v-icon>mdi-close</v-icon>
+                  </v-btn>
+                </v-card-title>
                 <v-card-text>
                   <v-form ref="weightForm">
-                    <v-text-field
-                      v-model="TTN"
-                      label="TTN"
+                    <!-- <v-text-field
+                      v-model="package_number"
+                      label="package_number"
                       required
-                    ></v-text-field>
+                      readonly
+                    ></v-text-field> -->
                     <v-text-field
                       v-model="weight"
                       label="Waga (kg)"
@@ -233,8 +245,8 @@
                 </v-card-text>
                 <v-card-actions>
                   <v-spacer></v-spacer>
-                  <v-btn color="primary" @click="workTTN">Zapisz</v-btn>
-                  <v-btn text @click="dialogWeight = false">Anulowanie</v-btn>
+                  <v-btn color="primary" @click="getTTN">get TTN</v-btn>
+                  <!-- <v-btn text @click="dialogWeight = false">Anulowanie</v-btn> -->
                 </v-card-actions>
               </v-card>
             </v-dialog>
@@ -290,7 +302,12 @@ export default {
       length: "",
       width: "",
       height: "",
-      TTN: "",
+
+      package_id: "",
+      package_number: "",
+      courier_inner_number: "",
+
+      filepath: "",
     };
   },
 
@@ -305,6 +322,73 @@ export default {
     },
   },
   methods: {
+    getTTN() {
+      if (this.$refs.weightForm.validate()) {
+        if (!this.weight || !this.length || !this.width || !this.height) {
+          this.message = "Wszystkie pola muszą być wypełnione!";
+          this.snackbar = true;
+          return;
+        }
+        let data = {
+          IDOrder: this.transOrders[this.indexTransOrders].IDOrder,
+          IDWarehouse: this.transOrders[this.indexTransOrders].IDWarehouse,
+          forttn: {
+            order_id: this.transOrders[this.indexTransOrders].Nr_Baselinker,
+            courier_code: "",
+            account_id: 0,
+            fields: [
+              {
+                id: "courier",
+                value: "detect",
+              },
+              {
+                id: "package_type",
+                value: "PACKAGE",
+              },
+              {
+                id: "insurance",
+                value: "",
+              },
+              {
+                id: "package_description",
+                value: "zo",
+              },
+              {
+                id: "reference_number",
+                value: this.transOrders[this.indexTransOrders].Nr_Baselinker,
+              },
+            ],
+            packages: [
+              {
+                length: this.length,
+                height: this.height,
+                width: this.width,
+                weight: this.weight,
+              },
+            ],
+          },
+        };
+        axios
+          .post("/api/getTTN", data)
+          .then((response) => {
+            this.package_id = response.data.package_id;
+            this.courier_inner_number =
+              response.data.courier_inner_number || "";
+            this.package_number = response.data.package_number;
+
+            this.filepath = response.data.filePath || "";
+            this.workTTN();
+          })
+          .catch((error) => {
+            if (error.request.status == 404) {
+              this.message = error.request.response;
+              this.snackbar = true;
+              console.log(error.request.response);
+            }
+            console.log(error);
+          });
+      }
+    },
     print() {
       axios.post("/api/print", {
         doc: "invoice",
@@ -312,16 +396,9 @@ export default {
       });
     },
     printTTN(ttnNumber) {
-      let forTN = {};
-      forTN.weght = this.productsOrder[0].ttn[ttnNumber].weight;
-      forTN.length = this.productsOrder[0].ttn[ttnNumber].length;
-      forTN.width = this.productsOrder[0].ttn[ttnNumber].width;
-      forTN.height = this.productsOrder[0].ttn[ttnNumber].height;
       axios.post("/api/print", {
         doc: "ttn",
-        order: this.transOrders[this.indexTransOrders],
-        forTN: forTN,
-        ttn: ttnNumber,
+        path: this.filepath,
       });
     },
     clearValueTtn() {
@@ -329,7 +406,7 @@ export default {
       this.length = "";
       this.width = "";
       this.height = "";
-      this.TTN = "";
+      this.package_number = "";
     },
     async ConfirmdeleteTTN(ttnNumber) {
       if (
@@ -365,13 +442,6 @@ export default {
     },
     workTTN() {
       if (this.$refs.weightForm.validate()) {
-        // Perform the save operation here
-        console.log("Weight and dimensions saved:", {
-          weight: this.weight,
-          length: this.length,
-          width: this.width,
-          height: this.height,
-        });
         this.writeTTN();
         //this.dialogWeight = false;
         const currentOrder = this.transOrders[this.indexTransOrders];
@@ -434,7 +504,9 @@ export default {
     },
     writeTTN() {
       let o_ttn = {
-        [this.TTN]: {
+        [this.package_number]: {
+          package_id: this.package_id,
+          courier_inner_number: this.courier_inner_number,
           weight: this.weight,
           length: this.length,
           width: this.width,
@@ -448,7 +520,7 @@ export default {
       for (let i = this.productsOrder[0].products.length - 1; i >= 0; i--) {
         const product = this.productsOrder[0].products[i];
         if (product.qty > 0) {
-          o_ttn[this.TTN].products.push({
+          o_ttn[this.package_number].products.push({
             [product.KodKreskowy]: product.qty,
           });
           // Update product.ilosc to reflect the remaining quantity after packing
@@ -464,7 +536,7 @@ export default {
       axios
         .post("/api/writeTTN", {
           IDOrder: this.transOrders[this.indexTransOrders].IDOrder,
-          nttn: this.TTN,
+          nttn: this.package_number,
           o_ttn: o_ttn,
         })
         .then((response) => {
