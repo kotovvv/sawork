@@ -91,55 +91,55 @@ class ForTTNController extends Controller
     // Get codes from BaseLinker
     public function getCodesFromBL($id_warehouse)
     {
-        $cacheKey = 'codeBL';
-        $codeBL = cache()->get($cacheKey);
+        // $cacheKey = 'codeBL';
+        // $codeBL = cache()->get($cacheKey);
 
-        if (!$codeBL) {
-            $token = $this->getToken($id_warehouse);
-            if (!$token) {
-                return response()->json(['error' => 'Token not found'], 404);
-            }
-
-            $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
-            $response = $BL->getCouriersList([]);
-            if (!$response['status'] == 'SUCCESS') {
-                $messages[] = 'error getCodesFromBL: ';
-                throw new \Exception('Error getCodesFromBL in BL');
-            }
-            if (!isset($response['couriers']) || empty($response['couriers'])) {
-                return response()->json(['error' => 'No couriers found'], 404);
-            }
-
-            $codeBL = $response['couriers'];
-            cache()->put($cacheKey, $codeBL, now()->addDay());
+        // if (!$codeBL) {
+        $token = $this->getToken($id_warehouse);
+        if (!$token) {
+            return response()->json(['error' => 'Token not found'], 404);
         }
+
+        $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
+        $response = $BL->getCouriersList([]);
+        if (!$response['status'] == 'SUCCESS') {
+            $messages[] = 'error getCodesFromBL: ';
+            throw new \Exception('Error getCodesFromBL in BL');
+        }
+        if (!isset($response['couriers']) || empty($response['couriers'])) {
+            return response()->json(['error' => 'No couriers found'], 404);
+        }
+
+        $codeBL = $response['couriers'];
+        //     cache()->put($cacheKey, $codeBL, now()->addDay());
+        // }
 
         return $codeBL;
     }
     public function getAccountsFromBL($id_warehouse, $courier_code)
     {
-        $cacheKey = 'accountBL' . $courier_code;
-        $accountBL = cache()->get($cacheKey);
+        // $cacheKey = 'accountBL' . $courier_code;
+        // $accountBL = cache()->get($cacheKey);
 
-        if (!$accountBL) {
-            $token = $this->getToken($id_warehouse);
-            if (!$token) {
-                return response()->json(['error' => 'Token not found'], 404);
-            }
-
-            $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
-            $response = $BL->getCourierAccounts(['courier_code' => $courier_code]);
-            if (!$response['status'] == 'SUCCESS') {
-                $messages[] = 'error getAccountsFromBL: ';
-                throw new \Exception('Error getAccountsFromBL in BL');
-            }
-            if (!isset($response['accounts']) || empty($response['accounts'])) {
-                return response()->json(['error' => 'No accounts found'], 404);
-            }
-
-            $accountBL = $response['accounts'];
-            cache()->put($cacheKey, $accountBL, now()->addDay());
+        // if (!$accountBL) {
+        $token = $this->getToken($id_warehouse);
+        if (!$token) {
+            return response()->json(['error' => 'Token not found'], 404);
         }
+
+        $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
+        $response = $BL->getCourierAccounts(['courier_code' => $courier_code]);
+        if (!$response['status'] == 'SUCCESS') {
+            $messages[] = 'error getAccountsFromBL: ';
+            throw new \Exception('Error getAccountsFromBL in BL');
+        }
+        if (!isset($response['accounts']) || empty($response['accounts'])) {
+            return response()->json(['error' => 'No accounts found'], 404);
+        }
+
+        $accountBL = $response['accounts'];
+        //     cache()->put($cacheKey, $accountBL, now()->addDay());
+        // }
 
         return $accountBL;
     }
