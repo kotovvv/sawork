@@ -67,7 +67,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::get('sendPDF', [SendPDF::class, 'index']);
     Route::post('TowarLocationTipTab', [LocationController::class, 'TowarLocationTipTab']);
     Route::get('getWarehouseLocations/{id}', [LocationController::class, 'getWarehouseLocations']);
-    Route::post('doRelokacja', [LocationController::class, 'doRelokacja']);
+    Route::post('doRelokacja', [LocationController::class, 'doRelokacjaTowaru']);
     Route::post('refreshLocations', [LocationController::class, 'refreshLocations']);
     Route::get('getProductLocations/{id}', [LocationController::class, 'getProductLocations']);
     Route::post('getOrder', [OrderController::class, 'getOrder']);

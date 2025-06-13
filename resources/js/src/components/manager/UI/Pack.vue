@@ -298,6 +298,7 @@ export default {
       selectTransCompany: null,
       productsOrder: [],
       showTransCompanyList: false,
+      // Fields for TTN
       weight: "",
       length: "",
       width: "",

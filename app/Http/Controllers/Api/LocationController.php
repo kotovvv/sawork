@@ -221,6 +221,20 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
         );
     }
 
+    public function doRelokacjaTowaru(Request $request)
+    {
+        $response = [];
+        try {
+            DB::beginTransaction();
+            $response = $this->doRelokacja($request);
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            // Верните ошибку пользователю
+        }
+        return  $response;
+    }
+
     public function doRelokacja(Request $request)
     {
         $resnonse = [];
@@ -245,93 +259,85 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
 
         $symbol = DB::table('Magazyn')->where('IDMagazynu', $idWarehause)->value('Symbol');
         // 1. chech if doc cteated
-        DB::beginTransaction();
-        try {
-            if ($createdDoc == null) {
 
-                $NrDokumentu = $this->lastNumber('ZL', $symbol);
+        if ($createdDoc == null) {
 
-                $creat_zl = [];
+            $NrDokumentu = $this->lastNumber('ZL', $symbol);
 
-                $creat_zl['IDRodzajuRuchuMagazynowego'] = 27;
-                $creat_zl['Data'] = Date('m-d-Y H:i:s');
-                $creat_zl['IDMagazynu'] = $idWarehause;
-                $creat_zl['NrDokumentu'] = $NrDokumentu;
-                $creat_zl['Uwagi'] = $Uwagi;
-                $creat_zl['Operator'] = 1;
-                $creat_zl['IDCompany'] = 1;
-                $creat_zl['IDUzytkownika'] = $IDUzytkownika;
+            $creat_zl = [];
 
-                // create doc
-                DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
-                $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
+            $creat_zl['IDRodzajuRuchuMagazynowego'] = 27;
+            $creat_zl['Data'] = Date('m-d-Y H:i:s');
+            $creat_zl['IDMagazynu'] = $idWarehause;
+            $creat_zl['NrDokumentu'] = $NrDokumentu;
+            $creat_zl['Uwagi'] = $Uwagi;
+            $creat_zl['Operator'] = 1;
+            $creat_zl['IDCompany'] = 1;
+            $creat_zl['IDUzytkownika'] = $IDUzytkownika;
 
-                DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
-                $resnonse['createdDoc']['idpls'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
+            // create doc
+            DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
+            $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
 
-                DB::table('PrzesunieciaMM')->insert(['IDRuchuMagazynowegoZ' => $resnonse['createdDoc']['idmin'], 'IDRuchuMagazynowegoDo' => $resnonse['createdDoc']['idpls']]);
-            } else {
-                $resnonse['createdDoc'] = $createdDoc;
-            }
+            DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
+            $resnonse['createdDoc']['idpls'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
 
-            //2. ElementRuchuMagazynowego
-            if (isset($fromLocation['LocationCode'])) {
-                $pz = $this->getPZ($IDTowaru, $fromLocation['LocationCode']);
-            } else {
-                $pz = $this->getPZ($IDTowaru);
-            }
-            $el = [];
-            $el['IDTowaru'] = $IDTowaru;
-            $qtyToMove = $qty;
+            DB::table('PrzesunieciaMM')->insert(['IDRuchuMagazynowegoZ' => $resnonse['createdDoc']['idmin'], 'IDRuchuMagazynowegoDo' => $resnonse['createdDoc']['idpls']]);
+        } else {
+            $resnonse['createdDoc'] = $createdDoc;
+        }
 
-            if (empty($pz)) {
-                $this->errorLocation($request->user, 'Document ' . $createdDoc . ' No towar ID:' . $IDTowaru . ' qty=' . $qty . ' found from location: ' . $fromLocation['LocationCode'] . ' to location: ' . $toLocation['LocationCode'], $request->ip());
-                throw new \Exception('Uwaga! Uwaga! Uwaga! Nie znaleziono identyfikatora towaru ID:' . $IDTowaru . '  z lokalizacji: ' . $fromLocation['LocationCode'] . ' do lokalizacji:' . $toLocation['LocationCode'] . ' qty' . $qty);
-            }
-            foreach ($pz as $key => $value) {
-                $debt = $qtyToMove > $pz[$key]->qty ?  $pz[$key]->qty : $qtyToMove;
-                $el['Ilosc'] = -$debt;
-                $el['Uwagi'] =  $Uwagi;
-                $el['IDRodzic'] = null;
-                $el['IDWarehouseLocation'] = null;
-                $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idmin'];
-                $el['CenaJednostkowa'] = $pz[$key]->Cena;
+        //2. ElementRuchuMagazynowego
+        if (isset($fromLocation['LocationCode'])) {
+            $pz = $this->getPZ($IDTowaru, $fromLocation['LocationCode']);
+        } else {
+            $pz = $this->getPZ($IDTowaru);
+        }
+        $el = [];
+        $el['IDTowaru'] = $IDTowaru;
+        $qtyToMove = $qty;
 
-                // Ensure the IDRuchuMagazynowego exists in the RuchMagazynowy table
-                $exists = DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $el['IDRuchuMagazynowego'])->exists();
+        if (empty($pz)) {
+            $this->errorLocation($request->user, 'Document ' . $createdDoc . ' No towar ID:' . $IDTowaru . ' qty=' . $qty . ' found from location: ' . $fromLocation['LocationCode'] . ' to location: ' . $toLocation['LocationCode'], $request->ip());
+            throw new \Exception('Uwaga! Uwaga! Uwaga! Nie znaleziono identyfikatora towaru ID:' . $IDTowaru . '  z lokalizacji: ' . $fromLocation['LocationCode'] . ' do lokalizacji:' . $toLocation['LocationCode'] . ' qty' . $qty);
+        }
+        foreach ($pz as $key => $value) {
+            $debt = $qtyToMove > $pz[$key]->qty ?  $pz[$key]->qty : $qtyToMove;
+            $el['Ilosc'] = -$debt;
+            $el['Uwagi'] =  $Uwagi;
+            $el['IDRodzic'] = null;
+            $el['IDWarehouseLocation'] = null;
+            $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idmin'];
+            $el['CenaJednostkowa'] = $pz[$key]->Cena;
 
-                if ($exists) {
-                    DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
-                } else {
-                    Log::error('Failed to insert into ElementRuchuMagazynowego: IDRuchuMagazynowego does not exist', ['IDRuchuMagazynowego' => $el['IDRuchuMagazynowego']]);
-                    throw new \Exception('IDRuchuMagazynowego nie istnieje w tabeli RuchMagazynowy.');
-                }
-                $ndocidmin = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
-                $el['Ilosc'] = $debt;
-                $el['Uwagi'] =  $Uwagi;
-                $el['IDRodzic'] = $ndocidmin;
-                $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idpls'];
-                $el['IDWarehouseLocation'] = $toLocation['IDWarehouseLocation'];
+            // Ensure the IDRuchuMagazynowego exists in the RuchMagazynowy table
+            $exists = DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $el['IDRuchuMagazynowego'])->exists();
+
+            if ($exists) {
                 DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
-                $ndocidpls = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
-
-                $resnonse['IDsElementuRuchuMagazynowego']['min'][] = $ndocidmin;
-                $resnonse['IDsElementuRuchuMagazynowego']['pls'][] = $ndocidpls;
-                DB::statement('EXEC dbo.UtworzZaleznoscPZWZ @IDElementuPZ = ?, @IDElementuWZ = ?, @Ilosc = ?', [
-                    $pz[$key]->ID,
-                    $ndocidmin,
-                    $debt
-                ]);
-
-                $qtyToMove -=  $debt;
-                if ($qtyToMove <= 0) break;
+            } else {
+                Log::error('Failed to insert into ElementRuchuMagazynowego: IDRuchuMagazynowego does not exist', ['IDRuchuMagazynowego' => $el['IDRuchuMagazynowego']]);
+                throw new \Exception('IDRuchuMagazynowego nie istnieje w tabeli RuchMagazynowy.');
             }
+            $ndocidmin = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
+            $el['Ilosc'] = $debt;
+            $el['Uwagi'] =  $Uwagi;
+            $el['IDRodzic'] = $ndocidmin;
+            $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idpls'];
+            $el['IDWarehouseLocation'] = $toLocation['IDWarehouseLocation'];
+            DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
+            $ndocidpls = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
 
-            DB::commit();
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Zmiana lokalizacji nie powiodła się: ' . $e->getMessage(), ['exception' => $e]);
-            throw $e;
+            $resnonse['IDsElementuRuchuMagazynowego']['min'][] = $ndocidmin;
+            $resnonse['IDsElementuRuchuMagazynowego']['pls'][] = $ndocidpls;
+            DB::statement('EXEC dbo.UtworzZaleznoscPZWZ @IDElementuPZ = ?, @IDElementuWZ = ?, @Ilosc = ?', [
+                $pz[$key]->ID,
+                $ndocidmin,
+                $debt
+            ]);
+
+            $qtyToMove -=  $debt;
+            if ($qtyToMove <= 0) break;
         }
 
         return $resnonse;
