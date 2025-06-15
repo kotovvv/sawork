@@ -5,19 +5,55 @@ namespace Tests\Feature;
 
 use Tests\TestCase;
 use App\Http\Controllers\Api\importBLController;
+use App\Http\Controllers\Api\BaseLinkerController;
 use Illuminate\Support\Facades\DB;
+use App\Models\CourierForms;
 use Carbon\Carbon;
 
 class BaseLinkerControllerTest extends TestCase
 {
+    private $token = '5006735-5023428-IRU08C6YBD28XVJ33KY0NKOFMHFG3Y4M0QDL0K1T836KM8NLZKKKTS50KUNU2YV4';
 
-    public function testGetAllWarehouses()
+    public function test_getFields()
     {
-        $controller = new importBLController();
-        $warehouses = $controller->getAllWarehouses();
-        var_dump($warehouses); // Uncomment for debugging
-        $this->assertNotEmpty($warehouses);
+
+        $BL = new BaseLinkerController('eyJpdiI6Imd3ODA3cm9JTmhVemVIbUVHdlJxQnc9PSIsInZhbHVlIjoib1FCZTYxbEVRSmsvTVd2eXRDNlB3cU9QVUdQOTVKbXh0eTNGKzhwejdXUnd5YmJpTWtscTN3eDYzTDdnUE9XS1lPUCtEWDR6WjJnK0ludFJvTGh1elNNWktHcndyVzc1a3RZMnEwTmhFRGR0QndwUERSNno5SWN0blpJSmtZdEYiLCJtYWMiOiIzZmFmMjZhODk1Y2UwMWNkMDQ3ZThjOWI1MDZlZjljNThjNzVmOTJjYmZlYjYwNGU2ZDgxZGZjODA5N2FhYmVhIiwidGFnIjoiIn0=');
+        $couriers_code = DB::connection('second_mysql')->table('for_ttn')
+            ->where('courier_code', '!=', '')
+            ->pluck('courier_code')
+            ->unique()
+            ->values()
+            ->toArray();
+        foreach ($couriers_code as $courier_code) {
+
+            $fields = $BL->getCourierFields([
+                'courier_code' => $courier_code
+
+            ]);
+            if (isset($fields['status']) && $fields['status'] === 'SUCCESS') {
+                $fields = $fields;
+            } else {
+                $fields = [];
+            }
+            if (!empty($fields)) {
+                $jsonFields = json_encode($fields, JSON_UNESCAPED_UNICODE);
+                CourierForms::updateOrCreate(
+                    ['courier_code' => $courier_code],
+                    ['form' => $jsonFields]
+                );
+            }
+        }
+
+        $this->assertNotEmpty($fields);
     }
+
+    // public function testGetAllWarehouses()
+    // {
+    //     $controller = new importBLController();
+    //     $warehouses = $controller->getAllWarehouses();
+    //     var_dump($warehouses); // Uncomment for debugging
+    //     $this->assertNotEmpty($warehouses);
+    // }
     /*
     private $token = '5006735-5023428-IRU08C6YBD28XVJ33KY0NKOFMHFG3Y4M0QDL0K1T836KM8NLZKKKTS50KUNU2YV4';
     private $statuses = [];

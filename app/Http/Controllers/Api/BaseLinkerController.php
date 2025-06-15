@@ -232,4 +232,12 @@ class BaseLinkerController extends Controller
         $response = $this->sendRequest('getLabel', $parameters);
         return $response;
     }
+    public function getCourierFields($parameters)
+    {
+        if (!isset($parameters['courier_code'])) {
+            throw new \InvalidArgumentException('The "courier_code" are required.');
+        }
+        $response = $this->sendRequest('getCourierFields', $parameters);
+        return $response;
+    }
 }

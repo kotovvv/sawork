@@ -120,5 +120,6 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::apiResource('for-ttn', ForTTNController::class);
     Route::get('for-ttn/get-codes-from-bl/{id_warehouse}', [ForTTNController::class, 'getCodesFromBL']);
     Route::get('for-ttn/get-accounts-from-bl/{id_warehouse}/{courier_code}', [ForTTNController::class, 'getAccountsFromBL']);
+    Route::get('getForm/{id}', [ForTTNController::class, 'getForm']);
     Route::post('getTTN', [ForTTNController::class, 'getTTN']);
 });

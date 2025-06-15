@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ForTtn;
+use App\Models\CourierForms;
+
 use Illuminate\Support\Facades\DB;
 
 class ForTTNController extends Controller
@@ -116,6 +118,28 @@ class ForTTNController extends Controller
 
         return $codeBL;
     }
+
+    private function getCourierFields($courier_code, $BL)
+    {
+
+        $fields = $BL->getCourierFields([
+            'courier_code' => $courier_code
+
+        ]);
+        if (isset($fields['status']) && $fields['status'] === 'SUCCESS') {
+            $fields = $fields['fields'];
+        } else {
+            $fields = [];
+        }
+        if (!empty($fields)) {
+            $jsonFields = json_encode($fields, JSON_UNESCAPED_UNICODE);
+            CourierForms::updateOrCreate(
+                ['courier_code' => $courier_code],
+                ['form' => $jsonFields]
+            );
+        }
+    }
+
     public function getAccountsFromBL($id_warehouse, $courier_code)
     {
         // $cacheKey = 'accountBL' . $courier_code;
@@ -140,7 +164,7 @@ class ForTTNController extends Controller
         $accountBL = $response['accounts'];
         //     cache()->put($cacheKey, $accountBL, now()->addDay());
         // }
-
+        $this->getCourierFields($courier_code, $BL);
         return $accountBL;
     }
 
@@ -185,7 +209,27 @@ class ForTTNController extends Controller
         $res['KwotaBrutto'] = $order->KwotaBrutto;
         return $res;
     }
+    public function getForm($id)
+    {
+        $res = [];
 
+        $values = DB::connection('second_mysql')->table('order_details as od')
+            ->join('for_ttn as ft', function ($join) {
+                $join->on('ft.id_warehouse', '=', 'od.IDWarehouse')
+                    ->on('ft.order_source_id', '=', 'od.order_source_id')
+                    ->on('ft.order_source', '=', 'od.order_source');
+            })
+            ->join('courier_forms as cf', 'cf.courier_code', '=', 'ft.courier_code')
+            ->where('od.order_id', $id)
+            ->select('cf.form', 'cf.default_values')->first();
+        //->value(DB::raw('JSON_OBJECT("form", cf.form, "default_values", cf.default_values)'));
+        if (!$values) {
+            return response()->json(['error' => 'Form not found'], 404);
+        }
+        $res['fields'] = json_decode($values->form, true);
+        $res['default_values'] = json_decode($values->default_values, true);
+        return $res;
+    }
     public function getTTN(Request $request)
     {
         $data = $request->validate([
@@ -230,55 +274,65 @@ class ForTTNController extends Controller
             }
             unset($field);
         }
+        if (env('APP_ENV') == 'production') {
+            $createdTTN = $BL->createPackage($forttn);
 
-        $createdTTN = $BL->createPackage($forttn);
+            if ($createdTTN['status'] == 'ERROR') {
+                return response()->json(['error_message' => $createdTTN['error_code'] . ' ' . $createdTTN['error_message']], 404);
+            }
+            $label = $BL->getLabel([
+                'courier_code' => $orderInfo['courier_code'],
+                'package_id' => $createdTTN['package_id'],
+                'package_number' => $createdTTN['package_number']
+            ]);
+            if ($label['status'] == 'ERROR') {
+                return response()->json(['error_message' => $label['error_code'] . ' ' . $label['error_message']], 404);
+            }
 
-        if ($createdTTN['status'] == 'ERROR') {
-            return response()->json(['error_message' => $createdTTN['error_code'] . ' ' . $createdTTN['error_message']], 404);
+            // Save label to storage
+            $symbol = DB::table('Magazyn')->where('IDMagazynu', $data['IDWarehouse'])->value('Symbol');
+            $fileName = "pdf/{$symbol}/{$createdTTN['package_number']}.{$label['extension']}";
+            $filePath = storage_path('app/public/' . $fileName);
+            if (!file_exists(dirname($filePath))) {
+                mkdir(dirname($filePath), 0755, true);
+            }
+            file_put_contents($filePath, base64_decode($label['label']));
+
+            $req = new Request(
+                [
+                    'user' => $request->user,
+                    'doc' => 'label',
+                    'path' => $filePath,
+                    //'IDWarehouse' => $data['IDWarehouse'],
+                    // 'order' => [
+                    //     'IDOrder' => $data['IDOrder'],
+                    //     'invoice_number' => $createdTTN['package_number'],
+                    //     'invoice_id' => $createdTTN['package_id'],
+                    // ],
+                ]
+            );
+
+            $print = new \App\Http\Controllers\Api\PrintController($req);
+
+
+            // Return three values: package_id, package_number, courier_inner_number
+            return response()->json([
+                'package_id' => $createdTTN['package_id'],
+                'package_number' => $createdTTN['package_number'],
+                'courier_inner_number' => $createdTTN['courier_inner_number'],
+                'filePath' => $filePath,
+                //'extension' => $label['extension'] ?? null,
+                //'label' => $label['label'] ?? null,
+            ]);
+        } else {
+            return response()->json([
+                'package_id' => 123123123456,
+                'package_number' => 123123456,
+                'courier_inner_number' => 123123456,
+                'filePath' => '',
+                //'extension' => $label['extension'] ?? null,
+                //'label' => $label['label'] ?? null,
+            ]);
         }
-        $label = $BL->getLabel([
-            'courier_code' => $orderInfo['courier_code'],
-            'package_id' => $createdTTN['package_id'],
-            'package_number' => $createdTTN['package_number']
-        ]);
-        if ($label['status'] == 'ERROR') {
-            return response()->json(['error_message' => $label['error_code'] . ' ' . $label['error_message']], 404);
-        }
-
-        // Save label to storage
-        $symbol = DB::table('Magazyn')->where('IDMagazynu', $data['IDWarehouse'])->value('Symbol');
-        $fileName = "pdf/{$symbol}/{$createdTTN['package_number']}.{$label['extension']}";
-        $filePath = storage_path('app/public/' . $fileName);
-        if (!file_exists(dirname($filePath))) {
-            mkdir(dirname($filePath), 0755, true);
-        }
-        file_put_contents($filePath, base64_decode($label['label']));
-
-        $req = new Request(
-            [
-                'user' => $request->user,
-                'doc' => 'label',
-                'path' => $filePath,
-                //'IDWarehouse' => $data['IDWarehouse'],
-                // 'order' => [
-                //     'IDOrder' => $data['IDOrder'],
-                //     'invoice_number' => $createdTTN['package_number'],
-                //     'invoice_id' => $createdTTN['package_id'],
-                // ],
-            ]
-        );
-
-        $print = new \App\Http\Controllers\Api\PrintController($req);
-
-
-        // Return three values: package_id, package_number, courier_inner_number
-        return response()->json([
-            'package_id' => $createdTTN['package_id'],
-            'package_number' => $createdTTN['package_number'],
-            'courier_inner_number' => $createdTTN['courier_inner_number'],
-            'filePath' => $filePath,
-            //'extension' => $label['extension'] ?? null,
-            //'label' => $label['label'] ?? null,
-        ]);
     }
 }

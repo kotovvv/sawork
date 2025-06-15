@@ -190,7 +190,7 @@
               @delete-ttn="ConfirmdeleteTTN"
               @print-ttn="printTTN"
             />
-            <v-dialog v-model="dialogWeight" max-width="500">
+            <v-dialog v-model="dialogWeight" max-width="1200">
               <v-card>
                 <v-card-title>
                   Wprowadź wagę i wymiary paczki
@@ -204,48 +204,17 @@
                     <v-icon>mdi-close</v-icon>
                   </v-btn>
                 </v-card-title>
-                <v-card-text>
-                  <v-form ref="weightForm">
-                    <!-- <v-text-field
-                      v-model="package_number"
-                      label="package_number"
-                      required
-                      readonly
-                    ></v-text-field> -->
-                    <v-text-field
-                      v-model="weight"
-                      label="Waga (kg)"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      required
-                    ></v-text-field>
-                    <v-text-field
-                      v-model="length"
-                      label="Długość (cm)"
-                      type="number"
-                      min="0"
-                      required
-                    ></v-text-field>
-                    <v-text-field
-                      v-model="width"
-                      label="Szerokość (cm)"
-                      type="number"
-                      min="0"
-                      required
-                    ></v-text-field>
-                    <v-text-field
-                      v-model="height"
-                      label="Wysokość (cm)"
-                      type="number"
-                      min="0"
-                      required
-                    ></v-text-field>
-                  </v-form>
+                <v-card-text class="overflow-y-auto">
+                  <DynamicForm
+                    :fields="fields"
+                    :packageFields="packageFields"
+                    v-model="formValues"
+                    @save="onSave"
+                  />
                 </v-card-text>
                 <v-card-actions>
                   <v-spacer></v-spacer>
-                  <v-btn color="primary" @click="getTTN">get TTN</v-btn>
+                  <!-- <v-btn color="primary" @click="getTTN">get TTN</v-btn> -->
                   <!-- <v-btn text @click="dialogWeight = false">Anulowanie</v-btn> -->
                 </v-card-actions>
               </v-card>
@@ -272,12 +241,14 @@ import _ from "lodash";
 import GetQrCode from "../../UI/GetQrCode.vue";
 import PackProductList from "./PackProductList.vue";
 import ConfirmDlg from "../../UI/ConfirmDlg.vue";
+import DynamicForm from "../../UI/DynamicForm.vue";
 export default {
   name: "PackOrders",
   components: {
     ConfirmDlg,
     GetQrCode,
     PackProductList,
+    DynamicForm,
   },
 
   data() {
@@ -299,10 +270,9 @@ export default {
       productsOrder: [],
       showTransCompanyList: false,
       // Fields for TTN
-      weight: "",
-      length: "",
-      width: "",
-      height: "",
+      fields: [],
+      packageFields: [],
+      formValues: {},
 
       package_id: "",
       package_number: "",
@@ -324,72 +294,64 @@ export default {
   },
   methods: {
     getTTN() {
-      if (this.$refs.weightForm.validate()) {
-        if (!this.weight || !this.length || !this.width || !this.height) {
-          this.message = "Wszystkie pola muszą być wypełnione!";
-          this.snackbar = true;
-          return;
-        }
-        let data = {
-          IDOrder: this.transOrders[this.indexTransOrders].IDOrder,
-          IDWarehouse: this.transOrders[this.indexTransOrders].IDWarehouse,
-          forttn: {
-            order_id: this.transOrders[this.indexTransOrders].Nr_Baselinker,
-            courier_code: "",
-            account_id: 0,
-            fields: [
-              {
-                id: "courier",
-                value: "detect",
-              },
-              {
-                id: "package_type",
-                value: "PACKAGE",
-              },
-              {
-                id: "insurance",
-                value: "",
-              },
-              {
-                id: "package_description",
-                value: "zo",
-              },
-              {
-                id: "reference_number",
-                value: this.transOrders[this.indexTransOrders].Nr_Baselinker,
-              },
-            ],
-            packages: [
-              {
-                length: this.length,
-                height: this.height,
-                width: this.width,
-                weight: this.weight,
-              },
-            ],
-          },
-        };
-        axios
-          .post("/api/getTTN", data)
-          .then((response) => {
-            this.package_id = response.data.package_id;
-            this.courier_inner_number =
-              response.data.courier_inner_number || "";
-            this.package_number = response.data.package_number;
+      //   if (this.$refs.weightForm.validate()) {
+      //     if (!this.weight || !this.length || !this.width || !this.height) {
+      //       this.message = "Wszystkie pola muszą być wypełnione!";
+      //       this.snackbar = true;
+      //       return;
+      //     }
 
-            this.filepath = response.data.filePath || "";
-            this.workTTN();
-          })
-          .catch((error) => {
-            if (error.request.status == 404) {
-              this.dialogWeight = false;
-              // this.message = error.request.response;
-              this.message_error = error.request.response;
-              this.snackbar = true;
-            }
-            console.log(error);
-          });
+      let data = {
+        IDOrder: this.transOrders[this.indexTransOrders].IDOrder,
+        IDWarehouse: this.transOrders[this.indexTransOrders].IDWarehouse,
+        Nr_Baselinker: this.transOrders[this.indexTransOrders].Nr_Baselinker,
+        forttn: {
+          order_id: this.transOrders[this.indexTransOrders].Nr_Baselinker,
+          courier_code: "",
+          account_id: 0,
+        },
+      };
+      data.forttn["fields"] = Object.entries(this.formValues.fields).map(
+        ([key, value]) => {
+          return { id: key, value: value };
+        }
+      );
+      if (this.formValues.packageFields) {
+        let new_packegeValue = {};
+        Object.entries(this.formValues.packageFields).forEach(([k, v]) => {
+          if (k === "size_width") {
+            new_packegeValue["width"] = v;
+          } else if (k === "size_length") {
+            new_packegeValue["length"] = v;
+          } else if (k === "size_height") {
+            new_packegeValue["height"] = v;
+          } else {
+            new_packegeValue[k] = v;
+          }
+        });
+
+        data.forttn["packages"] = [new_packegeValue];
       }
+      axios
+        .post("/api/getTTN", data)
+        .then((response) => {
+          this.package_id = response.data.package_id;
+          this.courier_inner_number = response.data.courier_inner_number || "";
+          this.package_number = response.data.package_number;
+
+          this.filepath = response.data.filePath || "";
+          this.workTTN();
+        })
+        .catch((error) => {
+          if (error.request.status == 404) {
+            this.dialogWeight = false;
+            // this.message = error.request.response;
+            this.message_error = error.request.response;
+            this.snackbar = true;
+          }
+          console.log(error);
+        });
+      //}
     },
     print() {
       axios
@@ -481,31 +443,45 @@ export default {
         });
     },
     workTTN() {
-      if (this.$refs.weightForm.validate()) {
-        this.writeTTN();
-        //this.dialogWeight = false;
-        const currentOrder = this.transOrders[this.indexTransOrders];
-        if (currentOrder) {
-          // If there are still orders for this transport company
-          if (this.transOrders.length > 0) {
-            // Stay on the same index (or move to previous if at end)
-            if (this.indexTransOrders >= this.transOrders.length) {
-              this.indexTransOrders = 0;
+      //if (this.$refs.weightForm.validate()) {
+      this.writeTTN();
+      //this.dialogWeight = false;
+      const currentOrder = this.transOrders[this.indexTransOrders];
+      if (currentOrder) {
+        // If there are still orders for this transport company
+        if (this.transOrders.length > 0) {
+          // Stay on the same index (or move to previous if at end)
+          if (this.indexTransOrders >= this.transOrders.length) {
+            this.indexTransOrders = 0;
+          }
+          this.getOrderPackProducts(
+            this.transOrders[this.indexTransOrders].IDOrder
+          );
+        } else {
+          // No more orders for this company, move to next company
+          const currentCompanyIndex = this.transCompany.findIndex(
+            (c) => c.key === this.selectTransCompany
+          );
+          let foundNext = false;
+          for (
+            let i = currentCompanyIndex + 1;
+            i < this.transCompany.length;
+            i++
+          ) {
+            const nextCompany = this.transCompany[i];
+            const companyOrders = this.orders.filter(
+              (order) => order.IDTransport === nextCompany.key
+            );
+            if (companyOrders.length > 0) {
+              this.selectTransCompany = nextCompany.key;
+              this.getTransOrders();
+              foundNext = true;
+              break;
             }
-            this.getOrderPackProducts(
-              this.transOrders[this.indexTransOrders].IDOrder
-            );
-          } else {
-            // No more orders for this company, move to next company
-            const currentCompanyIndex = this.transCompany.findIndex(
-              (c) => c.key === this.selectTransCompany
-            );
-            let foundNext = false;
-            for (
-              let i = currentCompanyIndex + 1;
-              i < this.transCompany.length;
-              i++
-            ) {
+          }
+          if (!foundNext) {
+            // Try from the beginning if not found after current
+            for (let i = 0; i < currentCompanyIndex; i++) {
               const nextCompany = this.transCompany[i];
               const companyOrders = this.orders.filter(
                 (order) => order.IDTransport === nextCompany.key
@@ -517,40 +493,24 @@ export default {
                 break;
               }
             }
-            if (!foundNext) {
-              // Try from the beginning if not found after current
-              for (let i = 0; i < currentCompanyIndex; i++) {
-                const nextCompany = this.transCompany[i];
-                const companyOrders = this.orders.filter(
-                  (order) => order.IDTransport === nextCompany.key
-                );
-                if (companyOrders.length > 0) {
-                  this.selectTransCompany = nextCompany.key;
-                  this.getTransOrders();
-                  foundNext = true;
-                  break;
-                }
-              }
-            }
-            if (!foundNext) {
-              // No more companies with orders
-              this.dialogPack = false;
-              this.snackbar = true;
-              this.message = "Wszystkie zamówienia zostały zrealizowane!";
-            }
+          }
+          if (!foundNext) {
+            // No more companies with orders
+            this.dialogPack = false;
+            this.snackbar = true;
+            this.message = "Wszystkie zamówienia zostały zrealizowane!";
           }
         }
       }
+      //}
     },
     writeTTN() {
       let o_ttn = {
         [this.package_number]: {
           package_id: this.package_id,
           courier_inner_number: this.courier_inner_number,
-          weight: this.weight,
-          length: this.length,
-          width: this.width,
-          height: this.height,
+          fields: this.formValues.fields || {},
+          packages: this.formValues.packageFields || {},
           products: [],
           lastUpdate: "",
         },
@@ -632,7 +592,9 @@ export default {
       this.productsOrder[0]?.products.forEach((product) => {
         //when qty > 0 add to o_pack.products ('KodKreskowy', 'qty')
         if (product.qty > 0) {
-          o_pack["0"].products.push({ [product.KodKreskowy]: product.qty });
+          o_pack["0"].products.push({
+            [product.KodKreskowy]: product.qty,
+          });
         }
         if (product.qty < product.ilosc) {
           allDone = false;
@@ -722,6 +684,7 @@ export default {
 
             // Repeat beep: 3 short beeps
             let beepCount = 0;
+
             function beep() {
               oscillator.start(ctx.currentTime + beepCount * 0.25);
               oscillator.stop(ctx.currentTime + beepCount * 0.25 + 0.15);
@@ -749,7 +712,7 @@ export default {
         .post("/api/getOrderPackProducts/" + id)
         .then((response) => {
           this.productsOrder = response.data;
-
+          this.getForm(id);
           this.loading = false;
         })
         .catch((error) => {
@@ -759,6 +722,33 @@ export default {
           console.log(error);
           this.loading = false;
         });
+    },
+    getForm(id) {
+      axios
+        .get("/api/getForm/" + id)
+        .then((response) => {
+          const forFormData =
+            typeof response.data.fields === "string"
+              ? JSON.parse(response.data.fields)
+              : response.data.fields;
+          this.fields = forFormData.fields;
+
+          this.packageFields = forFormData.package_fields || [];
+
+          this.formValues = response.data.default_values || {};
+        })
+        .catch((error) => {
+          console.error("Error fetching form data:", error);
+          this.message_error = "Błąd pobierania formularza";
+          this.snackbar = true;
+        });
+    },
+    onSave() {
+      // Handle save action
+      this.getTTN();
+      console.log("Form saved with values:", this.formValues);
+      this.message = "Formularz zapisany";
+      this.snackbar = true;
     },
     getTransOrders() {
       this.indexTransOrders = 0;
@@ -871,9 +861,11 @@ export default {
   top: 0;
   z-index: 1;
 }
+
 .active .qty {
   background: #e0e0e0;
 }
+
 .error .qty {
   background: #ffcdd2;
 }

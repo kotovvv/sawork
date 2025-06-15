@@ -1034,10 +1034,8 @@ class CollectController extends Controller
                     }
                 }
                 $a_pack['ttn'][$ttn_key] = [
-                    'weight' => $ttn_entry['weight'] ?? null,
-                    'length' => $ttn_entry['length'] ?? null,
-                    'width' => $ttn_entry['width'] ?? null,
-                    'height' => $ttn_entry['height'] ?? null,
+                    'fields' => $ttn_entry['fields'] ?? null,
+
                     'products' => $ttn_products,
                     'lastUpdate' => isset($ttn_entry['lastUpdate']) ? Carbon::parse($ttn_entry['lastUpdate'])->format('Y-m-d H:i') : null,
                 ];
