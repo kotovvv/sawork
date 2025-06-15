@@ -666,6 +666,7 @@ export default {
           }
           this.imputCod = "";
           this.test = "";
+          this.isOrderDone();
           return true;
           //   this.message = "Zeskanowano kod: " + this.imputCod;
           //   this.snackbar = true;
@@ -705,7 +706,6 @@ export default {
         this.imputCod = "";
         this.test = "";
       }
-      this.isOrderDone();
     },
     getOrderPackProducts(id) {
       this.message = "";
