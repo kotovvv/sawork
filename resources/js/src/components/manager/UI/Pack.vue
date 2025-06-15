@@ -669,8 +669,6 @@ export default {
           }
           //   this.message = "Zeskanowano kod: " + this.imputCod;
           //   this.snackbar = true;
-          this.imputCod = "";
-          this.test = "";
         } else {
           if (typeof window !== "undefined" && window.AudioContext) {
             const ctx = new (window.AudioContext ||
@@ -700,6 +698,8 @@ export default {
           this.message_error = "Coś jest nie tak!!!";
           // this.snackbar = true;
         }
+        this.imputCod = "";
+        this.test = "";
       });
       this.isOrderDone();
     },
