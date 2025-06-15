@@ -673,25 +673,29 @@ export default {
           if (typeof window !== "undefined" && window.AudioContext) {
             const ctx = new (window.AudioContext ||
               window.webkitAudioContext)();
-            const oscillator = ctx.createOscillator();
             const gain = ctx.createGain();
-            oscillator.type = "square";
-            oscillator.frequency.setValueAtTime(220, ctx.currentTime); // 220 Hz for error
             gain.gain.setValueAtTime(0.5, ctx.currentTime);
-            oscillator.connect(gain).connect(ctx.destination);
+            gain.connect(ctx.destination);
 
             // Repeat beep: 3 short beeps
             let beepCount = 0;
 
             function beep() {
-              oscillator.start(ctx.currentTime + beepCount * 0.25);
-              oscillator.stop(ctx.currentTime + beepCount * 0.25 + 0.15);
-              beepCount++;
-              if (beepCount < 3) {
-                setTimeout(beep, 250);
-              } else {
-                setTimeout(() => ctx.close(), 800);
-              }
+              const oscillator = ctx.createOscillator();
+              oscillator.type = "square";
+              oscillator.frequency.setValueAtTime(220, ctx.currentTime);
+              oscillator.connect(gain);
+              oscillator.start();
+              setTimeout(() => {
+                oscillator.stop();
+                oscillator.disconnect();
+                beepCount++;
+                if (beepCount < 3) {
+                  setTimeout(beep, 100); // пауза между бипами
+                } else {
+                  setTimeout(() => ctx.close(), 200);
+                }
+              }, 150); // длительность бипа
             }
             beep();
           }
