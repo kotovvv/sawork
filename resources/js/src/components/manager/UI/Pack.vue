@@ -649,10 +649,7 @@ export default {
       this.message_error = "";
       this.test = "";
       this.productsOrder[0].products.forEach((product) => {
-        if (
-          product.KodKreskowy == this.imputCod &&
-          product.qty + 1 <= product.ilosc
-        ) {
+        if (product.KodKreskowy == this.imputCod) {
           product.qty = parseInt(product.qty) + 1;
           if (typeof window !== "undefined" && window.AudioContext) {
             const ctx = new (window.AudioContext ||
