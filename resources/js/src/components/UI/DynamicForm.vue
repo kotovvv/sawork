@@ -21,18 +21,19 @@
           </template>
           <template v-if="field.type === 'checkbox' && field.options">
             <v-label class="mb-2">{{ field.name }}</v-label>
-            <v-checkbox-group
-              v-model="fieldsData[field.id]"
-              :rules="field.rules || []"
-              :name="field.id"
-            >
+            <div>
               <v-checkbox
                 v-for="opt in getOptions(field)"
                 :key="opt.value"
+                v-model="fieldsData[field.id]"
                 :label="opt.title"
                 :value="opt.value"
+                :rules="field.rules || []"
+                :name="field.id"
+                multiple
+                hide-details="auto"
               />
-            </v-checkbox-group>
+            </div>
           </template>
           <template v-else-if="field.type === 'date'">
             <v-menu
