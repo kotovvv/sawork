@@ -664,44 +664,47 @@ export default {
               ctx.close();
             }, 150); // 150 ms beep
           }
+          this.imputCod = "";
+          this.test = "";
+          return true;
           //   this.message = "Zeskanowano kod: " + this.imputCod;
           //   this.snackbar = true;
-        } else {
-          if (typeof window !== "undefined" && window.AudioContext) {
-            const ctx = new (window.AudioContext ||
-              window.webkitAudioContext)();
-            const gain = ctx.createGain();
-            gain.gain.setValueAtTime(0.5, ctx.currentTime);
-            gain.connect(ctx.destination);
-
-            // Repeat beep: 3 short beeps
-            let beepCount = 0;
-
-            function beep() {
-              const oscillator = ctx.createOscillator();
-              oscillator.type = "square";
-              oscillator.frequency.setValueAtTime(220, ctx.currentTime);
-              oscillator.connect(gain);
-              oscillator.start();
-              setTimeout(() => {
-                oscillator.stop();
-                oscillator.disconnect();
-                beepCount++;
-                if (beepCount < 3) {
-                  setTimeout(beep, 100); // пауза между бипами
-                } else {
-                  setTimeout(() => ctx.close(), 200);
-                }
-              }, 150); // длительность бипа
-            }
-            beep();
-          }
-          this.message_error = "Coś jest nie tak!!!";
-          // this.snackbar = true;
         }
+
+        // this.snackbar = true;
+      });
+      if (typeof window !== "undefined" && window.AudioContext) {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.5, ctx.currentTime);
+        gain.connect(ctx.destination);
+
+        // Repeat beep: 3 short beeps
+        let beepCount = 0;
+
+        function beep() {
+          const oscillator = ctx.createOscillator();
+          oscillator.type = "square";
+          oscillator.frequency.setValueAtTime(220, ctx.currentTime);
+          oscillator.connect(gain);
+          oscillator.start();
+          setTimeout(() => {
+            oscillator.stop();
+            oscillator.disconnect();
+            beepCount++;
+            if (beepCount < 3) {
+              setTimeout(beep, 100); // пауза между бипами
+            } else {
+              setTimeout(() => ctx.close(), 200);
+            }
+          }, 150); // длительность бипа
+        }
+        beep();
+
+        this.message_error = "Coś jest nie tak!!!";
         this.imputCod = "";
         this.test = "";
-      });
+      }
       this.isOrderDone();
     },
     getOrderPackProducts(id) {
