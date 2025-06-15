@@ -4,21 +4,35 @@
       <v-col cols="12" md="6">
         <h4 class="mb-2">Pola</h4>
         <div v-for="field in fields" :key="field.id" class="mb-1">
+          <template v-if="field.type === 'radio' && field.options">
+            <v-label class="mb-2">{{ field.name }}</v-label>
+            <v-radio-group
+              v-model="fieldsData[field.id]"
+              :rules="field.rules || []"
+              :name="field.id"
+            >
+              <v-radio
+                v-for="opt in getOptions(field)"
+                :key="opt.value"
+                :label="opt.title"
+                :value="opt.value"
+              />
+            </v-radio-group>
+          </template>
           <template v-if="field.type === 'checkbox' && field.options">
             <v-label class="mb-2">{{ field.name }}</v-label>
-            <v-selection-control-group
+            <v-checkbox-group
               v-model="fieldsData[field.id]"
-              multiple
               :rules="field.rules || []"
               :name="field.id"
             >
               <v-checkbox
                 v-for="opt in getOptions(field)"
                 :key="opt.value"
-                :label="opt.text"
+                :label="opt.title"
                 :value="opt.value"
               />
-            </v-selection-control-group>
+            </v-checkbox-group>
           </template>
           <template v-else-if="field.type === 'date'">
             <v-menu
