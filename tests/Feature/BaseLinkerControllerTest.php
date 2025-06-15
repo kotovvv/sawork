@@ -17,7 +17,7 @@ class BaseLinkerControllerTest extends TestCase
     public function test_getFields()
     {
 
-        $BL = new BaseLinkerController('eyJpdiI6Imd3ODA3cm9JTmhVemVIbUVHdlJxQnc9PSIsInZhbHVlIjoib1FCZTYxbEVRSmsvTVd2eXRDNlB3cU9QVUdQOTVKbXh0eTNGKzhwejdXUnd5YmJpTWtscTN3eDYzTDdnUE9XS1lPUCtEWDR6WjJnK0ludFJvTGh1elNNWktHcndyVzc1a3RZMnEwTmhFRGR0QndwUERSNno5SWN0blpJSmtZdEYiLCJtYWMiOiIzZmFmMjZhODk1Y2UwMWNkMDQ3ZThjOWI1MDZlZjljNThjNzVmOTJjYmZlYjYwNGU2ZDgxZGZjODA5N2FhYmVhIiwidGFnIjoiIn0=');
+        $BL = new BaseLinkerController('eyJpdiI6ImlSMzFLZFRvbVZBZmhBV09JUHZmWkE9PSIsInZhbHVlIjoiOUsyY2pPQVk1THVDY0FTTUZhY0hzYzR3Uk40SWJEc3YvVGVWaWFLOGdZWGU1M2MzVFZEQUdtbW9hd1E1aFJnV2dGSDhMandVRXVhd3pDaVRIODNtaVpqMVhLQ0NobDNxM0c4R1VadUxKalQ1Y2hUT1BhYjFZaXVIYmI5VXhIRDgiLCJtYWMiOiJkOWRiZWMzYWE4OWE1MmVhMTI4NDNhMjNiMzlkYTEzYjQ2NzE3OGRkYTdhMjg0NGRjZGRjNjUzZjRkZmU0MDhiIiwidGFnIjoiIn0=');
         $couriers_code = DB::connection('second_mysql')->table('for_ttn')
             ->where('courier_code', '!=', '')
             ->pluck('courier_code')

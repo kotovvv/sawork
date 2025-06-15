@@ -671,9 +671,9 @@ export default {
           //   this.message = "Zeskanowano kod: " + this.imputCod;
           //   this.snackbar = true;
         }
-
-        // this.snackbar = true;
       });
+      // this.snackbar = true;
+
       if (typeof window !== "undefined" && window.AudioContext) {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const gain = ctx.createGain();
