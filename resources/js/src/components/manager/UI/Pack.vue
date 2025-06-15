@@ -736,7 +736,9 @@ export default {
             typeof response.data.fields === "string"
               ? JSON.parse(response.data.fields)
               : response.data.fields;
-          this.fields = forFormData.fields;
+          this.fields = Array.isArray(forFormData)
+            ? forFormData
+            : forFormData.fields || [];
 
           this.packageFields = forFormData.package_fields || [];
 
