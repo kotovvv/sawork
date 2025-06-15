@@ -150,13 +150,15 @@
                 <v-btn
                   v-if="
                     productsOrder[0]?.products &&
-                    productsOrder[0].products.some((product) => product.qty > 0)
+                    productsOrder[0].products.some(
+                      (product) =>
+                        product.qty > 0 && product.qty <= product.ilosc
+                    )
                   "
                   class="btn"
                   @click="
                     dialogWeight = true;
                     workTTN;
-                    clearValueTtn();
                   "
                   >Utwórz TTN</v-btn
                 >
@@ -404,13 +406,7 @@ export default {
           }
         });
     },
-    clearValueTtn() {
-      this.weight = "";
-      this.length = "";
-      this.width = "";
-      this.height = "";
-      this.package_number = "";
-    },
+
     async ConfirmdeleteTTN(ttnNumber) {
       if (
         await this.$refs.confirm.open(
@@ -576,7 +572,6 @@ export default {
         this.snackbar = true;
 
         this.$nextTick(() => {
-          this.clearValueTtn();
           this.dialogWeight = true;
         });
       } else {
@@ -596,28 +591,28 @@ export default {
             [product.KodKreskowy]: product.qty,
           });
         }
-        if (product.qty < product.ilosc) {
+        if (product.qty < product.ilosc || product.qty > product.ilosc) {
           allDone = false;
         }
       });
 
-      this.setOrderPackProducts(o_pack);
+      this.setOrderPackProducts(o_pack, allDone);
 
       if (allDone) {
         this.message = "Zamówienie zapakowany i gotowe do wysyłki";
         this.snackbar = true;
         this.print();
         this.$nextTick(() => {
-          this.clearValueTtn();
           this.dialogWeight = true;
         });
       }
     },
-    setOrderPackProducts(o_pack) {
+    setOrderPackProducts(o_pack, allDone = false) {
       axios
         .post("/api/setOrderPackProducts", {
-          IDOrder: this.transOrders[this.indexTransOrders].IDOrder,
+          Order: this.transOrders[this.indexTransOrders],
           o_pack: o_pack,
+          allDone: allDone,
         })
         .then((response) => {})
         .catch((error) => {

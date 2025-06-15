@@ -1085,14 +1085,42 @@ class CollectController extends Controller
         return $a_pack;
     }
 
+    public function setStatus($order, $status_name)
+    {
+        $idsatus = DB::table('OrderStatus')->where('Name', $status_name)->value('IDOrderStatus');
+        DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update(['IDOrderStatus' => $idsatus]);
+        $IDWarehouse = $order['IDWarehouse'];
+        $token = $this->getToken($IDWarehouse);
+        if (!$token) {
+            return response()->json(['error' => 'Token not found'], 404);
+        }
+
+        $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
+        $BL->getStatusId($status_name);
+        $BL->setOrderStatus([
+            'order_id' => $order['Nr_Baselinker'],
+            'status_id' =>  $BL->getStatusId($status_name),
+        ]);
+    }
+
     public function setOrderPackProducts(Request $request)
     {
-        $IDOrder = (int)$request->IDOrder;
+        $Order = $request->Order;
+        //     "Order": {
+        //         "IDOrder": "93184",
+        //         "IDWarehouse": "19",
+        //         "invoice_number": "57/6/2025",
+        //         "Nr_Baselinker": "22068193",
+        //         "OrderNumber": "ZO955/25 - SPS"
         $pack = $request->o_pack;
+        $allDone = $request->allDone ?? false;
         $pack['0']['lastUpdate'] = Carbon::now()->format('Y-m-d H:i:s');
         $pack = json_encode($pack);
-        $o_pack = Collect::query()->where('IDOrder', $IDOrder)->update(['pack' => $pack]);
+        $o_pack = Collect::query()->where('IDOrder', $Order['IDOrder'])->update(['pack' => $pack]);
         if ($o_pack) {
+            if ($allDone) {
+                $this->setStatus($Order, 'Do wysłania');
+            }
             return response()->json(['status' => 'success']);
         }
         return response()->json(['status' => 'error']);

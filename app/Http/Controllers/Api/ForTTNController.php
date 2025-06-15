@@ -203,9 +203,6 @@ class ForTTNController extends Controller
             ->where('IDWarehouse', $IDWarehouse)
             ->first();
 
-        if (!$order) {
-            return response()->json(['error' => 'Order not found'], 404);
-        }
         $res['KwotaBrutto'] = $order->KwotaBrutto;
         return $res;
     }
@@ -228,6 +225,20 @@ class ForTTNController extends Controller
         }
         $res['fields'] = json_decode($values->form, true);
         $res['default_values'] = json_decode($values->default_values, true);
+
+        $order = DB::table('orders as ord')
+            ->select('ord.Number', 'ord._OrdersTempDecimal2 as NumberBL', DB::raw('(SELECT CAST(SUM(ol.PriceGross * ol.Quantity) AS DECIMAL(10,2)) FROM OrderLines ol WHERE ol.IDOrder = ord.IDOrder) as KwotaBrutto'))
+            ->where('IDOrder', $id)
+            ->first();
+        /*
+"id": "insurance" = стоимость заказа
+"id":"reference_number" = "BL "
+"id": "package_description"= "ZO "
+*/
+        $res['default_values']['fields']['insurance'] = $order->KwotaBrutto;
+        $res['default_values']['fields']['reference_number'] = (int)$order->NumberBL;
+        $res['default_values']['fields']['package_description'] = $order->Number;
+
         return $res;
     }
     public function getTTN(Request $request)
@@ -266,14 +277,7 @@ class ForTTNController extends Controller
 
         $forttn['courier_code'] = $orderInfo['courier_code'];
         $forttn['account_id'] = $orderInfo['account_id'];
-        if (isset($forttn['fields']) && is_array($forttn['fields'])) {
-            foreach ($forttn['fields'] as &$field) {
-                if (isset($field['id']) && $field['id'] === 'insurance') {
-                    $field['value'] = $orderInfo['KwotaBrutto'] ?? 0;
-                }
-            }
-            unset($field);
-        }
+
         if (env('APP_ENV') == 'production') {
             $createdTTN = $BL->createPackage($forttn);
 

@@ -17,6 +17,7 @@ class BaseLinkerController extends Controller
     public $ExtraFields = [];
     public $status_id_Kompletowanie = '';
     public $status_id_Nie_wysylac = '';
+    public $status_id_Do_wysłania = '';
     public $id_exfield_stan = '';
     public $log_type = [
         1 => "Order creation",
@@ -80,6 +81,9 @@ class BaseLinkerController extends Controller
             }
             if ($statusItem['name'] == 'Nie wysyłać') {
                 $this->status_id_Nie_wysylac = $statusItem['id'];
+            }
+            if ($statusItem['name'] == 'Do wysłania') {
+                $this->status_id_Do_wysłania = $statusItem['id'];
             }
         }
         //\Log::info('getOrderStatusList response:', $response['statuses']);
