@@ -460,6 +460,7 @@ HAVING
                 ->where('order_source', $forttn['order_source'])
                 ->where('order_source_id', $forttn['order_source_id'])
                 ->where('order_source_name', $forttn['order_source_name'])
+                ->where('delivery_method', $forttn['delivery_method'])
                 ->exists();
 
             if (!$exists) {

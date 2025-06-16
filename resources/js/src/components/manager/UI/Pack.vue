@@ -12,7 +12,10 @@
         >
           Close
         </v-btn>
-      </template>
+      </template></v-snackbar
+    >
+  </div>
+</template>
     </v-snackbar>
     <v-btn
       @click="
@@ -286,7 +289,7 @@ export default {
 
   mounted() {},
   watch: {
-    indexTransOrders: function (newValue, oldValue) {
+    iащк_еетndexTransOrders: function (newValue, oldValue) {
       if (this.transOrders.length > 0) {
         this.imputCod = "";
         this.test = "";
