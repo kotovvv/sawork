@@ -531,11 +531,9 @@ export default {
 
       axios
         .post("/api/writeTTN", {
-          IDOrder: this.transOrders[this.indexTransOrders].IDOrder,
+          Order: this.transOrders[this.indexTransOrders],
           nttn: this.package_number,
           o_ttn: o_ttn,
-          IDWarehouse: this.transOrders[this.indexTransOrders].IDWarehouse,
-          Nr_Baselinker: this.transOrders[this.indexTransOrders].Nr_Baselinker,
         })
         .then((response) => {
           this.dialogWeight = false;

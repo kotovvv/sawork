@@ -9,6 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 use App\Models\Collect;
 
 class CollectController extends Controller
@@ -1119,6 +1120,8 @@ class CollectController extends Controller
         $o_pack = Collect::query()->where('IDOrder', $Order['IDOrder'])->update(['pack' => $pack]);
         if ($o_pack) {
             if ($allDone) {
+                // Save $allDone state in cache for this order
+                Cache::put('order_all_done_' . $Order['IDOrder'], $allDone, now()->addDay());
                 //$this->setStatus($Order, 'Do wysłania');
             }
             return response()->json(['status' => 'success']);
@@ -1128,24 +1131,22 @@ class CollectController extends Controller
 
     public function writeTTN(Request $request)
     {
+        $Order = $request->Order;
+        //     "Order": {
+        //         "IDOrder": "93184",
+        //         "IDWarehouse": "19",
+        //         "invoice_number": "57/6/2025",
+        //         "Nr_Baselinker": "22068193",
+        //         "OrderNumber": "ZO955/25 - SPS"
 
-        $IDOrder = (int)$request->IDOrder;
         $ttn = $request->o_ttn;
         $nttn =  $request->nttn;
-        $IDWarehouse = (int)$request->IDWarehouse;
-        $token = $this->getToken($IDWarehouse);
-        if (!$token) {
-            return response()->json(['error' => 'Token not found'], 404);
-        }
-
-        $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
-
 
         $ttn[$nttn]['lastUpdate'] = Carbon::now()->format('Y-m-d H:i:s');
         // $ttn = json_encode($ttn);
         // Get existing 'ttn' and 'pack' columns
 
-        $existingTtn = Collect::query()->where('IDOrder', $IDOrder)->value('ttn');
+        $existingTtn = Collect::query()->where('IDOrder', $Order['IDOrder'])->value('ttn');
         if ($existingTtn) {
             // $existingTtnArr = json_decode($existingTtn, true);
             if (is_object($existingTtn)) {
@@ -1163,10 +1164,15 @@ class CollectController extends Controller
         ]]);
 
         // Update 'ttn' column
-        $ttn = Collect::query()->where('IDOrder', $IDOrder)->update(['ttn' => $ttn, 'pack' => $packJson]);
+        $ttn = Collect::query()->where('IDOrder', $Order['IDOrder'])->update(['ttn' => $ttn, 'pack' => $packJson]);
         if ($ttn) {
+            if (Cache::get('order_all_done_' . $Order['IDOrder'])) {
+                $this->setStatus($Order, 'Do wysłania');
+            }
+
             return response()->json(['status' => 'success']);
         }
+        \Log::error('Error writing TTN for order ID: ' . $Order['IDOrder']);
         return response()->json(['status' => 'error']);
     }
 
