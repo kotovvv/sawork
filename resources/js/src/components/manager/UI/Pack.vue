@@ -14,9 +14,7 @@
         </v-btn>
       </template></v-snackbar
     >
-  </div>
-</template>
-    </v-snackbar>
+
     <v-btn
       @click="
         dialogPack = true;
