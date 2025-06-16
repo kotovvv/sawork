@@ -255,8 +255,11 @@ HAVING
             if (cache()->has($cacheKey)) {
                 $maxDateConfirmed = cache()->get($cacheKey);
             } else {
-                $maxDateConfirmed = max(array_column($response['orders'], 'date_confirmed'));
-                cache()->put($cacheKey, $maxDateConfirmed, 900);
+                $dateConfirmedArray = array_column($response['orders'], 'date_confirmed');
+                if (!empty($dateConfirmedArray)) {
+                    $maxDateConfirmed = max($dateConfirmedArray);
+                    cache()->put($cacheKey, $maxDateConfirmed, 900);
+                }
             }
 
             $parameters = [
@@ -265,8 +268,11 @@ HAVING
             ];
 
             $response = $this->BL->getOrders($parameters);
-            $maxDateConfirmed = max(array_column($response['orders'], 'date_confirmed'));
-            cache()->put($cacheKey, $maxDateConfirmed, 900);
+            $dateConfirmedArray = array_column($response['orders'], 'date_confirmed');
+            if (!empty($dateConfirmedArray)) {
+                $maxDateConfirmed = max($dateConfirmedArray);
+                cache()->put($cacheKey, $maxDateConfirmed, 900);
+            }
         }
         //$ordersToProcess = array_slice($response['orders'], 0, 80); // Process only the first 80 orders
         $i = 80;
