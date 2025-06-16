@@ -1119,7 +1119,7 @@ class CollectController extends Controller
         $o_pack = Collect::query()->where('IDOrder', $Order['IDOrder'])->update(['pack' => $pack]);
         if ($o_pack) {
             if ($allDone) {
-                $this->setStatus($Order, 'Do wysłania');
+                //$this->setStatus($Order, 'Do wysłania');
             }
             return response()->json(['status' => 'success']);
         }
