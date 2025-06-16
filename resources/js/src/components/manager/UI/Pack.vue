@@ -293,8 +293,23 @@ export default {
         this.getOrderPackProducts(this.transOrders[newValue].IDOrder);
       }
     },
+    showTransCompanyList: function (newValue) {
+      if (newValue == true) {
+        this.getPackOrders();
+        this.clearDialogOrders();
+      }
+    },
   },
   methods: {
+    clearDialogOrders() {
+      this.imputCod = "";
+      this.test = "";
+      this.message = "";
+      this.message_error = "";
+      this.selectTransCompany = null;
+      this.transOrders = [];
+      this.productsOrder = [];
+    },
     getTTN() {
       //   if (this.$refs.weightForm.validate()) {
       //     if (!this.weight || !this.length || !this.width || !this.height) {
