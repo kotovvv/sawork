@@ -2,9 +2,19 @@
   <v-container>
     <v-card>
       <v-card-title> TTN Table </v-card-title>
+      <v-text-field
+        v-model="search"
+        append-icon="mdi-magnify"
+        label="Search"
+        single-line
+        hide-details
+        class="mb-4"
+        max-width="400"
+      />
       <v-data-table
         :headers="headers"
         :items="rows"
+        :search="search"
         :loading="loading"
         class="elevation-1"
         item-key="id"
@@ -155,18 +165,23 @@ export default {
         { title: "ID", value: "id" },
         { title: "API Service ID", value: "api_service_id" },
         { title: "Warehouse ID", value: "id_warehouse" },
-        { title: "Warehouse", value: "symbol" },
-        { title: "Delivery Method", value: "delivery_method" },
-        { title: "Order Source", value: "order_source" },
+        { title: "Warehouse", value: "symbol", sortable: true },
+        { title: "Delivery Method", value: "delivery_method", sortable: true },
+        { title: "Order Source", value: "order_source", sortable: true },
         { title: "Order Source ID", value: "order_source_id" },
-        { title: "Order Source Name", value: "order_source_name" },
-        { title: "Courier Code", value: "courier_code" },
+        {
+          title: "Order Source Name",
+          value: "order_source_name",
+          sortable: true,
+        },
+        { title: "Courier Code", value: "courier_code", sortable: true },
         { title: "Account ID", value: "account_id" },
-        { title: "Info Account", value: "info_account" },
+        { title: "Info Account", value: "info_account", sortable: true },
         // { title: "Created At", value: "created_at" },
         // { title: "Updated At", value: "updated_at" },
         { title: "Actions", value: "actions", sortable: false },
       ],
+      search: "",
     };
   },
   mounted() {

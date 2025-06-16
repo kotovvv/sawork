@@ -214,7 +214,9 @@ class ForTTNController extends Controller
             ->join('for_ttn as ft', function ($join) {
                 $join->on('ft.id_warehouse', '=', 'od.IDWarehouse')
                     ->on('ft.order_source_id', '=', 'od.order_source_id')
-                    ->on('ft.order_source', '=', 'od.order_source');
+                    ->on('ft.order_source', '=', 'od.order_source')
+                    ->on('ft.order_source_name', '=', 'od.order_source_name')
+                    ->on('ft.courier_code', '=', 'od.courier_code');
             })
             ->join('courier_forms as cf', 'cf.courier_code', '=', 'ft.courier_code')
             ->where('od.order_id', $id)
