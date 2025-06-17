@@ -216,7 +216,7 @@ class ForTTNController extends Controller
                     ->on('ft.order_source_id', '=', 'od.order_source_id')
                     ->on('ft.order_source', '=', 'od.order_source')
                     //->on('ft.order_source_name', '=', 'od.order_source_name')
-                    ->on('ft.courier_code', '=', 'od.courier_code')
+                    //->on('ft.courier_code', '=', 'od.courier_code')
                     ->on('ft.account_id', '>', 0);
             })
             ->join('courier_forms as cf', 'cf.courier_code', '=', 'ft.courier_code')
