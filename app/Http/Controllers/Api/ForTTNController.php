@@ -172,7 +172,7 @@ class ForTTNController extends Controller
     {
         $res = [];
         $delivery = DB::connection('second_mysql')->table('order_details')
-            ->select('order_source', 'order_source_id')
+            ->select('order_source', 'order_source_id', 'delivery_method')
             ->where('order_id', $IDOrder)
             ->where('IDWarehouse', $IDWarehouse)
             ->first();
@@ -184,6 +184,7 @@ class ForTTNController extends Controller
         $forttn = ForTtn::where('id_warehouse', $IDWarehouse)
             ->where('order_source', $delivery->order_source)
             ->where('order_source_id', $delivery->order_source_id)
+            ->where('delivery_method',  $delivery->delivery_method)
             ->where('courier_code', '!=', '')
             ->where('account_id', '>', 0)
             ->select('courier_code', 'account_id')
@@ -215,12 +216,14 @@ class ForTTNController extends Controller
                 $join->on('ft.id_warehouse', '=', 'od.IDWarehouse')
                     ->on('ft.order_source_id', '=', 'od.order_source_id')
                     ->on('ft.order_source', '=', 'od.order_source')
-                    //->on('ft.order_source_name', '=', 'od.order_source_name')
-                    //->on('ft.courier_code', '=', 'od.courier_code')
-                    ->on('ft.account_id', '>', 0);
+                    ->on('ft.delivery_method', '=', 'od.delivery_method');
+                //->on('ft.order_source_name', '=', 'od.order_source_name')
+                //->on('ft.courier_code', '=', 'od.courier_code')
+                //->on('ft.account_id', '>', 0);
             })
             ->join('courier_forms as cf', 'cf.courier_code', '=', 'ft.courier_code')
             ->where('od.order_id', $id)
+            ->where('ft.account_id', '>', 0)
             ->select('cf.form', 'cf.default_values')->first();
         //->value(DB::raw('JSON_OBJECT("form", cf.form, "default_values", cf.default_values)'));
         if (!$values) {
