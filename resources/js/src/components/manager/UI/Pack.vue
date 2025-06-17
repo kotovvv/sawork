@@ -196,7 +196,36 @@
             <v-dialog v-model="dialogWeight" max-width="1200">
               <v-card>
                 <v-card-title>
-                  Wprowadź wagę i wymiary paczki
+                  {{
+                    transCompany.find((c) => c.key === selectTransCompany)
+                      ?.title
+                  }}
+                  -
+                  <span>
+                    {{
+                      transOrders.length > 0 &&
+                      transOrders[indexTransOrders] &&
+                      transOrders[indexTransOrders] != ""
+                        ? transOrders[indexTransOrders].OrderNumber
+                        : ""
+                    }}
+                    <small>{{
+                      transOrders.length > 0 &&
+                      transOrders[indexTransOrders] &&
+                      transOrders[indexTransOrders] != ""
+                        ? transOrders[indexTransOrders].Nr_Baselinker
+                        : ""
+                    }}</small>
+                    <small class="text-grey-lighten-1 ml-2"
+                      >({{
+                        transOrders.length > 0 &&
+                        transOrders[indexTransOrders] &&
+                        transOrders[indexTransOrders] != ""
+                          ? transOrders[indexTransOrders].IDOrder
+                          : ""
+                      }})</small
+                    >
+                  </span>
                   <v-spacer />
                   <v-btn
                     icon

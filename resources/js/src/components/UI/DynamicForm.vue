@@ -2,7 +2,6 @@
   <v-form ref="form" v-model="valid">
     <v-row>
       <v-col cols="12" md="6">
-        <h4 class="mb-2">Pola</h4>
         <div v-for="field in fields" :key="field.id" class="mb-1">
           <template v-if="field.type === 'radio' && field.options">
             <v-label class="mb-2">{{ field.name }}</v-label>
@@ -80,7 +79,6 @@
       </v-col>
       <v-col cols="12" md="6">
         <div v-if="packageFields && packageFields.length">
-          <h4 class="mb-2">Pola działek</h4>
           <div v-for="field in packageFields" :key="field.id" class="mb-1">
             <component
               :is="getComponent(field)"
@@ -105,6 +103,7 @@
 </template>
 
 <script setup>
+defineOptions({ name: "DynamicForm" });
 import { ref, reactive, watch, watchEffect } from "vue";
 
 const props = defineProps({
