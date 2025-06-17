@@ -127,7 +127,7 @@ class ForTTNController extends Controller
 
         ]);
         if (isset($fields['status']) && $fields['status'] === 'SUCCESS') {
-            $fields = $fields['fields'];
+            $fields = $fields;
         } else {
             $fields = [];
         }
@@ -283,6 +283,11 @@ class ForTTNController extends Controller
 
         $forttn['courier_code'] = $orderInfo['courier_code'];
         $forttn['account_id'] = $orderInfo['account_id'];
+        if (isset($forttn['fields']) && is_array($forttn['fields'])) {
+            $forttn['fields'] = array_values(array_filter($forttn['fields'], function ($field) {
+                return !array_key_exists('value', $field) || $field['value'] !== null;
+            }));
+        }
 
         if (env('APP_ENV') == 'production') {
             $createdTTN = $BL->createPackage($forttn);
