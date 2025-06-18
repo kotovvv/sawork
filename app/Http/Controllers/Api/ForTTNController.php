@@ -230,13 +230,14 @@ class ForTTNController extends Controller
             ->join('courier_forms as cf', 'cf.courier_code', '=', 'ft.courier_code')
             ->where('od.order_id', $id)
             ->where('ft.account_id', '>', 0)
-            ->select('cf.form', 'cf.default_values')->first();
+            ->select('cf.form', 'cf.default_values', 'ft.service')->first();
         //->value(DB::raw('JSON_OBJECT("form", cf.form, "default_values", cf.default_values)'));
         if (!$values) {
             return response()->json(['error' => 'Form not found'], 404);
         }
         $res['fields'] = json_decode($values->form, true);
         $res['default_values'] = json_decode($values->default_values, true);
+        $service = json_decode($values->service, true);
 
         $order = DB::table('orders as ord')
             ->select('ord.Number', 'ord._OrdersTempDecimal2 as NumberBL', DB::raw('(SELECT CAST(SUM(ol.PriceGross * ol.Quantity) AS DECIMAL(10,2)) FROM OrderLines ol WHERE ol.IDOrder = ord.IDOrder) as KwotaBrutto'))
@@ -250,6 +251,9 @@ class ForTTNController extends Controller
         $res['default_values']['fields']['insurance'] = $order->KwotaBrutto;
         $res['default_values']['fields']['reference_number'] = (int)$order->NumberBL;
         $res['default_values']['fields']['package_description'] = $order->Number;
+        if ($service) {
+            $res['default_values']['fields']['service'] = $service;
+        }
 
         return $res;
     }
