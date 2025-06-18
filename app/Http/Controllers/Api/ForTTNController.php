@@ -237,6 +237,7 @@ class ForTTNController extends Controller
         }
         $res['fields'] = json_decode($values->form, true);
         $res['default_values'] = json_decode($values->default_values, true);
+        $res['service'] = json_decode($values->service, true);
         $service = json_decode($values->service, true);
 
         $order = DB::table('orders as ord')
@@ -251,7 +252,7 @@ class ForTTNController extends Controller
         $res['default_values']['fields']['insurance'] = $order->KwotaBrutto;
         $res['default_values']['fields']['reference_number'] = (int)$order->NumberBL;
         $res['default_values']['fields']['package_description'] = $order->Number;
-        if ($service) {
+        if (!is_null($service)) {
             $res['default_values']['fields']['service'] = $service;
         }
 
