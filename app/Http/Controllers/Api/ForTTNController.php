@@ -216,7 +216,7 @@ class ForTTNController extends Controller
     public function getForm($id)
     {
         $res = [];
-
+        $res['default_values'] = [];
         $values = DB::connection('second_mysql')->table('order_details as od')
             ->join('for_ttn as ft', function ($join) {
                 $join->on('ft.id_warehouse', '=', 'od.IDWarehouse')
@@ -237,8 +237,8 @@ class ForTTNController extends Controller
         }
         $res['fields'] = json_decode($values->form, true);
         $res['default_values'] = json_decode($values->default_values, true);
-        $res['service'] = json_decode($values->service, true);
-        $service = json_decode($values->service, true);
+        $res['service'] = $values->service;
+        $service = $values->service;
 
         $order = DB::table('orders as ord')
             ->select('ord.Number', 'ord._OrdersTempDecimal2 as NumberBL', DB::raw('(SELECT CAST(SUM(ol.PriceGross * ol.Quantity) AS DECIMAL(10,2)) FROM OrderLines ol WHERE ol.IDOrder = ord.IDOrder) as KwotaBrutto'))
