@@ -112,10 +112,12 @@ export default {
   padding: 16px;
   border-radius: 8px;
 }
+
 .info-pack ul {
   list-style: none;
   padding: 0;
 }
+
 .info-pack li {
   margin-bottom: 8px;
 }
