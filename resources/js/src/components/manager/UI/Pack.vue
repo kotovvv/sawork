@@ -494,6 +494,7 @@ export default {
           // Stay on the same index (or move to previous if at end)
           if (this.indexTransOrders >= this.transOrders.length) {
             this.indexTransOrders = 0;
+            this.clearDialogOrders();
           }
           this.getOrderPackProducts(
             this.transOrders[this.indexTransOrders].IDOrder

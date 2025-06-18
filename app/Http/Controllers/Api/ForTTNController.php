@@ -15,6 +15,7 @@ class ForTTNController extends Controller
     public function index()
     {
         $rows = ForTtn::get();
+        $forms = CourierForms::pluck('form', 'courier_code')->toArray();
         $warehouseIds = $rows->pluck('id_warehouse')->unique()->toArray();
         $symbols = DB::table('Magazyn')
             ->whereIn('IDMagazynu', $warehouseIds)
@@ -22,6 +23,7 @@ class ForTTNController extends Controller
 
         foreach ($rows as $row) {
             $row->symbol = $symbols[$row->id_warehouse] ?? null;
+            $row->form = isset($forms[$row->courier_code]) ? json_decode($forms[$row->courier_code], true) : [];
         }
         return $rows;
     }
@@ -38,6 +40,7 @@ class ForTTNController extends Controller
             'order_source_name' => 'required|string|max:150',
             'courier_code' => 'required|string|max:20',
             'account_id' => 'required|integer',
+            'service' => 'nullable|string|max:50',
             'info_account' => 'nullable|json',
         ]);
         $id = ForTtn::insertGetId($data);
@@ -66,6 +69,7 @@ class ForTTNController extends Controller
             'order_source_name' => 'required|string|max:150',
             'courier_code' => 'required|string|max:20',
             'account_id' => 'required|integer',
+            'service' => 'nullable|string|max:50',
             'info_account' => 'nullable|json',
         ]);
         $updated = ForTtn::where('id', $id)->update($data);
@@ -95,7 +99,9 @@ class ForTTNController extends Controller
     {
         // $cacheKey = 'codeBL';
         // $codeBL = cache()->get($cacheKey);
-
+        if (ENV('APP_ENV') != 'production') {
+            return [['code' => '0', 'name' => 'Not']];
+        }
         // if (!$codeBL) {
         $token = $this->getToken($id_warehouse);
         if (!$token) {

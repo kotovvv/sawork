@@ -118,6 +118,13 @@
             >
               Refresh Accounts
             </v-btn>
+            <v-select
+              v-if="editedItem.courier_code"
+              v-model="editedItem.service"
+              :items="getServices()"
+              label="Service"
+            >
+            </v-select>
             <v-textarea
               v-model="editedItem.info_account"
               label="Info Account (JSON)"
@@ -156,6 +163,7 @@ export default {
         order_source_name: "",
         courier_code: [],
         account_id: [],
+        service: "",
         info_account: "",
       },
       codesBL: [],
@@ -176,6 +184,7 @@ export default {
         },
         { title: "Courier Code", value: "courier_code", sortable: true },
         { title: "Account ID", value: "account_id" },
+        { title: "Service", value: "service" },
         { title: "Info Account", value: "info_account", sortable: true },
         // { title: "Created At", value: "created_at" },
         // { title: "Updated At", value: "updated_at" },
@@ -188,6 +197,22 @@ export default {
     this.fetchRows();
   },
   methods: {
+    getServices() {
+      // Check if editedItem.form exists and is an array
+      console.log(this.editedItem);
+      if (this.editedItem.form && Array.isArray(this.editedItem.form)) {
+        const serviceField = this.editedItem.form.find(
+          (f) => f.id === "service" && f.options
+        );
+        if (serviceField) {
+          // Convert options object to array of { name, value }
+          return Object.entries(serviceField.options).map(([value, title]) => ({
+            title,
+            value,
+          }));
+        }
+      }
+    },
     fetchRows() {
       this.loading = true;
       axios.get("/api/for-ttn").then((res) => {
@@ -206,6 +231,7 @@ export default {
         order_source_name: "",
         courier_code: "",
         account_id: "",
+        service: "",
         info_account: "",
       };
       this.dialog = true;
