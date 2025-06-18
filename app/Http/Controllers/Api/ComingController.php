@@ -35,8 +35,8 @@ class ComingController extends Controller
                 'InfoComming.doc',
                 'InfoComming.photo',
                 'InfoComming.brk',
-                'InfoComming.ready',`
-                't._TowarTempBool1 as noBaselink',
+                'InfoComming.ready',
+                DB::raw('MAX(CASE WHEN t._TowarTempBool1 IS NULL OR t._TowarTempBool1 = \'\' THEN 0 WHEN t._TowarTempBool1 IN (\'1\', 1, \'true\', \'TRUE\', \'True\') THEN 1 ELSE 0 END) as noBaselink'),
             )
             ->leftJoin('dbo.DocumentRelations', function ($join) {
                 $join->on('DocumentRelations.ID2', '=', 'rm1.IDRuchuMagazynowego')
