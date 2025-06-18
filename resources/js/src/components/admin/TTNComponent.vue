@@ -201,10 +201,10 @@ export default {
       // Check if editedItem.form exists and is an array
       console.log(this.editedItem);
       if (
-        this.editedItem.fields.form &&
-        Array.isArray(this.editedItem.fields.form)
+        this.editedItem.form.fields &&
+        Array.isArray(this.editedItem.form.fields)
       ) {
-        const serviceField = this.editedItem.form.find(
+        const serviceField = this.editedItem.form.fields.find(
           (f) => f.id === "service" && f.options
         );
         if (serviceField) {
