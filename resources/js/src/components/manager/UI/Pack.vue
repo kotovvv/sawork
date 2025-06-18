@@ -483,9 +483,9 @@ export default {
           console.log(error);
         });
     },
-    workTTN() {
+    async workTTN() {
       //if (this.$refs.weightForm.validate()) {
-      this.writeTTN();
+      await this.writeTTN();
       //this.dialogWeight = false;
       const currentOrder = this.transOrders[this.indexTransOrders];
       if (currentOrder) {
