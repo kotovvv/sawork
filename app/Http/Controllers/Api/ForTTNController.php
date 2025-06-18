@@ -216,7 +216,7 @@ class ForTTNController extends Controller
     public function getForm($id)
     {
         $res = [];
-        $res['default_values'] = [];
+
         $values = DB::connection('second_mysql')->table('order_details as od')
             ->join('for_ttn as ft', function ($join) {
                 $join->on('ft.id_warehouse', '=', 'od.IDWarehouse')
@@ -237,7 +237,7 @@ class ForTTNController extends Controller
         }
         $res['fields'] = json_decode($values->form, true);
         $res['default_values'] = json_decode($values->default_values, true);
-        $res['service'] = $values->service;
+
         $service = $values->service;
 
         $order = DB::table('orders as ord')
