@@ -113,23 +113,52 @@
                       : ""
                   }}</small>
                 </span>
-                <v-btn
-                  icon="mdi-arrow-left"
+                <span
+                  tabindex="0"
+                  role="button"
+                  aria-label="Previous order"
                   @click="
                     if (indexTransOrders > 0) indexTransOrders--;
                     else indexTransOrders = transOrders.length - 1;
                   "
-                ></v-btn>
+                  @keydown.left.prevent="
+                    if (indexTransOrders > 0) indexTransOrders--;
+                    else indexTransOrders = transOrders.length - 1;
+                  "
+                  style="
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    margin-right: 8px;
+                  "
+                >
+                  <v-icon icon="mdi-arrow-left"></v-icon>
+                </span>
                 {{ indexTransOrders + 1 }} /
                 {{ transOrders.length > 0 ? transOrders.length : 0 }}
-                <v-btn
-                  icon="mdi-arrow-right"
+                <span
+                  tabindex="0"
+                  role="button"
+                  aria-label="Next order"
                   @click="
                     if (indexTransOrders < transOrders.length - 1)
                       indexTransOrders++;
                     else indexTransOrders = 0;
                   "
-                ></v-btn>
+                  @keydown.right.prevent="
+                    if (indexTransOrders < transOrders.length - 1)
+                      indexTransOrders++;
+                    else indexTransOrders = 0;
+                  "
+                  style="
+                    cursor: pointer;
+                    display: inline-flex;
+                    align-items: center;
+                    margin-left: 8px;
+                  "
+                >
+                  <v-icon icon="mdi-arrow-right"></v-icon>
+                </span>
               </v-col>
               <v-spacer></v-spacer>
 
