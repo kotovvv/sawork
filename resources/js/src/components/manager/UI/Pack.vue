@@ -316,7 +316,7 @@ export default {
 
   mounted() {},
   watch: {
-    iащк_еетndexTransOrders: function (newValue, oldValue) {
+    indexTransOrders: function (newValue, oldValue) {
       if (this.transOrders.length > 0) {
         this.imputCod = "";
         this.test = "";
