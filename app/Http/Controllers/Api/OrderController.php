@@ -172,6 +172,7 @@ class OrderController extends Controller
             return response()->json(['error' => 'Pack not found'], 404);
         }
         $res['pack'] = $pack;
+        $res['pack']->Date = \Carbon\Carbon::parse($pack->Date)->locale('pl')->isoFormat('LLLL');
         $Uzytkownik = DB::table('Uzytkownik')
             ->where('IDUzytkownika', $pack->IDUzytkownika)
             ->pluck('NazwaUzytkownika');
