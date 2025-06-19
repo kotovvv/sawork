@@ -62,11 +62,26 @@
       >
         <v-card class="pa-3 mb-2 bg-grey-lighten-3" outlined max-height="60vh">
           <div class="gap-2 d-flex flex-wrap align-center">
-            <strong>TTN:</strong> {{ ttnNumber }}, <strong>Waga:</strong>
-            {{ ttnData.weight }}, <strong>Długość:</strong>
-            {{ ttnData.length }}, <strong>Szerokość:</strong>
-            {{ ttnData.width }}, <strong>Wysokość:</strong>
-            {{ ttnData.height }},
+            <strong>TTN:</strong> {{ ttnNumber }},
+            <span v-if="ttnData.packages">
+              <v-icon small class="mr-1">mdi-package-variant</v-icon>
+              <strong>Paczka:</strong>
+              <span>
+                <v-icon small class="mr-1">mdi-ruler-square</v-icon>
+                {{ ttnData.packages.size_length }}x{{
+                  ttnData.packages.size_width
+                }}x{{ ttnData.packages.size_height }} cm,
+                <v-icon small class="mr-1">mdi-weight</v-icon>
+                {{ ttnData.packages.weight }} kg </span
+              >,
+            </span>
+            <span v-if="ttnData.size_type" class="ml-2">
+              <v-icon small class="mr-1"
+                >mdi-alpha-{{ ttnData.size_type.toLowerCase() }}-box</v-icon
+              >
+              <strong>Typ:</strong> {{ ttnData.size_type }}
+            </span>
+
             <strong>Date:</strong>
             {{ ttnData.lastUpdate }}
             <v-btn
