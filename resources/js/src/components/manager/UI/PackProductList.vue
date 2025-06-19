@@ -82,7 +82,7 @@
               <strong>Typ:</strong> {{ ttnData.size_type }}
             </span>
 
-            <strong>Date:</strong>
+            <v-icon small class="mr-1">mdi-calendar</v-icon>
             {{ ttnData.lastUpdate }}
             <v-btn
               v-if="showBtns"
