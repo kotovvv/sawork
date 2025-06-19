@@ -65,6 +65,10 @@ export default {
         .get(`/api/getOrderPack/${this.order.IDOrder}`)
         .then((response) => {
           this.pack = response.data.pack;
+          if (this.pack && this.pack.Date) {
+            const date = new Date(this.pack.Date.replace(" ", "T"));
+            this.pack.Date = date.toLocaleString("pl-PL");
+          }
 
           if (!this.pack) {
             this.message = "Zamówienie nie zostało spakowane";
