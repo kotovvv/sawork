@@ -1,5 +1,5 @@
 <template>
-  <v-form ref="form" v-model="valid">
+  <v-form ref="form" v-model="valid" @submit.prevent="save">
     <v-row>
       <v-col cols="12" md="6">
         <div v-for="field in fields" :key="field.id" class="mb-1">

@@ -559,7 +559,7 @@ export default {
       }
       //}
     },
-    writeTTN() {
+    async writeTTN() {
       let o_ttn = {
         [this.package_number]: {
           package_id: this.package_id,
@@ -588,7 +588,7 @@ export default {
         }
       }
 
-      axios
+      await axios
         .post("/api/writeTTN", {
           Order: this.transOrders[this.indexTransOrders],
           nttn: this.package_number,
