@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class PrintController extends Controller
 {
@@ -38,7 +39,7 @@ class PrintController extends Controller
                 }
             }
             if (!$isReady) {
-                \Log::error("Printer {$printer} is not ready for user {$userId}");
+                Log::error("Printer {$printer} is not ready for user {$userId}");
                 return response()->json(['status' => 'error', 'message' => 'Printer not ready'], 400);
             }
             if (file_exists($path)) {
@@ -67,13 +68,13 @@ class PrintController extends Controller
                 }
             }
             if (!$isReady) {
-                \Log::error("Printer {$printer} is not ready for user {$userId}");
+                Log::error("Printer {$printer} is not ready for user {$userId}");
                 return response()->json(['status' => 'error', 'message' => 'Printer not ready'], 400);
             }
             if (file_exists($request->path)) {
                 exec("lpr -P " . escapeshellarg($printer) . " " . escapeshellarg($request->path));
             } else {
-                \Log::error("File not found: " . $request->path);
+                Log::error("File not found: " . $request->path);
                 return response()->json(['status' => 'error', 'message' => 'File not found'], 404);
             }
         }
