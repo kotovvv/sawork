@@ -204,7 +204,10 @@
                 <v-btn
                   class="btn"
                   @click="print"
-                  v-if="productsOrder[0]?.products.length == 0"
+                  v-if="
+                    productsOrder[0]?.products &&
+                    productsOrder[0].products.length > 0
+                  "
                   >Print faktura</v-btn
                 >
               </v-col>
