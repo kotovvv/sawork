@@ -417,6 +417,7 @@ export default {
       vm.productsERROR = [];
       vm.orderERROR = [];
       vm.loading = true;
+      vm.message = "";
       vm.currentFunction = "prepareDoc";
       axios
         .post("/api/prepareDoc", {
@@ -428,6 +429,7 @@ export default {
         .then((res) => {
           if (res.status == 200) {
             vm.snackbar = true;
+            vm.message = res.data.message;
 
             vm.makeOrders = res.data.listOrders;
             vm.ordersPropucts = res.data.listProductsOK;
