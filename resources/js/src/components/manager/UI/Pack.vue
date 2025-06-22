@@ -890,7 +890,20 @@ export default {
       this.message_error = "";
     },
     handleKeypress(event) {
-      if (event.key === "Shift") {
+      if (
+        event.key === "Shift" ||
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowRight"
+      ) {
+        if (event.key === "ArrowLeft") {
+          if (this.indexTransOrders > 0) this.indexTransOrders--;
+          else this.indexTransOrders = this.transOrders.length - 1;
+        }
+        if (event.key === "ArrowRight") {
+          if (this.indexTransOrders < this.transOrders.length - 1)
+            this.indexTransOrders++;
+          else this.indexTransOrders = 0;
+        }
         return;
       }
       if (event.key === "Enter") {

@@ -74,20 +74,18 @@ class CollectController extends Controller
         return response()->json(['allOrders' => $allOrders, 'waiteOrders' => $waiteOrders]);
     }
 
-    private function getLockedOrderIds($user)
+    public function getLockedOrderIds($user)
     {
         $locked = [];
-
         foreach (Cache::getMemcached()->getAllKeys() as $key) {
-            if (str_starts_with($key, 'order_lock_')) {
-                $orderId = str_replace('order_lock_', '', $key);
-                $lock = Cache::get($key);
-                if ($lock && $lock['user_id'] != $user->IDUzytkownika) {
+            if (str_starts_with($key, 'fulstor_cache_:order_lock_')) {
+                $orderId = str_replace('fulstor_cache_:order_lock_', '', $key);
+                $lock = Cache::get(str_replace('fulstor_cache_:', '', $key));
+                if ($lock && now()->diffInSeconds($lock['locked_at']) < 120 && $lock['user_id'] != $user->IDUzytkownika) {
                     $locked[] = $orderId;
                 }
             }
         }
-
         return $locked;
     }
 
@@ -132,7 +130,6 @@ class CollectController extends Controller
 
     public function lockOrders($orders, $user)
     {
-
         $userId = $user->IDUzytkownika;
         $locked = [];
         $unavailable = [];
@@ -141,15 +138,20 @@ class CollectController extends Controller
             $key = "order_lock_{$orderId}";
             $lock = Cache::get($key);
 
+            Log::debug("Checking lock for order: $orderId", ['lock' => $lock, 'userId' => $userId]);
+
             if ($lock && $lock['user_id'] !== $userId) {
                 $unavailable[] = $orderId;
             } else {
                 Cache::put($key, [
                     'user_id' => $userId,
+                    'locked_at' => now(),
                 ], now()->addMinutes(2));
                 $locked[] = $orderId;
             }
         }
+        $this->getLockedOrderIds($user); // Refresh the locked orders cache
+        Log::debug("Lock result", ['locked' => $locked, 'unavailable' => $unavailable]);
 
         return response()->json([
             'locked' => $locked,
@@ -163,6 +165,7 @@ class CollectController extends Controller
         $freeOrders = $this->freeOrdersFromCollect($request->IDsOrder, $request->user);
         // Check for intersection between $freeOrders and $lockedOrders
         $lockedOrders = $this->getLockedOrderIds($request->user);
+
 
         $intersectedOrders = array_intersect($freeOrders, $lockedOrders);
         if (!empty($intersectedOrders)) {
@@ -277,12 +280,13 @@ class CollectController extends Controller
             $product->locationsData = $locations;
         });
 
-        $lokedOrders = $this->lockOrders($selectedOrdersIDs->toArray(), $request->user);
+        $lockedOrdersResponse = $this->lockOrders($selectedOrdersIDs->toArray(), $request->user);
+        $lockedOrdersData = $lockedOrdersResponse->getData(true);
 
         // Selected orders
         return response()->json([
             'listProducts' => $listProducts,
-            'selectedOrders' => $lokedOrders,
+            'selectedOrders' => $selectedOrdersIDs,
             'sharedItems' => $sharedItems,
             'endParamas' => ['maxProducts' => $currentProducts, 'maxWeight' =>  $currentWeight, 'maxM3' => $currentM3],
             'message' => $message,
