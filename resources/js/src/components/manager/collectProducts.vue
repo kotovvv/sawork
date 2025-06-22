@@ -428,7 +428,6 @@ export default {
         .then((res) => {
           if (res.status == 200) {
             vm.snackbar = true;
-            vm.message = "Dokumenty przygotowane";
 
             vm.makeOrders = res.data.listOrders;
             vm.ordersPropucts = res.data.listProductsOK;
