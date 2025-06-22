@@ -19,7 +19,7 @@ class CollectController extends Controller
     {
         //get collected orders
         $waiteOrders = $this->waitOrders($request->user);
-        $lokedOrders = $this->getLockedOrderIds();
+        $lokedOrders = $this->getLockedOrderIds($request->user);
         $IDsWaiteOrders = $waiteOrders->pluck('IDOrder');
         //get free orders
         $allOrders = DB::table('dbo.Orders as o')
@@ -74,7 +74,7 @@ class CollectController extends Controller
         return response()->json(['allOrders' => $allOrders, 'waiteOrders' => $waiteOrders]);
     }
 
-    private function getLockedOrderIds()
+    private function getLockedOrderIds($user)
     {
         $locked = [];
 
@@ -82,7 +82,7 @@ class CollectController extends Controller
             if (str_starts_with($key, 'order_lock_')) {
                 $orderId = str_replace('order_lock_', '', $key);
                 $lock = Cache::get($key);
-                if ($lock && now()->diffInSeconds($lock['locked_at']) < 120) {
+                if ($lock && $lock['user_id'] != $user->IDUzytkownika) {
                     $locked[] = $orderId;
                 }
             }
@@ -126,14 +126,50 @@ class CollectController extends Controller
 
         $freeOrders = array_diff($orders, $ordersInCollect->toArray());
 
+
         return $freeOrders;
+    }
+
+    public function lockOrders($orders, $user)
+    {
+
+        $userId = $user->IDUzytkownika;
+        $locked = [];
+        $unavailable = [];
+
+        foreach ($orders as $orderId) {
+            $key = "order_lock_{$orderId}";
+            $lock = Cache::get($key);
+
+            if ($lock && $lock['user_id'] !== $userId) {
+                $unavailable[] = $orderId;
+            } else {
+                Cache::put($key, [
+                    'user_id' => $userId,
+                ], now()->addMinutes(2));
+                $locked[] = $orderId;
+            }
+        }
+
+        return response()->json([
+            'locked' => $locked,
+            'unavailable' => $unavailable,
+        ]);
     }
 
     public function getOrderProductsToCollect(Request $request)
     {
 
         $freeOrders = $this->freeOrdersFromCollect($request->IDsOrder, $request->user);
+        // Check for intersection between $freeOrders and $lockedOrders
+        $lockedOrders = $this->getLockedOrderIds($request->user);
 
+        $intersectedOrders = array_intersect($freeOrders, $lockedOrders);
+        if (!empty($intersectedOrders)) {
+            return response()->json([
+                'message' => 'Aktualizacja listy zamówień'
+            ]);
+        }
         $maxProducts = $request->maxProducts ?? 30;
         $maxWeight = $request->maxWeight ?? 30;
         $maxM3 = $request->maxM3 ?? 0.2;
@@ -141,6 +177,7 @@ class CollectController extends Controller
         $currentProducts = 0;
         $currentWeight = 0;
         $currentM3 = 0;
+        $message = '';
         foreach ($request->IDsWarehouses as  $warehouse) {
 
             $sharedItems = DB::table('dbo.OrderLines as ol')
@@ -240,13 +277,16 @@ class CollectController extends Controller
             $product->locationsData = $locations;
         });
 
+        $lokedOrders = $this->lockOrders($selectedOrdersIDs->toArray(), $request->user);
+
         // Selected orders
         return response()->json([
             'listProducts' => $listProducts,
-            'selectedOrders' => $selectedOrdersIDs,
+            'selectedOrders' => $lokedOrders,
             'sharedItems' => $sharedItems,
             'endParamas' => ['maxProducts' => $currentProducts, 'maxWeight' =>  $currentWeight, 'maxM3' => $currentM3],
-
+            'message' => $message,
+            'selectedOrdersData' => $selectedOrders
         ]);
     }
 
