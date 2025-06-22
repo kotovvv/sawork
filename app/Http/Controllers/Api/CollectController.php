@@ -19,6 +19,7 @@ class CollectController extends Controller
     {
         //get collected orders
         $waiteOrders = $this->waitOrders($request->user);
+        $lokedOrders = $this->getLockedOrderIds();
         $IDsWaiteOrders = $waiteOrders->pluck('IDOrder');
         //get free orders
         $allOrders = DB::table('dbo.Orders as o')
@@ -65,8 +66,29 @@ class CollectController extends Controller
                     ->where('IDType1', 2)
                     ->where('IDType2', 15);
             })
+            ->when($lokedOrders, function ($query) use ($lokedOrders) {
+                return $query->whereNotIn('o.IDOrder', $lokedOrders);
+            })
             ->get();
+
         return response()->json(['allOrders' => $allOrders, 'waiteOrders' => $waiteOrders]);
+    }
+
+    private function getLockedOrderIds()
+    {
+        $locked = [];
+
+        foreach (Cache::getMemcached()->getAllKeys() as $key) {
+            if (str_starts_with($key, 'order_lock_')) {
+                $orderId = str_replace('order_lock_', '', $key);
+                $lock = Cache::get($key);
+                if ($lock && now()->diffInSeconds($lock['locked_at']) < 120) {
+                    $locked[] = $orderId;
+                }
+            }
+        }
+
+        return $locked;
     }
 
     private function waitOrders($user)

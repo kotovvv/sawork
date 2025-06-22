@@ -36,6 +36,11 @@
           hide-details="auto"
           multiple
           clearable
+          append-icon="mdi-refresh"
+          @click:append="
+            clear();
+            getAllOrders();
+          "
         ></v-select>
       </v-col>
       <v-col cols="12" md="2" v-if="IDsWarehouses.length">
