@@ -1,110 +1,111 @@
 <template>
-<v-form ref="form" v-model="valid" @submit.prevent="save">
+  <v-form ref="form" v-model="valid" @submit.prevent="save">
     <v-row>
-        <v-col cols="12" md="6">
-            <div v-for="field in fields" :key="field.id" class="mb-1">
-                <template v-if="field.type === 'radio' && field.options">
-                    <v-label class="mb-2">{{ field.name }}</v-label>
-                    <v-radio-group
-                        v-model="fieldsData[field.id]"
-                        :rules="field.rules || []"
-                        :name="field.id"
-                        @keydown.enter.prevent="save"
-                    >
-                        <v-radio
-                            v-for="opt in getOptions(field)"
-                            :key="opt.value"
-                            :label="opt.title"
-                            :value="opt.value"
-                        />
-                    </v-radio-group>
-                </template>
-                <template v-if="field.type === 'checkbox' && field.options">
-                    <v-label class="mb-2">{{ field.name }}</v-label>
-                    <div>
-                        <v-checkbox
-                            v-for="opt in getOptions(field)"
-                            :key="opt.value"
-                            v-model="fieldsData[field.id]"
-                            :label="opt.title"
-                            :value="opt.value"
-                            :rules="field.rules || []"
-                            :name="field.id"
-                            multiple
-                            hide-details="auto"
-                            @keydown.enter.prevent="save"
-                        />
-                    </div>
-                </template>
-                <template v-else-if="field.type === 'date'">
-                    <v-menu
-                        v-model="datePickers[field.id]"
-                        :close-on-content-click="false"
-                        transition="scale-transition"
-                        offset-y
-                        min-width="auto"
-                    >
-                        <template #activator="{ props }">
-                            <v-text-field
-                                v-bind="props"
-                                v-model="fieldsData[field.id]"
-                                :label="field.name"
-                                readonly
-                                :rules="field.rules || []"
-                                :name="field.id"
-                                @keydown.enter.prevent="save"
-                            />
-                        </template>
-                        <v-date-picker
-                            v-model="fieldsData[field.id]"
-                            @update:modelValue="datePickers[field.id] = false"
-                        />
-                    </v-menu>
-                </template>
-                <template v-else>
-                    <component
-                        :is="getComponent(field)"
-                        v-model="fieldsData[field.id]"
-                        :label="field.name"
-                        :items="getOptions(field)"
-                        :multiple="field.type === 'checkbox'"
-                        :type="field.type === 'text' ? 'text' : undefined"
-                        :value="fieldsData[field.id]"
-                        :hint="field.hint"
-                        persistent-hint
-                        :rules="field.rules || []"
-                        :name="field.id"
-                        :true-value="true"
-                        :false-value="false"
-                        @keydown.enter.prevent="save"
-                    ></component>
-                </template>
+      <v-col cols="12" md="6">
+        <div v-for="field in fields" :key="field.id" class="mb-1">
+          <template v-if="field.type === 'radio' && field.options">
+            <v-label class="mb-2">{{ field.name }}</v-label>
+            <v-radio-group
+              v-model="fieldsData[field.id]"
+              :rules="field.rules || []"
+              :name="field.id"
+              @keydown.enter.prevent="save"
+            >
+              <v-radio
+                v-for="opt in getOptions(field)"
+                :key="opt.value"
+                :label="opt.title"
+                :value="opt.value"
+              />
+            </v-radio-group>
+          </template>
+          <template v-if="field.type === 'checkbox' && field.options">
+            <v-label class="mb-2">{{ field.name }}</v-label>
+            <div>
+              <v-checkbox
+                v-for="opt in getOptions(field)"
+                :key="opt.value"
+                v-model="fieldsData[field.id]"
+                :label="opt.title"
+                :value="opt.value"
+                :rules="field.rules || []"
+                :name="field.id"
+                multiple
+                hide-details="auto"
+                @keydown.enter.prevent="save"
+              />
             </div>
-        </v-col>
-        <v-col cols="12" md="6">
-            <div v-if="packageFields && packageFields.length">
-                <div v-for="field in packageFields" :key="field.id" class="mb-1">
-                    <component
-                        :is="getComponent(field)"
-                        v-model="packageFieldsData[field.id]"
-                        :label="field.name"
-                        :items="getOptions(field)"
-                        :multiple="field.type === 'checkbox'"
-                        :type="field.type === 'text' ? 'text' : undefined"
-                        :hint="field.hint"
-                        persistent-hint
-                        :rules="field.rules || []"
-                        :name="field.id"
-                        :true-value="true"
-                        :false-value="false"
-                        @keydown.enter.prevent="save"
-                    ></component>
-                </div>
-            </div>
-        </v-col>
+          </template>
+          <template v-else-if="field.type === 'date'">
+            <v-menu
+              v-model="datePickers[field.id]"
+              :close-on-content-click="false"
+              transition="scale-transition"
+              offset-y
+              min-width="auto"
+            >
+              <template #activator="{ props }">
+                <v-text-field
+                  v-bind="props"
+                  v-model="fieldsData[field.id]"
+                  :label="field.name"
+                  readonly
+                  :rules="field.rules || []"
+                  :name="field.id"
+                  @keydown.enter.prevent="save"
+                />
+              </template>
+              <v-date-picker
+                v-model="fieldsData[field.id]"
+                @update:modelValue="datePickers[field.id] = false"
+              />
+            </v-menu>
+          </template>
+          <template v-else>
+            <component
+              :is="getComponent(field)"
+              v-model="fieldsData[field.id]"
+              :label="field.name"
+              :items="getOptions(field)"
+              :multiple="field.type === 'checkbox'"
+              :type="field.type === 'text' ? 'text' : undefined"
+              :value="fieldsData[field.id]"
+              :hint="field.hint"
+              persistent-hint
+              :rules="field.rules || []"
+              :name="field.id"
+              :true-value="true"
+              :false-value="false"
+              @keydown.enter.prevent="save"
+            ></component>
+          </template>
+        </div>
+      </v-col>
+      <v-col cols="12" md="6">
+        <div v-if="packageFields && packageFields.length">
+          <div v-for="field in packageFields" :key="field.id" class="mb-1">
+            <component
+              :is="getComponent(field)"
+              v-model="packageFieldsData[field.id]"
+              :label="field.name"
+              :items="getOptions(field)"
+              :multiple="field.type === 'checkbox'"
+              :type="field.type === 'text' ? 'text' : undefined"
+              :hint="field.hint"
+              persistent-hint
+              :rules="field.rules || []"
+              :name="field.id"
+              :true-value="true"
+              :false-value="false"
+              @keydown.enter.prevent="save"
+            ></component>
+          </div>
+        </div>
+      </v-col>
     </v-row>
     <v-btn color="primary" @click="save">odbiór konosamentu</v-btn>
-</v-form>
+  </v-form>
+</template>
 
 <script setup>
 defineOptions({ name: "DynamicForm" });
