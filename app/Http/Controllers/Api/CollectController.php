@@ -430,17 +430,17 @@ class CollectController extends Controller
                 $bl_user_id = 0;
             }
 
-            // Check if all requested orders are locked (must match exactly)
-            $lockedOrders = $this->getLockedOrderIds($request->user);
-            $requestedOrderIds = collect($request->orders)->pluck('IDOrder')->toArray();
-            sort($lockedOrders);
-            sort($requestedOrderIds);
-            if ($lockedOrders !== $requestedOrderIds) {
-                return response()->json([
-                    'message' => 'Zaktualizuj listę zamówień, niektóre zamówienia są już zablokowane.',
+            // // Check if all requested orders are locked (must match exactly)
+            // $lockedOrders = $this->getLockedOrderIds($request->user);
+            // $requestedOrderIds = collect($request->orders)->pluck('IDOrder')->toArray();
+            // sort($lockedOrders);
+            // sort($requestedOrderIds);
+            // if ($lockedOrders !== $requestedOrderIds) {
+            //     return response()->json([
+            //         'message' => 'Zaktualizuj listę zamówień, niektóre zamówienia są już zablokowane.',
 
-                ]);
-            }
+            //     ]);
+            // }
 
             $createdDoc[$IDMagazynu] = null;
             $toLocation['IDWarehouseLocation'] = $this->getUserLocation($IDMagazynu, $request->user->IDUzytkownika);
