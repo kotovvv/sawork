@@ -36,6 +36,11 @@
           hide-details="auto"
           multiple
           clearable
+          append-icon="mdi-refresh"
+          @click:append="
+            clear();
+            getAllOrders();
+          "
         ></v-select>
       </v-col>
       <v-col cols="12" md="2" v-if="IDsWarehouses.length">
@@ -412,6 +417,7 @@ export default {
       vm.productsERROR = [];
       vm.orderERROR = [];
       vm.loading = true;
+      vm.message = "";
       vm.currentFunction = "prepareDoc";
       axios
         .post("/api/prepareDoc", {
@@ -423,7 +429,7 @@ export default {
         .then((res) => {
           if (res.status == 200) {
             vm.snackbar = true;
-            vm.message = "Dokumenty przygotowane";
+            vm.message = res.data.message;
 
             vm.makeOrders = res.data.listOrders;
             vm.ordersPropucts = res.data.listProductsOK;
@@ -469,11 +475,16 @@ export default {
         })
         .then((res) => {
           if (res.status == 200) {
-            vm.ordersPropucts = res.data.listProducts;
-            vm.selectedOrders = res.data.selectedOrders;
-            vm.endParamas = res.data.endParamas;
-            vm.loading = false;
-            vm.showBtn = true;
+            if (res.data.message !== "") {
+              vm.snackbar = true;
+              vm.message = res.data.message;
+            } else {
+              vm.ordersPropucts = res.data.listProducts;
+              vm.selectedOrders = res.data.selectedOrders;
+              vm.endParamas = res.data.endParamas;
+              vm.loading = false;
+              vm.showBtn = true;
+            }
           }
         })
         .catch((error) => console.log(error));

@@ -84,14 +84,14 @@ class importBLController extends Controller
 
     private function writeLog($param)
     {
-        if (DB::table('Orders')->where('_OrdersTempDecimal2', $param['a_log']['order_id'])->exists()) {
+        if (DB::table('Orders')->where('_OrdersTempDecimal2', $param['a_log']['order_id'])->where('IDWarehouse', $param['a_warehouse']->warehouse_id)->exists()) {
             $log_type_name = $this->BL->log_type[$param['a_log']['log_type']];
             $object_id = 0;
             if ($param['a_log']['object_id'] > 0 && $param['a_log']['object_id'] < 19) {
                 $object_id = $this->BL->object_id[$param['a_log']['object_id']];
             }
             $date = Carbon::createFromTimestamp($param['a_log']['date'])->format('Y-m-d H:i:s');
-            if (DB::table('Orders')->where('_OrdersTempDecimal2', $param['a_log']['order_id'])->where('IDOrderStatus', 23)->exists()) {
+            if (DB::table('Orders')->where('_OrdersTempDecimal2', $param['a_log']['order_id'])->where('IDWarehouse', $param['a_warehouse']->warehouse_id)->where('IDOrderStatus', 23)->exists()) {
                 LogOrder::create([
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
@@ -143,7 +143,7 @@ class importBLController extends Controller
                 */
 
                 // this order has already been imported by the integrator
-                $a_order = DB::table('Orders')->where('_OrdersTempDecimal2', $order['order_id'])->first();
+                $a_order = DB::table('Orders')->where('_OrdersTempDecimal2', $order['order_id'])->where('IDWarehouse', $param['a_warehouse']->warehouse_id)->first();
                 if ($a_order) {
                     if (!in_array($a_order->IDOrderStatus, [16, 19, 23, 27, 29, 32, 33, 43])) {
                         LogOrder::create([
@@ -157,6 +157,7 @@ class importBLController extends Controller
                     if (in_array($a_order->IDOrderStatus, [16, 19, 27, 29, 32, 33, 43])) {
                         DB::table('Orders')
                             ->where('_OrdersTempDecimal2', $order['order_id'])
+                            ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
                             ->update(['IDOrderStatus' => 23]);
                     }
                     $uwagi = 'Nr zamówienia w BaseLinker: ' . $order['order_id'] . ' Zmiana zamówienia w BaseLinker ' . $order['user_comments'] ?: $order['admin_comments'] ?: '';
@@ -416,7 +417,7 @@ HAVING
             $this->writeProductsOrder($orderData, $IDOrder, $idMagazynu, $uwagi);
 
 
-            DB::table('Orders')->where('Number', $Number)->update([
+            DB::table('Orders')->where('Number', $Number)->where('IDWarehouse', $idMagazynu)->update([
                 '_OrdersTempString1' => $invoice_number,
                 '_OrdersTempDecimal2' => $orderData['order_id'],
                 '_OrdersTempString7' => $orderSources,

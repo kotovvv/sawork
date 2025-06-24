@@ -9,6 +9,7 @@
               v-model="fieldsData[field.id]"
               :rules="field.rules || []"
               :name="field.id"
+              @keydown.enter.prevent="save"
             >
               <v-radio
                 v-for="opt in getOptions(field)"
@@ -31,6 +32,7 @@
                 :name="field.id"
                 multiple
                 hide-details="auto"
+                @keydown.enter.prevent="save"
               />
             </div>
           </template>
@@ -50,6 +52,7 @@
                   readonly
                   :rules="field.rules || []"
                   :name="field.id"
+                  @keydown.enter.prevent="save"
                 />
               </template>
               <v-date-picker
@@ -73,6 +76,7 @@
               :name="field.id"
               :true-value="true"
               :false-value="false"
+              @keydown.enter.prevent="save"
             ></component>
           </template>
         </div>
@@ -93,6 +97,7 @@
               :name="field.id"
               :true-value="true"
               :false-value="false"
+              @keydown.enter.prevent="save"
             ></component>
           </div>
         </div>
