@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\Api\BaseLinkerController;
-use App\Models\LogOrder; // Ensure this model exists in the App\Models namespace
-use App\Models\ForTtn; // Add this line to import the ForTtn model
+use App\Models\LogOrder;
+use App\Models\ForTtn;
+use App\Models\Collect;
 use Illuminate\Support\Facades\DB;
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
 
 class importBLController extends Controller
 {
@@ -19,7 +21,41 @@ class importBLController extends Controller
     private $BL;
 
     /* Get all mwarehouse for loop */
-    public function __construct()
+    public function __construct($warehouseId = null, $orderId = null)
+    {
+        if ($warehouseId && $orderId) {
+
+            $this->importSingleOrder($warehouseId, $orderId);
+        } else {
+            $this->runAll();
+        }
+    }
+
+    public function importSingleOrder($warehouseId, $orderId)
+    {
+        // Получаем sklad_token только для нужного склада
+        $sklad_token = DB::table('settings')
+            ->where('obj_name', 'sklad_token')
+            ->where('for_obj', $warehouseId)
+            ->value('value');
+
+        $this->BL = new BaseLinkerController($sklad_token);
+
+        // Импортируем только один заказ
+        $this->GetOrders($warehouseId, $orderId);
+        $number = DB::table('orders')
+            ->where('_OrdersTempDecimal2', $orderId)
+            ->where('IDWarehouse', $warehouseId)
+            ->value('Number');
+
+        if ($number) {
+            return $number;
+        } else {
+            return 'Error import order';
+        }
+    }
+
+    private function runAll()
     {
         $this->warehouses = $this->getAllWarehouses();
 
@@ -38,8 +74,42 @@ class importBLController extends Controller
         $last_log_id = $a_warehouse->last_log_id;
 
         $parameters = [
-            // 'order_id' => 12017786,
-            'logs_types' => [12, 13, 14, 18]
+            /*
+            Event type:
+            1 - Order creation
+            2 - DOF download (order confirmation)
+            3 - Payment of the order
+            4 - Removal of order/invoice/receipt
+            5 - Merging the orders
+            6 - Splitting the order
+            7 - Issuing an invoice
+            8 - Issuing a receipt
+            9 - Package creation
+            10 - Deleting a package
+            11 - Editing delivery data
+            12 - Adding a product to an order
+            13 - Editing the product in the order
+            14 - Removing the product from the order
+            15 - Adding a buyer to a blacklist
+            16 - Editing order data
+            17 - Copying an order
+            18 - Order status change
+            19 - Invoice deletion
+            20 - Receipt deletion
+            21 - Editing invoice data
+
+            object_id:
+            Additional information, depending on the event type:
+            5 - ID of the merged order
+            6 - ID of the new order created by the order separation
+            7 - Invoice ID
+            9 - Created parcel ID
+            10 - Deleted parcel ID
+            14 - Deleted product ID
+            17 - Created order ID
+            18 - Order status ID
+            */
+            'logs_types' => [7, 9, 11, 12, 13, 14, 16, 18]
         ];
 
         if ($last_log_id > 0) {
@@ -58,13 +128,31 @@ class importBLController extends Controller
             $last_log_id = max($last_log_id, $log['log_id']);
             if ($a_warehouse->last_log_id == $log['log_id']) continue;
             switch ($log['log_type']) {
-                case '18':
+                case 7:
+                    $this->changeInvoiceOrder([
+                        'a_log' => $log,
+                        'a_warehouse' => $a_warehouse,
+                    ]);
+                    break;
+                case 9:
+                    $this->changePackageOrder([
+                        'a_log' => $log,
+                        'a_warehouse' => $a_warehouse,
+                    ]);
+                case 12:
+                case 13:
+                case 14:
                     $this->changeProductsOrder([
                         'a_log' => $log,
                         'a_warehouse' => $a_warehouse,
                     ]);
                     break;
-
+                case 18:
+                    $this->changeStatusOrder([
+                        'a_log' => $log,
+                        'a_warehouse' => $a_warehouse,
+                    ]);
+                    break;
                 default:
                     $this->writeLog([
                         'a_log' => $log,
@@ -109,6 +197,76 @@ class importBLController extends Controller
             }
         }
     }
+
+    private function changePackageOrder($param)
+    {
+        $newOrderPackageBL = $param['a_log']['object_id'];
+    }
+
+    private function changeInvoiceOrder($param)
+    {
+        $newOrderInviceBL = $param['a_log']['object_id'];
+        $this->invoices = $this->BL->getInvoices(['order_id' => $param['a_log']['order_id']]);
+        $invoice_number = collect($this->invoices['invoices'])->firstWhere('order_id', $param['a_log']['order_id'])['number'] ?? null;
+        $order = DB::table('Orders')
+            ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+            ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
+        $orderID = $order->value('IDOrder');
+        $order
+            ->where('_OrdersTempString1', '!=', $newOrderInviceBL)
+            ->update(['_OrdersTempString1' =>  $invoice_number]);
+
+        Collect::where('IDOrder', $orderID)->update('invoice_id', $newOrderInviceBL);
+        LogOrder::create([
+            'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+            'number' => $param['a_log']['order_id'],
+            'type' => 7,
+            'message' => 'Zmieniono numer faktury na: ' . $invoice_number . ' dla zamówienia: ' . $param['a_log']['order_id']
+        ]);
+    }
+
+
+
+    private function changeStatusOrder($param)
+    {
+        $newOrderStatusBL = $param['a_log']['object_id'];
+        $newOrderStatusBLName = $this->BL->getStatusName($newOrderStatusBL);
+
+        $OrderStatusLMName = DB::table('Orders')
+            ->join('IntegratorTransactions', 'IntegratorTransactions.transId', '=', 'Orders._OrdersTempDecimal2')
+            ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
+            ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+            ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+            ->value('OrderStatus.Name');
+        $newOrderStatusLMID = DB::table('OrderStatus')->where('Name', $newOrderStatusBLName)->value('IDOrderStatus');
+
+        if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['', 'Nowe zamówienia', 'Nie wysyłaćь'])) || (in_array($newOrderStatusBLName, ['Do Wyslanja', 'Wyslane', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do Wyslanja', 'Wyslane', 'Do odbior']))) {
+            LogOrder::create([
+                'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                'number' => $param['a_log']['order_id'],
+                'type' => 18,
+                'message' => 'Status zmieniony na: ' . $newOrderStatusBLName . ' od statusu w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
+            ]);
+            DB::table('Orders')
+                ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+                ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+                ->update(['IDOrderStatus' => $newOrderStatusLMID]);
+        } else {
+            $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
+            Mail::send([], [], function ($message) use ($body) {
+                $message->to('khanenko.igor@gmail.com')
+                    ->subject('Status zmiany zamówienia w BaseLinker')
+                    ->setBody($body, 'text/plain');
+            });
+            LogOrder::create([
+                'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                'number' => $param['a_log']['order_id'],
+                'type' => 18,
+                'message' => 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
+            ]);
+        }
+    }
+
 
     private function changeProductsOrder($param)
     {
@@ -234,18 +392,23 @@ HAVING
     MAX(CASE WHEN obj_name = 'sklad_token' THEN value ELSE '' END) != ''");
     }
 
-    public function GetOrders($idMagazynu)
+    public function GetOrders($idMagazynu, $order_id = null)
     {
         $this->statuses = $this->BL->statuses;
         $w_realizacji_id = $this->BL->getStatusId('W realizacji');
         $this->orderSources = $this->BL->getOrderSources();
 
-        $parameters = [
-            // 'order_id' => 12017786,
-            // 'get_unconfirmed_orders' => true,
-            // 'include_custom_extra_fields' => true,
-            'status_id' => $w_realizacji_id,
-        ];
+
+        if ($order_id) {
+            $parameters['order_id'] = $order_id;
+        } else {
+            $parameters = [
+                // 'order_id' => 12017786,
+                // 'get_unconfirmed_orders' => true,
+                // 'include_custom_extra_fields' => true,
+                'status_id' => $w_realizacji_id,
+            ];
+        }
 
         $response = $this->BL->getOrders($parameters);
 

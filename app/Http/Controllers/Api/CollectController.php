@@ -437,11 +437,14 @@ class CollectController extends Controller
             $requestedOrderIds = collect($request->orders)->pluck('IDOrder')->toArray();
             sort($lockedOrders);
             sort($requestedOrderIds);
-            dd($lockedOrders, $requestedOrderIds);
-            if ($lockedOrders !== $requestedOrderIds) {
+
+            $allRequestedAreLocked = empty(array_diff($requestedOrderIds, $lockedOrders));
+            // $allRequestedAreLocked will be true if all requestedOrderIds are in lockedOrders
+            // Example usage:
+            // if (!$allRequestedAreLocked) { ... }
+            if (!$allRequestedAreLocked) {
                 return response()->json([
                     'message' => 'Zaktualizuj listę zamówień, niektóre zamówienia są już zablokowane.',
-
                 ]);
             }
 

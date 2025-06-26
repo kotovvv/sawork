@@ -36,6 +36,21 @@
             <v-col cols="6" class="d-flex align-center">
               {{ lastExecutedAt }}
             </v-col>
+            <v-col cols="6">
+              <v-text-field v-model="orderId" label="id order for import">
+                <template v-slot:append>
+                  <v-icon
+                    @click="importSingleOrder(selectedWarehouse, orderId)"
+                    class="btn"
+                    color="primary"
+                    :loading="loadingOrderImport"
+                    :messages="messages"
+                  >
+                    mdi-content-save
+                  </v-icon>
+                </template>
+              </v-text-field>
+            </v-col>
           </v-row>
         </v-col>
 
@@ -215,10 +230,31 @@ export default {
       page: 1,
       itemsPerPage: 50,
       pageCount: 0,
+      orderId: null,
+      loadingOrderImport: false,
+      messages: [],
     };
   },
 
   methods: {
+    importSingleOrder(warehouseId, orderId) {
+      this.loadingOrderImport = true;
+      axios
+        .get(`/api/importSingleOrder/${warehouseId}/${orderId}`)
+        .then((response) => {
+          if (response.data.success) {
+            this.orderId = null;
+            this.loadingOrderImport = false;
+            this.messages = [response.data];
+          } else {
+            this.$emit("error", response.data.message);
+          }
+        })
+        .catch((error) => {
+          console.error("Error importing order:", error);
+          this.$emit("error", "Failed to import order");
+        });
+    },
     async getLog(page = 1, search = "") {
       const params = {
         page,

@@ -122,4 +122,6 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::get('for-ttn/get-accounts-from-bl/{id_warehouse}/{courier_code}', [ForTTNController::class, 'getAccountsFromBL']);
     Route::get('getForm/{id}', [ForTTNController::class, 'getForm']);
     Route::post('getTTN', [ForTTNController::class, 'getTTN']);
+
+    Route::get('importSingleOrder/{warehouseId}/{orderId}', [\App\Http\Controllers\Api\importBLController::class, 'importSingleOrder']);
 });

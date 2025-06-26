@@ -195,7 +195,7 @@
 
     <v-row v-if="ordersPropucts.length && showBtn">
       <v-col>
-        <v-btn @click="prepareDoc">Zbierać</v-btn>
+        <v-btn @click.once="prepareDoc" :disable="isHidenBtnZ">Zbierać</v-btn>
       </v-col>
     </v-row>
     <v-row v-if="ordersPropucts.length">
@@ -311,6 +311,7 @@ export default {
         { title: "locations", value: "locations" },
       ],
       currentFunction: null,
+      isHidenBtnZ: false,
     };
   },
 
@@ -414,6 +415,7 @@ export default {
     },
     prepareDoc() {
       const vm = this;
+      vm.isHidenBtnZ = true;
       vm.productsERROR = [];
       vm.orderERROR = [];
       vm.loading = true;
@@ -442,6 +444,7 @@ export default {
             vm.selectedMakeOrders = [];
             vm.setTransComany();
             vm.showBtn = false;
+            vm.isHidenBtnZ = false;
           }
         })
         .catch((error) => {
