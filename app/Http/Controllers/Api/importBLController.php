@@ -460,6 +460,7 @@ class importBLController extends Controller
                         $this->writeProductsOrder($order, $a_order->IDOrder, $param['a_warehouse']->warehouse_id, $uwagi);
                         DB::table('Orders')->where('IDOrder', $a_order->IDOrder)->update([
                             'Modified' => now(),
+                            '_OrdersTempString5' => 'Products changed',
                         ]);
 
                         DB::commit();
