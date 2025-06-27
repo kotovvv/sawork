@@ -212,6 +212,7 @@ class BaseLinkerController extends Controller
         $response = $this->sendRequest('getCouriersList', $parameters);
         return $response;
     }
+
     public function getCourierAccounts($parameters)
     {
         if (!isset($parameters['courier_code'])) {
@@ -242,6 +243,14 @@ class BaseLinkerController extends Controller
             throw new \InvalidArgumentException('The "courier_code" are required.');
         }
         $response = $this->sendRequest('getCourierFields', $parameters);
+        return $response;
+    }
+    public function getOrderPackages($parameters)
+    {
+        if (!isset($parameters['order_id'])) {
+            throw new \InvalidArgumentException('The "order_id" are required.');
+        }
+        $response = $this->sendRequest('getOrderPackages', $parameters);
         return $response;
     }
 }

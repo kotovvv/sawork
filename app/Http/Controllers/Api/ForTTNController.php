@@ -258,6 +258,7 @@ class ForTTNController extends Controller
 
         return $res;
     }
+
     public function getTTN(Request $request)
     {
         $data = $request->validate([
@@ -306,6 +307,9 @@ class ForTTNController extends Controller
             if ($createdTTN['status'] == 'ERROR') {
                 return response()->json(['error_message' => $createdTTN['error_code'] . ' ' . $createdTTN['error_message']], 404);
             }
+            DB::table('Orders')->where('IDOrder', $data['IDOrder'])->where('IDWarehouse', $data['IDWarehouse'])
+                ->update(['_OrdersTempString2' => $createdTTN['package_number']]);
+
             $label = $BL->getLabel([
                 'courier_code' => $orderInfo['courier_code'],
                 'package_id' => $createdTTN['package_id'],
