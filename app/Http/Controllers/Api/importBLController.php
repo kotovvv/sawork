@@ -422,8 +422,7 @@ class importBLController extends Controller
             ||
             (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
             ||
-            (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wyslane', 'Do odbior', 'Odebrane'])) && $newOrderStatusBLName != $OrderStatusLMName
-
+            (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wyslane', 'Do odbior', 'Odebrane']) && $newOrderStatusBLName != $OrderStatusLMName)
         ) {
             LogOrder::create([
                 'IDWarehouse' => $param['a_warehouse']->warehouse_id,
