@@ -20,6 +20,7 @@ class importBLController extends Controller
     private $invoices = [];
     private $orderSources = [];
     private $BL;
+    private $warehouse = '';
 
     /* Get all mwarehouse for loop */
     public function __construct($warehouseId = null, $orderId = null)
@@ -227,40 +228,52 @@ class importBLController extends Controller
             ]);
             return;
         }
-        $OrderStatusLMName = DB::table('order')->leftJoin('OrderStatus as os', 'o.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
+        $LM_order = DB::table('Orders')
+            ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+            ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
+
+        $OrderStatusLMName =  $LM_order
+            ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
+            ->value('OrderStatus.Name');
+        $orderSources = $orderData['order_source'] . '_' .
+            (isset($this->orderSources['sources'][$orderData['order_source']])
+                ? collect($this->orderSources['sources'][$orderData['order_source']])->get($orderData['order_source_id'])
+                : null);
+        //IDAccount
+        $CustomerId =  $this->findOrCreateKontrahent($orderData, $param['a_warehouse']->warehouse_id);
         if (in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ'])) {
             $this->saveOrderDetails($orderData, $param['a_log']['order_id'],  $param['a_warehouse']->warehouse_id);
-            // $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
-            // if (!$idTransport) {
-            //     DB::table('RodzajTransportu')->insert([
-            //         'Nazwa' => $orderData['delivery_method'],
-            //         'Utworzono' => now(),
-            //         'Zmodyfikowano' => now(),
-            //     ]);
-            //     $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
-            // }
 
-            // $invoice_number = collect($this->invoices['invoices'])->firstWhere('order_id', $orderData['order_id'])['number'] ?? null;
-            $orderSources = $orderData['order_source'] . '_' .
-                (isset($this->orderSources['sources'][$orderData['order_source']])
-                    ? collect($this->orderSources['sources'][$orderData['order_source']])->get($orderData['order_source_id'])
-                    : null);
-            //IDAccount
-            $CustomerId =  $this->findOrCreateKontrahent($orderData, $param['a_warehouse']->warehouse_id);
-            DB::table('Orders')->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
-                ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)->update([
-                    'IDAccount' => $CustomerId,
-                    '_OrdersTempString7' => $orderSources,
-                    '_OrdersTempString8' => $orderData['external_order_id'],
-                    '_OrdersTempString9' => $orderData['user_login']
-                ]);
+
+            $LM_order->update([
+                'IDAccount' => $CustomerId,
+                '_OrdersTempString7' => $orderSources,
+                '_OrdersTempString8' => $orderData['external_order_id'],
+                '_OrdersTempString9' => $orderData['user_login']
+            ]);
         } else {
-            $body = 'Zamówienie: ' . $param['a_log']['order_id'] . ' ma status: ' . $OrderStatusLMName . ' i nie można zmienić danych zamówienia.';
-            Mail::send([], [], function ($message) use ($body, $param) {
-                $message->to('khanenko.igor@gmail.com')
-                    ->subject('Zamówienie: ' . $param['a_log']['order_id'] . ' i nie można zmienić danych zamówienia dataOrder.')
-                    ->setBody($body, 'text/plain');
-            });
+            // Get current values from the database
+            $currentData = $LM_order->first([
+                'IDAccount',
+                '_OrdersTempString7',
+                '_OrdersTempString8',
+                '_OrdersTempString9'
+            ]);
+
+            // Only update if data is different
+            if (
+                !$currentData ||
+                $currentData->IDAccount != $CustomerId ||
+                $currentData->_OrdersTempString7 != $orderSources ||
+                $currentData->_OrdersTempString8 != $orderData['external_order_id'] ||
+                $currentData->_OrdersTempString9 != $orderData['user_login']
+            ) {
+                $body = 'Zamówienie: ' . $param['a_log']['order_id'] . ' ma status: ' . $OrderStatusLMName . ' i nie można zmienić danych zamówienia.';
+                Mail::raw($body, function ($message) use ($param) {
+                    $message->to('khanenko.igor@gmail.com')
+                        ->subject('Zamówienie: ' . $param['a_log']['order_id'] . ' i nie można zmienić danych zamówienia dataOrder.');
+                });
+            }
         }
         LogOrder::create([
             'IDWarehouse' => $param['a_warehouse']->warehouse_id,
@@ -286,7 +299,6 @@ class importBLController extends Controller
         $LM_order = DB::table('Orders')
             ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
             ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
-        $orderStatus = $LM_order->leftJoin('OrderStatus as os', 'o.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
 
         $OrderStatusLMName =  $LM_order
             ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
@@ -309,10 +321,9 @@ class importBLController extends Controller
                 ]);
         } else {
             $body = 'Zamówienie: ' . $param['a_log']['order_id'] . ' ma status: ' . $OrderStatusLMName . ' i nie można zmienić danych dostawy.';
-            Mail::send([], [], function ($message) use ($body, $param) {
+            Mail::raw($body, function ($message) use ($param) {
                 $message->to('khanenko.igor@gmail.com')
-                    ->subject('Zamówienie: ' . $param['a_log']['order_id'] . ' i nie można zmienić danych dostawy.')
-                    ->setBody($body, 'text/plain');
+                    ->subject('Zamówienie: ' . $param['a_log']['order_id'] . ' i nie można zmienić danych dostawy.');
             });
         }
     }
@@ -344,10 +355,9 @@ class importBLController extends Controller
                 ->update(['_OrdersTempString2' => $package['courier_package_nr']]);
         } else {
             $body = 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id'];
-            Mail::send([], [], function ($message) use ($body, $param) {
+            Mail::raw($body, function ($message) use ($param) {
                 $message->to('khanenko.igor@gmail.com')
-                    ->subject('Change Package Order BL' . $param['a_log']['order_id'])
-                    ->setBody($body, 'text/plain');
+                    ->subject('Change Package Order BL' . $param['a_log']['order_id']);
             });
         }
 
@@ -372,12 +382,13 @@ class importBLController extends Controller
             ->value('OrderStatus.Name');
         if (in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ'])) {
 
-            $orderID = $order->value('IDOrder');
             $order
-                ->where('_OrdersTempString1', '!=', $newOrderInviceBL)
-                ->update(['_OrdersTempString1' =>  $invoice_number]);
+                ->where('_OrdersTempString1', '!=', $invoice_number)
+                ->update([
+                    '_OrdersTempString1' =>  $invoice_number,
+                    'Modified' => now(),
 
-            Collect::where('IDOrder', $orderID)->update('invoice_id', $newOrderInviceBL);
+                ]);
         }
 
         LogOrder::create([
@@ -418,11 +429,11 @@ class importBLController extends Controller
             $order->update(['IDOrderStatus' => $newOrderStatusLMID]);
         } else {
             $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Panel: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
-            Mail::send([], [], function ($message) use ($body) {
+            Mail::raw($body, function ($message) use ($param) {
                 $message->to('khanenko.igor@gmail.com')
-                    ->subject('Status zmiany zamówienia w BaseLinker')
-                    ->setBody($body, 'text/plain');
+                    ->subject('Status zmiany zamówienia w BaseLinker');
             });
+
             LogOrder::create([
                 'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                 'number' => $param['a_log']['order_id'],
@@ -501,11 +512,11 @@ class importBLController extends Controller
                 }
             } else {
                 $body = "Change products Order: {$order['order_id']}";
-                Mail::send([], [], function ($message) use ($body, $order) {
+                Mail::raw($body, function ($message) use ($param) {
                     $message->to('khanenko.igor@gmail.com')
-                        ->subject("Change products Order: {$order['order_id']}")
-                        ->setBody($body, 'text/plain');
+                        ->subject("Change products Order: {$order['order_id']}");
                 });
+
                 LogOrder::create([
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $order['order_id'],
