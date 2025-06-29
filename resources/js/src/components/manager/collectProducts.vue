@@ -432,12 +432,12 @@ export default {
             vm.message = res.data.message;
 
             vm.makeOrders = res.data.listOrders;
-            vm.ordersPropucts = res.data.listProductsOK;
+            vm.ordersPropucts = res.data.listProductsOK ?? [];
             vm.loading = false;
-            vm.messages = res.data.messages;
-            vm.createdDoc = res.data.createdDoc;
-            vm.productsERROR = res.data.productsERROR;
-            vm.orderERROR = res.data.orderERROR;
+            vm.messages = res.data.messages ?? [];
+            vm.createdDoc = res.data.createdDoc ?? false;
+            vm.productsERROR = res.data.productsERROR ?? [];
+            vm.orderERROR = res.data.orderERROR ?? [];
             vm.getAllOrders();
             vm.selectedMakeOrders = [];
             vm.setTransComany();
@@ -484,6 +484,10 @@ export default {
               vm.endParamas = res.data.endParamas;
               vm.loading = false;
               vm.showBtn = true;
+            }
+            if (res.data.message == "Aktualizacja listy zamówień") {
+              vm.clear();
+              vm.getAllOrders();
             }
           }
         })

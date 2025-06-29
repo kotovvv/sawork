@@ -79,11 +79,9 @@ class CollectController extends Controller
         $locked = [];
         foreach (Cache::getMemcached()->getAllKeys() as $key) {
             if (str_starts_with($key, 'fulstor_cache_:order_lock_')) {
-
-
                 $orderId = str_replace('fulstor_cache_:order_lock_', '', $key);
                 $lock = Cache::get(str_replace('fulstor_cache_:', '', $key));
-                if ($lock && now()->diffInSeconds($lock['locked_at']) < 120 && $foruser ? $lock['user_id'] != $user->IDUzytkownika : true) {
+                if ($lock  && $foruser == null  ? $lock['user_id'] != $user->IDUzytkownika : true) {
                     $locked[] = $orderId;
                 }
             }
@@ -140,7 +138,6 @@ class CollectController extends Controller
             $key = "order_lock_{$orderId}";
             $lock = Cache::get($key);
 
-            Log::debug("Checking lock for order: $orderId", ['lock' => $lock, 'userId' => $userId]);
 
             if ($lock && $lock['user_id'] !== $userId) {
                 $unavailable[] = $orderId;
@@ -153,7 +150,6 @@ class CollectController extends Controller
             }
         }
         $this->getLockedOrderIds($user); // Refresh the locked orders cache
-        Log::debug("Lock result", ['locked' => $locked, 'unavailable' => $unavailable]);
 
         return response()->json([
             'locked' => $locked,
@@ -168,11 +164,10 @@ class CollectController extends Controller
         // Check for intersection between $freeOrders and $lockedOrders
         $lockedOrders = $this->getLockedOrderIds($request->user);
 
-
         $intersectedOrders = array_intersect($freeOrders, $lockedOrders);
         if (!empty($intersectedOrders)) {
             return response()->json([
-                'message' => 'Aktualizacja listy zamówień'
+                'message' => 'Aktualizacja listy zamówień',
             ]);
         }
         $maxProducts = $request->maxProducts ?? 30;
@@ -433,12 +428,10 @@ class CollectController extends Controller
             }
 
             // // Check if all requested orders are locked (must match exactly)
-            $lockedOrders = $this->getLockedOrderIds($request->user, false);
+            $lockedOrders = $this->getLockedOrderIds($request->user, true);
             $requestedOrderIds = collect($request->orders)->pluck('IDOrder')->toArray();
-            sort($lockedOrders);
-            sort($requestedOrderIds);
-            dd($lockedOrders, $requestedOrderIds);
-            if ($lockedOrders !== $requestedOrderIds) {
+
+            if (count(array_intersect($lockedOrders, $requestedOrderIds)) == 0) {
                 return response()->json([
                     'message' => 'Zaktualizuj listę zamówień, niektóre zamówienia są już zablokowane.',
 
