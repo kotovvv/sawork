@@ -1254,7 +1254,7 @@ class CollectController extends Controller
 
             return response()->json(['status' => 'success']);
         }
-        \Log::error('Error writing TTN for order ID: ' . $Order['IDOrder']);
+        Log::error('Error writing TTN for order ID: ' . $Order['IDOrder']);
         return response()->json(['status' => 'error']);
     }
 

@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class importBLController extends Controller
 {
@@ -140,7 +141,7 @@ class importBLController extends Controller
                         'a_warehouse' => $a_warehouse,
                     ]);
                 case 11:
-                    $this->changeDeliveryOrder([
+                    $this->changeDeliveryDataOrder([
                         'a_log' => $log,
                         'a_warehouse' => $a_warehouse,
                     ]);
@@ -226,32 +227,40 @@ class importBLController extends Controller
             ]);
             return;
         }
-        $orderStatus = DB::table('order')->leftJoin('OrderStatus as os', 'o.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
-        if ($orderStatus == 'W realizacji' || $orderStatus == 'Kompletowanie') {
+        $OrderStatusLMName = DB::table('order')->leftJoin('OrderStatus as os', 'o.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
+        if (in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ'])) {
             $this->saveOrderDetails($orderData, $param['a_log']['order_id'],  $param['a_warehouse']->warehouse_id);
-            $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
-            if (!$idTransport) {
-                DB::table('RodzajTransportu')->insert([
-                    'Nazwa' => $orderData['delivery_method'],
-                    'Utworzono' => now(),
-                    'Zmodyfikowano' => now(),
-                ]);
-                $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
-            }
+            // $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
+            // if (!$idTransport) {
+            //     DB::table('RodzajTransportu')->insert([
+            //         'Nazwa' => $orderData['delivery_method'],
+            //         'Utworzono' => now(),
+            //         'Zmodyfikowano' => now(),
+            //     ]);
+            //     $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
+            // }
 
-            $invoice_number = collect($this->invoices['invoices'])->firstWhere('order_id', $orderData['order_id'])['number'] ?? null;
+            // $invoice_number = collect($this->invoices['invoices'])->firstWhere('order_id', $orderData['order_id'])['number'] ?? null;
             $orderSources = $orderData['order_source'] . '_' .
                 (isset($this->orderSources['sources'][$orderData['order_source']])
                     ? collect($this->orderSources['sources'][$orderData['order_source']])->get($orderData['order_source_id'])
                     : null);
+            //IDAccount
+            $CustomerId =  $this->findOrCreateKontrahent($orderData, $param['a_warehouse']->warehouse_id);
             DB::table('Orders')->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
                 ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)->update([
-                    '_OrdersTempString1' => $invoice_number,
-                    '_OrdersTempDecimal2' => $orderData['order_id'],
+                    'IDAccount' => $CustomerId,
                     '_OrdersTempString7' => $orderSources,
                     '_OrdersTempString8' => $orderData['external_order_id'],
                     '_OrdersTempString9' => $orderData['user_login']
                 ]);
+        } else {
+            $body = 'Zamówienie: ' . $param['a_log']['order_id'] . ' ma status: ' . $OrderStatusLMName . ' i nie można zmienić danych zamówienia.';
+            Mail::send([], [], function ($message) use ($body, $param) {
+                $message->to('khanenko.igor@gmail.com')
+                    ->subject('Zamówienie: ' . $param['a_log']['order_id'] . ' i nie można zmienić danych zamówienia dataOrder.')
+                    ->setBody($body, 'text/plain');
+            });
         }
         LogOrder::create([
             'IDWarehouse' => $param['a_warehouse']->warehouse_id,
@@ -261,7 +270,7 @@ class importBLController extends Controller
         ]);
     }
 
-    private function changeDeliveryOrder($param)
+    private function changeDeliveryDataOrder($param)
     {
         $o_orderBL = $this->BL->getOrders(['order_id' => $param['a_log']['order_id']]);
         if (!isset($o_orderBL['status']) || $o_orderBL['status'] != "SUCCESS") {
@@ -278,8 +287,11 @@ class importBLController extends Controller
             ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
             ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
         $orderStatus = $LM_order->leftJoin('OrderStatus as os', 'o.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
-        $NR_NADANIA_BL = $LM_order->value('_OrdersTempString2');
-        if ($orderStatus == 'Do wysłania' && $NR_NADANIA_BL == '') {
+
+        $OrderStatusLMName =  $LM_order
+            ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
+            ->value('OrderStatus.Name');
+        if (in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ'])) {
             $this->saveOrderDetails($orderData, $LM_order->value('IDOrder'),  $param['a_warehouse']->warehouse_id);
             $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
             if (!$idTransport) {
@@ -290,13 +302,18 @@ class importBLController extends Controller
                 ]);
                 $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
             }
-            DB::table('Orders')
-                ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
-                ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+            $LM_order
                 ->update([
                     'IDTransport' => $idTransport,
-                    '_OrdersTempString2' => $orderData['courier_package_nr'],
+                    'Modified' => now(),
                 ]);
+        } else {
+            $body = 'Zamówienie: ' . $param['a_log']['order_id'] . ' ma status: ' . $OrderStatusLMName . ' i nie można zmienić danych dostawy.';
+            Mail::send([], [], function ($message) use ($body, $param) {
+                $message->to('khanenko.igor@gmail.com')
+                    ->subject('Zamówienie: ' . $param['a_log']['order_id'] . ' i nie można zmienić danych dostawy.')
+                    ->setBody($body, 'text/plain');
+            });
         }
     }
 
@@ -321,12 +338,17 @@ class importBLController extends Controller
             ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
             ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
         $orderStatus = $o_order->leftJoin('OrderStatus as os', 'o.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
-        if (in_array($orderStatus, ['Do wysłania', '', null])) {
+        if (in_array($orderStatus, ['Do wysłania', 'Kompletowanie'])) {
 
-            DB::table('Orders')
-                ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
-                ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+            $o_order
                 ->update(['_OrdersTempString2' => $package['courier_package_nr']]);
+        } else {
+            $body = 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id'];
+            Mail::send([], [], function ($message) use ($body, $param) {
+                $message->to('khanenko.igor@gmail.com')
+                    ->subject('Change Package Order BL' . $param['a_log']['order_id'])
+                    ->setBody($body, 'text/plain');
+            });
         }
 
         LogOrder::create([
@@ -345,12 +367,19 @@ class importBLController extends Controller
         $order = DB::table('Orders')
             ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
             ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
-        $orderID = $order->value('IDOrder');
-        $order
-            ->where('_OrdersTempString1', '!=', $newOrderInviceBL)
-            ->update(['_OrdersTempString1' =>  $invoice_number]);
+        $OrderStatusLMName =  $order
+            ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
+            ->value('OrderStatus.Name');
+        if (in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ'])) {
 
-        Collect::where('IDOrder', $orderID)->update('invoice_id', $newOrderInviceBL);
+            $orderID = $order->value('IDOrder');
+            $order
+                ->where('_OrdersTempString1', '!=', $newOrderInviceBL)
+                ->update(['_OrdersTempString1' =>  $invoice_number]);
+
+            Collect::where('IDOrder', $orderID)->update('invoice_id', $newOrderInviceBL);
+        }
+
         LogOrder::create([
             'IDWarehouse' => $param['a_warehouse']->warehouse_id,
             'number' => $param['a_log']['order_id'],
@@ -365,28 +394,30 @@ class importBLController extends Controller
     {
         $newOrderStatusBL = $param['a_log']['object_id'];
         $newOrderStatusBLName = $this->BL->getStatusName($newOrderStatusBL);
-
-        $OrderStatusLMName = DB::table('Orders')
-            ->join('IntegratorTransactions', 'IntegratorTransactions.transId', '=', 'Orders._OrdersTempDecimal2')
-            ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
+        $order = DB::table('Orders')
             ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
-            ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+            ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
+        $OrderStatusLMName = $order
+            ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
             ->value('OrderStatus.Name');
         $newOrderStatusLMID = DB::table('OrderStatus')->where('Name', $newOrderStatusBLName)->value('IDOrderStatus');
 
-        if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['', 'Nowe zamówienia', 'Nie wysyłaćь'])) || (in_array($newOrderStatusBLName, ['Do Wyslanja', 'Wyslane', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do Wyslanja', 'Wyslane', 'Do odbior']))) {
+        if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ']))
+            ||
+            (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
+            ||
+            (in_array($newOrderStatusBLName, ['Do Wyslanja', 'Wyslane', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do Wyslanja', 'Wyslane', 'Do odbior']))
+
+        ) {
             LogOrder::create([
                 'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                 'number' => $param['a_log']['order_id'],
                 'type' => 18,
                 'message' => 'Status zmieniony na: ' . $newOrderStatusBLName . ' od statusu w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
             ]);
-            DB::table('Orders')
-                ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
-                ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
-                ->update(['IDOrderStatus' => $newOrderStatusLMID]);
+            $order->update(['IDOrderStatus' => $newOrderStatusLMID]);
         } else {
-            $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
+            $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Panel: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
             Mail::send([], [], function ($message) use ($body) {
                 $message->to('khanenko.igor@gmail.com')
                     ->subject('Status zmiany zamówienia w BaseLinker')
@@ -405,8 +436,6 @@ class importBLController extends Controller
     private function changeProductsOrder($param)
     {
 
-        $w_realizacji_id = $this->BL->getStatusId('W realizacji');
-
         $parameters = [
             'order_id' => $param['a_log']['order_id'],
         ];
@@ -415,8 +444,15 @@ class importBLController extends Controller
         if (!isset($response['status']) || $response['status'] != "SUCCESS") {
             return;
         }
+        $orderPN = DB::table('Orders')
+            ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+            ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
+        $OrderStatusLMName = $orderPN
+            ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
+            ->value('OrderStatus.Name');
+
         foreach ($response['orders'] as $order) {
-            if ($order['order_status_id'] == $w_realizacji_id) {
+            if (in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ'])) {
 
                 /*
                 23|W realizacji - zamiana
@@ -435,23 +471,17 @@ class importBLController extends Controller
                 */
 
                 // this order has already been imported by the integrator
-                $a_order = DB::table('Orders')->where('_OrdersTempDecimal2', $order['order_id'])->where('IDWarehouse', $param['a_warehouse']->warehouse_id)->first();
+                $a_order = $orderPN->first();
                 if ($a_order) {
-                    if (!in_array($a_order->IDOrderStatus, [16, 19, 23, 27, 29, 32, 33, 43])) {
-                        LogOrder::create([
-                            'IDWarehouse' => $param['a_warehouse']->warehouse_id,
-                            'number' => $order['order_id'],
-                            'type' => $param['a_log']['log_type'],
-                            'message' => "Atention!!! Change status Order: {$order['order_id']}. Details: " . $this->BL->getStatusName($order['order_status_id'])
-                        ]);
-                        return;
-                    }
-                    if (in_array($a_order->IDOrderStatus, [16, 19, 27, 29, 32, 33, 43])) {
-                        DB::table('Orders')
-                            ->where('_OrdersTempDecimal2', $order['order_id'])
-                            ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
-                            ->update(['IDOrderStatus' => 23]);
-                    }
+
+                    LogOrder::create([
+                        'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                        'number' => $order['order_id'],
+                        'type' => $param['a_log']['log_type'],
+                        'message' => "Change products: {$order['order_id']}"
+                    ]);
+
+
                     $uwagi = 'Nr zamówienia w BaseLinker: ' . $order['order_id'] . ' Zmiana zamówienia w BaseLinker ' . $order['user_comments'] ?: $order['admin_comments'] ?: '';
 
                     try {
@@ -470,11 +500,17 @@ class importBLController extends Controller
                     }
                 }
             } else {
+                $body = "Change products Order: {$order['order_id']}";
+                Mail::send([], [], function ($message) use ($body, $order) {
+                    $message->to('khanenko.igor@gmail.com')
+                        ->subject("Change products Order: {$order['order_id']}")
+                        ->setBody($body, 'text/plain');
+                });
                 LogOrder::create([
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $order['order_id'],
-                    'type' => 911,
-                    'message' => "Change status Order: {$order['order_id']}. Details: " . $this->BL->getStatusName($order['order_status_id'])
+                    'type' =>  '911 - ' . $param['a_log']['log_type'],
+                    'message' => "Change products Order: {$order['order_id']}"
                 ]);
             }
         }
@@ -577,7 +613,7 @@ HAVING
         $i = 80;
 
         if (!is_array($response) || !isset($response['orders']) || !is_array($response['orders'])) {
-            \Log::error("Error in GetOrders: " . $e->getMessage(), ['exception' => $e]);
+            Log::error("Error in GetOrders: " . json_encode($response));
             throw new \Exception("Invalid response data. Expected an array with 'orders'.");
         }
 
@@ -608,7 +644,7 @@ HAVING
                     $wasImported = false;
                 }
             } else {
-                \Log::error("Invalid order data encountered.", ['order' => $order]);
+                Log::error("Invalid order data encountered.", ['order' => $order]);
                 throw new \Exception("Invalid order data. Expected an array with 'order_id'.");
             }
             if ($wasImported) {
@@ -649,7 +685,7 @@ HAVING
         try {
             DB::beginTransaction();
 
-            $CustomerId = $this->findOrCreateKontrahent($orderData);
+            $CustomerId = $this->findOrCreateKontrahent($orderData, $idMagazynu);
 
             $uwagi = 'Nr zamówienia w BaseLinker: ' . $orderData['order_id'] . ' ' . $orderData['user_comments'] ?: $orderData['admin_comments'] ?: '';
             $orderDate = Carbon::parse($orderData['date_add'])->addHours(2)->format('Y-m-d H:i:s');
@@ -772,7 +808,7 @@ HAVING
                 ForTtn::insert($forttn);
             }
         } catch (\Exception $e) {
-            \Log::error('ForTtn Insert failed', [
+            Log::error('ForTtn Insert failed', [
                 'order_id' => $IDOrder,
                 'error' => $e->getMessage(),
             ]);
@@ -829,7 +865,7 @@ HAVING
                 ]
             );
         } catch (\Exception $e) {
-            \Log::error('OrderDetails updateOrInsert failed', [
+            Log::error('OrderDetails updateOrInsert failed', [
                 'order_id' => $IDOrder,
                 'error' => $e->getMessage(),
             ]);
@@ -926,7 +962,7 @@ HAVING
         }
     }
 
-    public function findOrCreateKontrahent(array $orderData)
+    public function findOrCreateKontrahent(array $orderData, $idMagazynu)
     {
         // Extracting counterparty data from an order
         $contractorData = [
@@ -951,6 +987,7 @@ HAVING
             ->where('KodPocztowy', $contractorData['KodPocztowy'])
             ->where('Miejscowosc', $contractorData['Miejscowosc'])
             ->where('UlicaLokal', $contractorData['UlicaLokal'])
+
             ->first();
 
         if ($existingContractor) {
@@ -980,6 +1017,7 @@ HAVING
                 'Zmodyfikowano' => now(),
                 'Odbiorca' => 1,
                 'Dostawca' => 0,
+                'IDWarehouse' => $idMagazynu,
             ]);
 
             // Return the ID of a new counterparty
@@ -987,6 +1025,7 @@ HAVING
                 ->where('Nazwa', $contractorData['Nazwa'])
                 ->where('Email', $contractorData['Email'])
                 ->where('Telefon', $contractorData['Telefon'])
+                ->where('IDWarehouse', $idMagazynu)
                 ->first();
             return $existingContractor->IDKontrahenta;
         } catch (\Exception $e) {
