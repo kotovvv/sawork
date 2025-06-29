@@ -417,33 +417,34 @@ class importBLController extends Controller
             ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
             ->value('OrderStatus.Name');
         $newOrderStatusLMID = DB::table('OrderStatus')->where('Name', $newOrderStatusBLName)->value('IDOrderStatus');
+        if ($newOrderStatusBLName != $OrderStatusLMName) {
+            if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ']))
+                ||
+                (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
+                ||
+                (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane']))
+            ) {
+                LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                    'number' => $param['a_log']['order_id'],
+                    'type' => 18,
+                    'message' => 'Status zmieniony na: ' . $newOrderStatusBLName . ' od statusu w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
+                ]);
+                $order->update(['IDOrderStatus' => $newOrderStatusLMID]);
+            } else {
+                $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Panel: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
+                Mail::raw($body, function ($message) use ($param) {
+                    $message->to('khanenko.igor@gmail.com')
+                        ->subject('Status zmiany zamówienia w BaseLinker' . $param['a_log']['object_id']);
+                });
 
-        if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ']))
-            ||
-            (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
-            ||
-            (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wyslane', 'Do odbior', 'Odebrane']) && $newOrderStatusBLName != $OrderStatusLMName)
-        ) {
-            LogOrder::create([
-                'IDWarehouse' => $param['a_warehouse']->warehouse_id,
-                'number' => $param['a_log']['order_id'],
-                'type' => 18,
-                'message' => 'Status zmieniony na: ' . $newOrderStatusBLName . ' od statusu w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
-            ]);
-            $order->update(['IDOrderStatus' => $newOrderStatusLMID]);
-        } else {
-            $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Panel: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
-            Mail::raw($body, function ($message) use ($param) {
-                $message->to('khanenko.igor@gmail.com')
-                    ->subject('Status zmiany zamówienia w BaseLinker' . $param['a_log']['object_id']);
-            });
-
-            LogOrder::create([
-                'IDWarehouse' => $param['a_warehouse']->warehouse_id,
-                'number' => $param['a_log']['order_id'],
-                'type' => 18,
-                'message' => 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
-            ]);
+                LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                    'number' => $param['a_log']['order_id'],
+                    'type' => 18,
+                    'message' => 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
+                ]);
+            }
         }
     }
 
