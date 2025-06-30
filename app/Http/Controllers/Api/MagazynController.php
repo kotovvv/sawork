@@ -884,7 +884,7 @@ class MagazynController extends Controller
             })
             ->leftJoin('RuchMagazynowy as rm', 'rm.IDRuchuMagazynowego', 'do.ID1')
             ->leftJoin('RodzajTransportu as rt', 'rt.IDRodzajuTransportu', 'ord.IDTransport')
-            ->where('IDWarehouse', $IDWarehouse)
+            ->where('ord.IDWarehouse', $IDWarehouse)
             ->whereBetween('Date', [$dateMin, $dateMax])
             ->orderBy('Date', 'desc');
 
