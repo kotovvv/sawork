@@ -74,6 +74,10 @@ class BaseLinkerController extends Controller
     public function getOrderStatusList()
     {
         $response = $this->sendRequest('getOrderStatusList');
+        if (!isset($response['status']) && $response['status'] != 'SUCCESS') {
+            Log::error('getOrderStatusList response error:', ['response' => $response]);
+            throw new \Exception('Invalid response from getOrderStatusList');
+        }
         foreach ($response['statuses'] as $statusItem) {
             // if (strpos(strtolower($statusItem['name']), 'komp') === 0) {
             if ($statusItem['name'] == 'Kompletowanie') {
