@@ -504,9 +504,11 @@ class importBLController extends Controller
                         DB::beginTransaction();
                         DB::table('OrderLines')->where('IDOrder', $a_order->IDOrder)->delete();
                         $this->writeProductsOrder($order, $a_order->IDOrder, $param['a_warehouse']->warehouse_id, $uwagi);
+
                         DB::table('Orders')->where('IDOrder', $a_order->IDOrder)->update([
                             'Modified' => now(),
-                            '_OrdersTempString5' => 'Products changed',
+                            '_OrdersTempString5' => '',
+                            'Remarks' => DB::raw("ISNULL(Remarks, '') + ' Products chenged'"),
                         ]);
 
                         DB::commit();
