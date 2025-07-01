@@ -22,26 +22,19 @@ class PrintController extends Controller
 
         if ($request->input('doc') == 'invoice') {
             $order = $request->order;
+            $OrdersTempString1 = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->value('_OrdersTempString1');
+            $notprint = in_array($OrdersTempString1, ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka']);
+            if ($notprint) {
+                Log::info("Order {$order['IDOrder']} not printed due to condition {$OrdersTempString1}");
+                return response()->json(['status' => 'ok', 'message' => 'Zamówienie nie zostało wydrukowane z powodu warunku ' . $OrdersTempString1], 200);
+            }
             $IDMagazynu = $order['IDWarehouse'];
             $symbol = DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol');
             $fileName =  str_replace(['/', '\\'], '_', $order['invoice_number']);
             $fileName = "pdf/{$symbol}/{$fileName}.pdf";
             $path = storage_path('app/public/' . $fileName);
             $printer = $this->usersPrinters[$userId]['invoice'];
-            // // Проверка готовности принтера
-            // $printerStatus = [];
-            // exec("lpstat -p " . escapeshellarg($printer), $printerStatus);
-            // $isReady = false;
-            // foreach ($printerStatus as $line) {
-            //     if (strpos($line, 'is idle') !== false || strpos($line, 'is ready') !== false) {
-            //         $isReady = true;
-            //         break;
-            //     }
-            // }
-            // if (!$isReady) {
-            //     Log::error("Printer {$printer} is not ready for user {$userId}");
-            //     return response()->json(['status' => 'error', 'message' => 'Printer not ready'], 400);
-            // }
+
             if (file_exists($path)) {
                 exec("lpr -P " . escapeshellarg($printer) . " " . escapeshellarg($path));
             } else {

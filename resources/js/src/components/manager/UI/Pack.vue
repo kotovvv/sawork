@@ -439,6 +439,7 @@ export default {
           order: this.transOrders[this.indexTransOrders],
         })
         .then((response) => {
+          this.message_error = response.data.message;
           // handle success if needed
         })
         .catch((error) => {
