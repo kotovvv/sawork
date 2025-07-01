@@ -441,7 +441,7 @@ class importBLController extends Controller
                 LogOrder::create([
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
-                    'type' => 18,
+                    'type' => 91118,
                     'message' => 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
                 ]);
             }
