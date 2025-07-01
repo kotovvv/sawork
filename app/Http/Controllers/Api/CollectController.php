@@ -17,9 +17,34 @@ class CollectController extends Controller
 
     public function getAllOrders(Request $request)
     {
+        $user_role = $request->user->IDRoli;
+
+        $missingCourierOrders = DB::connection('second_mysql')->table('order_details as od')
+            ->leftJoin('for_ttn as f', function ($join) {
+                $join->on('od.order_source_id', '=', 'f.order_source_id')
+                    ->on('od.IDWarehouse', '=', 'f.id_warehouse')
+                    ->on('od.order_source', '=', 'f.order_source')
+                    ->on('od.delivery_method', '=', 'f.delivery_method');
+            })
+            ->where(function ($query) {
+                $query->whereNull('f.courier_code')
+                    ->orWhereNull('f.account_id');
+            })
+            ->whereNotNull('od.order_source_id')
+            ->where('od.order_source_id', '!=', 0)
+            ->whereNotNull('od.order_id')
+            ->where('od.order_id', '!=', 0)
+            ->whereNotNull('od.IDWarehouse')
+            ->where('od.IDWarehouse', '!=', 0)
+            ->whereNull('f.id')
+            ->groupBy('od.order_id')
+            ->havingRaw('COUNT(od.order_id) > 0')
+            ->pluck('od.order_id');
         //get collected orders
         $waiteOrders = $this->waitOrders($request->user);
+        //get locked orders
         $lokedOrders = $this->getLockedOrderIds($request->user);
+        //get waite orders IDs
         $IDsWaiteOrders = $waiteOrders->pluck('IDOrder');
         //get free orders
         $allOrders = DB::table('dbo.Orders as o')
@@ -52,6 +77,9 @@ class CollectController extends Controller
             ->where('o.IDOrderStatus', 23)
             ->when($IDsWaiteOrders, function ($query, $IDsWaiteOrders) {
                 return $query->whereNotIn('o.IDOrder', $IDsWaiteOrders);
+            })
+            ->when($user_role != 1, function ($query) use ($missingCourierOrders) {
+                return $query->whereNotIn('o.IDOrder', $missingCourierOrders);
             })
             ->whereNotNull('o._OrdersTempDecimal2') //Nr. Baselinker
             ->when(!in_array('o._OrdersTempString1', ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka']), function ($query) {
