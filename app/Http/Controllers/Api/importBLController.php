@@ -15,6 +15,10 @@ use Illuminate\Support\Facades\Log;
 
 class importBLController extends Controller
 {
+    // Deadlock retry configuration
+    const MAX_DEADLOCK_RETRIES = 3;
+    const DEADLOCK_RETRY_BASE_DELAY_MS = 100;
+
     private $warehouses;
     private $statuses = [];
     private $invoices = [];
@@ -22,9 +26,27 @@ class importBLController extends Controller
     private $BL;
     private $warehouse = '';
 
+    /**
+     * Set the transaction isolation level to reduce deadlock probability
+     * READ COMMITTED is generally better for high-concurrency scenarios
+     */
+    private function setOptimalIsolationLevel()
+    {
+        try {
+            DB::statement('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
+        } catch (\Exception $e) {
+            Log::warning('Could not set transaction isolation level', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
     /* Get all mwarehouse for loop */
     public function __construct($warehouseId = null, $orderId = null)
     {
+        // Set optimal isolation level to reduce deadlock probability
+        $this->setOptimalIsolationLevel();
+
         if ($warehouseId && $orderId) {
 
             $this->importSingleOrder($warehouseId, $orderId);
@@ -124,8 +146,7 @@ class importBLController extends Controller
             return;
         }
 
-        // $logsToProcess = array_slice($response['logs'], 0, 80); // Process only the first 80 logs
-        foreach ($response as $log) {
+        foreach ($response['logs'] as $log) {
 
             $last_log_id = max($last_log_id, $log['log_id']);
             if ($a_warehouse->last_log_id == $log['log_id']) continue;
@@ -244,13 +265,17 @@ class importBLController extends Controller
         if (in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ'])) {
             $this->saveOrderDetails($orderData, $param['a_log']['order_id'],  $param['a_warehouse']->warehouse_id);
 
-
-            $LM_order->update([
-                'IDAccount' => $CustomerId,
-                '_OrdersTempString7' => $orderSources,
-                '_OrdersTempString8' => $orderData['external_order_id'],
-                '_OrdersTempString9' => $orderData['user_login']
-            ]);
+            $this->executeWithRetry(function () use ($param, $CustomerId, $orderSources, $orderData) {
+                DB::table('Orders')
+                    ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+                    ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+                    ->update([
+                        'IDAccount' => $CustomerId,
+                        '_OrdersTempString7' => $orderSources,
+                        '_OrdersTempString8' => $orderData['external_order_id'],
+                        '_OrdersTempString9' => $orderData['user_login']
+                    ]);
+            });
         } else {
             // Get current values from the database
             $currentData = $LM_order->first([
@@ -310,19 +335,24 @@ class importBLController extends Controller
 
             if (in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ'])) {
                 $this->saveOrderDetails($orderData, $LM_order->value('IDOrder'),  $param['a_warehouse']->warehouse_id);
-                if (!$idTransport) {
+                if (!$idTransportBL) {
                     DB::table('RodzajTransportu')->insert([
                         'Nazwa' => $orderData['delivery_method'],
                         'Utworzono' => now(),
                         'Zmodyfikowano' => now(),
                     ]);
-                    $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
+                    $idTransportBL = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
                 }
-                $LM_order
-                    ->update([
-                        'IDTransport' => $idTransport,
-                        'Modified' => now(),
-                    ]);
+
+                $this->executeWithRetry(function () use ($param, $idTransportBL) {
+                    DB::table('Orders')
+                        ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+                        ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+                        ->update([
+                            'IDTransport' => $idTransportBL,
+                            'Modified' => now(),
+                        ]);
+                });
             } else {
                 $body = 'Zamówienie: ' . $param['a_log']['order_id'] . ' ma status: ' . $OrderStatusLMName . ' i nie można zmienić danych dostawy.';
                 Mail::raw($body, function ($message) use ($param) {
@@ -355,9 +385,12 @@ class importBLController extends Controller
             ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
         $orderStatus = $o_order->leftJoin('OrderStatus as os', 'o.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
         if (in_array($orderStatus, ['Do wysłania', 'Kompletowanie'])) {
-
-            $o_order
-                ->update(['_OrdersTempString2' => $package['courier_package_nr']]);
+            $this->executeWithRetry(function () use ($param, $package) {
+                DB::table('Orders')
+                    ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+                    ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+                    ->update(['_OrdersTempString2' => $package['courier_package_nr']]);
+            });
         } else {
             $body = 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id'];
             Mail::raw($body, function ($message) use ($param) {
@@ -386,14 +419,16 @@ class importBLController extends Controller
             ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
             ->value('OrderStatus.Name');
         if (in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ'])) {
-
-            $order
-                ->where('_OrdersTempString1', '!=', $invoice_number)
-                ->update([
-                    '_OrdersTempString1' =>  $invoice_number,
-                    'Modified' => now(),
-
-                ]);
+            $this->executeWithRetry(function () use ($param, $invoice_number) {
+                DB::table('Orders')
+                    ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+                    ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+                    ->where('_OrdersTempString1', '!=', $invoice_number)
+                    ->update([
+                        '_OrdersTempString1' =>  $invoice_number,
+                        'Modified' => now(),
+                    ]);
+            });
         }
 
         LogOrder::create([
@@ -408,44 +443,56 @@ class importBLController extends Controller
 
     private function changeStatusOrder($param)
     {
-        $newOrderStatusBL = $param['a_log']['object_id'];
-        $newOrderStatusBLName = $this->BL->getStatusName($newOrderStatusBL);
-        $order = DB::table('Orders')
-            ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
-            ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
-        $OrderStatusLMName = $order
-            ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
-            ->value('OrderStatus.Name');
-        $newOrderStatusLMID = DB::table('OrderStatus')->where('Name', $newOrderStatusBLName)->value('IDOrderStatus');
-        if ($newOrderStatusBLName != $OrderStatusLMName) {
-            if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ']))
-                ||
-                (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
-                ||
-                (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Wysłany', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane', 'Wysłany']))
-            ) {
-                LogOrder::create([
-                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
-                    'number' => $param['a_log']['order_id'],
-                    'type' => 18,
-                    'message' => 'Status zmieniony na: ' . $newOrderStatusBLName . ' od statusu w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
-                ]);
-                $order->update(['IDOrderStatus' => $newOrderStatusLMID]);
-            } else {
-                $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Panel: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
-                Mail::raw($body, function ($message) use ($param) {
-                    $message->to('khanenko.igor@gmail.com')
-                        ->subject('Status zmiany zamówienia w BaseLinker' . $param['a_log']['object_id']);
-                });
+        return $this->executeWithRetry(function () use ($param) {
+            $newOrderStatusBL = $param['a_log']['object_id'];
+            $newOrderStatusBLName = $this->BL->getStatusName($newOrderStatusBL);
 
-                LogOrder::create([
-                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
-                    'number' => $param['a_log']['order_id'],
-                    'type' => 91118,
-                    'message' => 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
-                ]);
+            // Use a fresh query builder for each attempt to avoid stale data
+            $order = DB::table('Orders')
+                ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+                ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
+
+            $OrderStatusLMName = $order
+                ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
+                ->value('OrderStatus.Name');
+
+            $newOrderStatusLMID = DB::table('OrderStatus')->where('Name', $newOrderStatusBLName)->value('IDOrderStatus');
+
+            if ($newOrderStatusBLName != $OrderStatusLMName) {
+                if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ']))
+                    ||
+                    (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
+                    ||
+                    (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Wysłany', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane', 'Wysłany']))
+                ) {
+                    LogOrder::create([
+                        'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                        'number' => $param['a_log']['order_id'],
+                        'type' => 18,
+                        'message' => 'Status zmieniony na: ' . $newOrderStatusBLName . ' od statusu w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
+                    ]);
+
+                    // Create a fresh query builder for the update to avoid deadlocks
+                    DB::table('Orders')
+                        ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+                        ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+                        ->update(['IDOrderStatus' => $newOrderStatusLMID]);
+                } else {
+                    $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Panel: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
+                    Mail::raw($body, function ($message) use ($param) {
+                        $message->to('khanenko.igor@gmail.com')
+                            ->subject('Status zmiany zamówienia w BaseLinker' . $param['a_log']['object_id']);
+                    });
+
+                    LogOrder::create([
+                        'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                        'number' => $param['a_log']['order_id'],
+                        'type' => 91118,
+                        'message' => 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
+                    ]);
+                }
             }
-        }
+        });
     }
 
 
@@ -501,17 +548,19 @@ class importBLController extends Controller
                     $uwagi = 'Nr zamówienia w BaseLinker: ' . $order['order_id'] . ' Zmiana zamówienia w BaseLinker ' . $order['user_comments'] ?: $order['admin_comments'] ?: '';
 
                     try {
-                        DB::beginTransaction();
-                        DB::table('OrderLines')->where('IDOrder', $a_order->IDOrder)->delete();
-                        $this->writeProductsOrder($order, $a_order->IDOrder, $param['a_warehouse']->warehouse_id, $uwagi);
+                        $this->executeWithRetry(function () use ($a_order, $order, $param, $uwagi) {
+                            DB::beginTransaction();
+                            DB::table('OrderLines')->where('IDOrder', $a_order->IDOrder)->delete();
+                            $this->writeProductsOrder($order, $a_order->IDOrder, $param['a_warehouse']->warehouse_id, $uwagi);
 
-                        DB::table('Orders')->where('IDOrder', $a_order->IDOrder)->update([
-                            'Modified' => now(),
-                            '_OrdersTempString5' => '',
-                            'Remarks' => DB::raw("ISNULL(Remarks, '') + ' Products chenged'"),
-                        ]);
+                            DB::table('Orders')->where('IDOrder', $a_order->IDOrder)->update([
+                                'Modified' => now(),
+                                '_OrdersTempString5' => '',
+                                'Remarks' => DB::raw("ISNULL(Remarks, '') + ' Products chenged'"),
+                            ]);
 
-                        DB::commit();
+                            DB::commit();
+                        });
                     } catch (\Throwable $th) {
                         DB::rollBack();
                         throw $th;
@@ -527,7 +576,7 @@ class importBLController extends Controller
                 LogOrder::create([
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $order['order_id'],
-                    'type' =>  '911 - ' . $param['a_log']['log_type'],
+                    'type' =>  (int)('911' . $param['a_log']['log_type']),
                     'message' => "Change products Order: {$param['a_log']['order_id']}"
                 ]);
             }
@@ -649,9 +698,11 @@ HAVING
                 if ($existingOrder) {
                     // If IDWarehouse is null, update it
                     if (is_null($existingOrder->IDWarehouse)) {
-                        DB::table('IntegratorTransactions')
-                            ->where('transId', $order['order_id'])
-                            ->update(['IDWarehouse' => $idMagazynu]);
+                        $this->executeWithRetry(function () use ($order, $idMagazynu) {
+                            DB::table('IntegratorTransactions')
+                                ->where('transId', $order['order_id'])
+                                ->update(['IDWarehouse' => $idMagazynu]);
+                        });
                     }
                     // Now check if transaction exists for this order_id and warehouse
                     $wasImported = DB::table('IntegratorTransactions')
@@ -769,13 +820,15 @@ HAVING
             $this->writeProductsOrder($orderData, $IDOrder, $idMagazynu, $uwagi);
 
 
-            DB::table('Orders')->where('Number', $Number)->where('IDWarehouse', $idMagazynu)->update([
-                '_OrdersTempString1' => $invoice_number,
-                '_OrdersTempDecimal2' => $orderData['order_id'],
-                '_OrdersTempString7' => $orderSources,
-                '_OrdersTempString8' => $orderData['external_order_id'],
-                '_OrdersTempString9' => $orderData['user_login']
-            ]);
+            $this->executeWithRetry(function () use ($Number, $idMagazynu, $invoice_number, $orderData, $orderSources) {
+                DB::table('Orders')->where('Number', $Number)->where('IDWarehouse', $idMagazynu)->update([
+                    '_OrdersTempString1' => $invoice_number,
+                    '_OrdersTempDecimal2' => $orderData['order_id'],
+                    '_OrdersTempString7' => $orderSources,
+                    '_OrdersTempString8' => $orderData['external_order_id'],
+                    '_OrdersTempString9' => $orderData['user_login']
+                ]);
+            });
 
             DB::commit();
             DB::table('IntegratorTransactions')->insert([
@@ -944,10 +997,12 @@ HAVING
                         ];
                         $this->BL->setOrderFields($parameters);
                     }
-                    DB::table('Orders')->where('IDOrder',  $IDOrder)->update([
-                        'IDOrderStatus' => 29, //Nie wysyłać
-                        'Remarks' => 'Тowar ' . $product['ean'] . ' nie istnieje w bazie danych. Proszę o dodanie towaru do bazy danych.',
-                    ]);
+                    $this->executeWithRetry(function () use ($IDOrder, $product) {
+                        DB::table('Orders')->where('IDOrder',  $IDOrder)->update([
+                            'IDOrderStatus' => 29, //Nie wysyłać
+                            'Remarks' => 'Тowar ' . $product['ean'] . ' nie istnieje w bazie danych. Proszę o dodanie towaru do bazy danych.',
+                        ]);
+                    });
                 } catch (\Exception $e) {
                     throw new \Exception("Error inserting product data: " . $e->getMessage());
                 }
@@ -1050,5 +1105,52 @@ HAVING
             throw new \Exception("Error inserting Kontrahent data: " . $e->getMessage());
             throw $e;
         }
+    }
+    /**
+     * Execute a database operation with retry logic for deadlock handling
+     *
+     * @param callable $operation
+     * @param int $maxRetries
+     * @return mixed
+     * @throws \Exception
+     */
+    private function executeWithRetry(callable $operation, $maxRetries = null)
+    {
+        $maxRetries = $maxRetries ?? self::MAX_DEADLOCK_RETRIES;
+        $attempt = 0;
+
+        while ($attempt < $maxRetries) {
+            try {
+                return $operation();
+            } catch (\Exception $e) {
+                $attempt++;
+
+                // Check if it's a deadlock error
+                if (strpos($e->getMessage(), 'deadlock') !== false || strpos($e->getMessage(), 'Deadlock') !== false) {
+                    if ($attempt >= $maxRetries) {
+                        Log::error('Maximum retry attempts reached for deadlock', [
+                            'attempt' => $attempt,
+                            'error' => $e->getMessage()
+                        ]);
+                        throw $e;
+                    }
+
+                    // Exponential backoff using the configured base delay
+                    $waitTime = self::DEADLOCK_RETRY_BASE_DELAY_MS * pow(2, $attempt - 1);
+                    Log::warning('Deadlock detected, retrying', [
+                        'attempt' => $attempt,
+                        'wait_time_ms' => $waitTime
+                    ]);
+
+                    usleep($waitTime * 1000); // Convert to microseconds
+                    continue;
+                }
+
+                // If it's not a deadlock, throw the exception immediately
+                throw $e;
+            }
+        }
+
+        throw new \Exception('Maximum retry attempts reached');
     }
 }
