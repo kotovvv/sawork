@@ -19,27 +19,7 @@ class CollectController extends Controller
     {
         $user_role = $request->user->IDRoli;
 
-        $missingCourierOrders = DB::connection('second_mysql')->table('order_details as od')
-            ->leftJoin('for_ttn as f', function ($join) {
-                $join->on('od.order_source_id', '=', 'f.order_source_id')
-                    ->on('od.IDWarehouse', '=', 'f.id_warehouse')
-                    ->on('od.order_source', '=', 'f.order_source')
-                    ->on('od.delivery_method', '=', 'f.delivery_method');
-            })
-            ->where(function ($query) {
-                $query->whereNull('f.courier_code')
-                    ->orWhereNull('f.account_id');
-            })
-            ->whereNotNull('od.order_source_id')
-            ->where('od.order_source_id', '!=', 0)
-            ->whereNotNull('od.order_id')
-            ->where('od.order_id', '!=', 0)
-            ->whereNotNull('od.IDWarehouse')
-            ->where('od.IDWarehouse', '!=', 0)
-            ->whereNull('f.id')
-            ->groupBy('od.order_id')
-            ->havingRaw('COUNT(od.order_id) > 0')
-            ->pluck('od.order_id');
+
         //get collected orders
         $waiteOrders = $this->waitOrders($request->user);
         //get locked orders
@@ -78,9 +58,7 @@ class CollectController extends Controller
             ->when($IDsWaiteOrders, function ($query, $IDsWaiteOrders) {
                 return $query->whereNotIn('o.IDOrder', $IDsWaiteOrders);
             })
-            ->when($user_role != 1, function ($query) use ($missingCourierOrders) {
-                return $query->whereNotIn('o.IDOrder', $missingCourierOrders);
-            })
+
             ->whereNotNull('o._OrdersTempDecimal2') //Nr. Baselinker
             ->when(!in_array('o._OrdersTempString1', ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka']), function ($query) {
                 return $query->whereNotNull('o._OrdersTempString1'); //Nr. Faktury BL);
@@ -100,7 +78,33 @@ class CollectController extends Controller
                 return $query->whereNotIn('o.IDOrder', $lokedOrders);
             })
             ->get();
+        if ($user_role != 1) {
+            // Получаем IDOrder из $allOrders
+            $allOrderIds = $allOrders->pluck('IDOrder')->toArray();
 
+            // Получаем валидные IDOrder из второй базы, только для тех, что есть в $allOrders
+            $validOrderIds = DB::connection('second_mysql')->table('order_details as od')
+                ->leftJoin('for_ttn as f', function ($join) {
+                    $join->on('od.order_source_id', '=', 'f.order_source_id')
+                        ->on('od.IDWarehouse', '=', 'f.id_warehouse')
+                        ->on('od.order_source', '=', 'f.order_source')
+                        ->on('od.delivery_method', '=', 'f.delivery_method');
+                })
+                ->whereIn('od.order_id', $allOrderIds)
+                ->where(function ($query) {
+                    $query->where('f.courier_code', '!=', '')
+                        ->orWhere('f.account_id', '!=', 0);
+                })
+                ->groupBy('od.order_id')
+                ->havingRaw('COUNT(od.order_id) > 0')
+                ->pluck('od.order_id')
+                ->toArray();
+
+            // Фильтруем $allOrders по валидным IDOrder
+            $allOrders = $allOrders->where(function ($order) use ($validOrderIds) {
+                return in_array($order->IDOrder, $validOrderIds);
+            })->values();
+        }
         return response()->json(['allOrders' => $allOrders, 'waiteOrders' => $waiteOrders]);
     }
 
