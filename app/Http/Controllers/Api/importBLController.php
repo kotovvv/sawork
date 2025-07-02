@@ -124,8 +124,8 @@ class importBLController extends Controller
             return;
         }
 
-        $logsToProcess = array_slice($response['logs'], 0, 80); // Process only the first 80 logs
-        foreach ($logsToProcess as $log) {
+        // $logsToProcess = array_slice($response['logs'], 0, 80); // Process only the first 80 logs
+        foreach ($response as $log) {
 
             $last_log_id = max($last_log_id, $log['log_id']);
             if ($a_warehouse->last_log_id == $log['log_id']) continue;
