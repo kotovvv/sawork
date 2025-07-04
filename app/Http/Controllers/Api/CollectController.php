@@ -79,10 +79,10 @@ class CollectController extends Controller
                 return $query->whereNotIn('o.IDOrder', $lokedOrders);
             })
             ->get();
-        if ($user_role != 1) {
-            // Получаем IDOrder из $allOrders
-            $allOrderIds = $allOrders->pluck('IDOrder')->toArray();
+        // Получаем IDOrder из $allOrders
+        $allOrderIds = $allOrders->pluck('IDOrder')->toArray();
 
+        if ($user_role != 1 || $problem) {
             // Получаем валидные IDOrder из второй базы, только для тех, что есть в $allOrders
             $validOrderIds = DB::connection('second_mysql')->table('order_details as od')
                 ->leftJoin('for_ttn as f', function ($join) {
@@ -101,34 +101,14 @@ class CollectController extends Controller
                 ->pluck('od.order_id')
                 ->toArray();
 
-            // Фильтруем $allOrders по валидным IDOrder
-            $allOrders = $allOrders->where(function ($order) use ($validOrderIds) {
-                return in_array($order->IDOrder, $validOrderIds);
-            })->values();
-        } else if ($problem) {
-            //get orders with problem
-            $allOrderIds = $allOrders->pluck('IDOrder')->toArray();
-
-            $validOrderIds = DB::connection('second_mysql')->table('order_details as od')
-                ->leftJoin('for_ttn as f', function ($join) {
-                    $join->on('od.order_source_id', '=', 'f.order_source_id')
-                        ->on('od.IDWarehouse', '=', 'f.id_warehouse')
-                        ->on('od.order_source', '=', 'f.order_source')
-                        ->on('od.delivery_method', '=', 'f.delivery_method');
-                })
-                ->whereIn('od.order_id', $allOrderIds)
-                ->where(function ($query) {
-                    $query->where('f.courier_code', '!=', '')
-                        ->orWhere('f.account_id', '!=', 0);
-                })
-                ->groupBy('od.order_id')
-                ->havingRaw('COUNT(od.order_id) > 0')
-                ->pluck('od.order_id')
-                ->toArray();
-
-            // Фильтруем $allOrders по проблемным IDOrder
-            $allOrders = $allOrders->where(function ($order) use ($validOrderIds) {
-                return !in_array($order->IDOrder, $validOrderIds);
+            // Фильтруем $allOrders по валидным или проблемным IDOrder
+            $allOrders = $allOrders->filter(function ($order) use ($validOrderIds, $user_role, $problem) {
+                if ($user_role != 1 && !$problem) {
+                    return in_array($order->IDOrder, $validOrderIds);
+                } elseif ($problem) {
+                    return !in_array($order->IDOrder, $validOrderIds);
+                }
+                return true;
             })->values();
         }
 
