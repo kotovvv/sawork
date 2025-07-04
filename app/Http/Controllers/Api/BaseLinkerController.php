@@ -78,6 +78,10 @@ class BaseLinkerController extends Controller
             Log::error('getOrderStatusList response error:', ['response' => $response]);
             throw new \Exception('Invalid response from getOrderStatusList');
         }
+        if (!isset($response['statuses'])) {
+            Log::error('getOrderStatusList missing statuses key:', ['response' => $response]);
+            throw new \Exception('Missing "statuses" key in getOrderStatusList response');
+        }
         foreach ($response['statuses'] as $statusItem) {
             // if (strpos(strtolower($statusItem['name']), 'komp') === 0) {
             if ($statusItem['name'] == 'Kompletowanie') {
@@ -140,6 +144,9 @@ class BaseLinkerController extends Controller
     public function inRealizacji($parameters)
     {
         $a_orders = $this->sendRequest('getOrders', $parameters);
+        if (!isset($a_orders['orders']) || empty($a_orders['orders'])) {
+            return false; // No orders found
+        }
         $o_status_id = $a_orders['orders'][0];
         $order_status_id = $o_status_id['order_status_id'];
         // \Log::info('order_status_id:', ['order_status_id' => $order_status_id]);

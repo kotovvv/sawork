@@ -87,7 +87,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::get('dowloadFile/{filename}', [FileController::class, 'dowloadFile']);
     Route::post('deleteFile', [FileController::class, 'deleteFile']);
 
-    Route::get('getAllOrders', [CollectController::class, 'getAllOrders']);
+    Route::post('getAllOrders', [CollectController::class, 'getAllOrders']);
     Route::post('getOrderProductsToCollect', [CollectController::class, 'getOrderProductsToCollect']);
     Route::post('collectOrders', [CollectController::class, 'collectOrders']);
     Route::post('deleteSelectedMakeOrders', [CollectController::class, 'deleteSelectedMakeOrders']);

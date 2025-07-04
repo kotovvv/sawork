@@ -42,6 +42,7 @@
             getAllOrders();
           "
         ></v-select>
+        <v-switch label="Problem" v-model="problem"></v-switch>
       </v-col>
       <v-col cols="12" md="2" v-if="IDsWarehouses.length">
         <!-- prepend-icon="mdi-swap-horizontal" -->
@@ -312,6 +313,7 @@ export default {
       ],
       currentFunction: null,
       isHidenBtnZ: false,
+      problem: false,
     };
   },
 
@@ -518,7 +520,9 @@ export default {
       const vm = this;
       vm.loading = true;
       axios
-        .get("/api/getAllOrders")
+        .post("/api/getAllOrders", {
+          problem: vm.problem,
+        })
         .then((res) => {
           if (res.status == 200) {
             vm.allOrders = res.data.allOrders;

@@ -18,6 +18,7 @@ class CollectController extends Controller
     public function getAllOrders(Request $request)
     {
         $user_role = $request->user->IDRoli;
+        $problem = $request->input('problem', false);
 
 
         //get collected orders

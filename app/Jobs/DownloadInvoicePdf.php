@@ -35,12 +35,15 @@ class DownloadInvoicePdf implements ShouldQueue
         $filename = "pdf/{$this->symbol}/{$this->invoice_number}.pdf";
         if (!Storage::disk('public')->exists($filename)) {
             $BL = new \App\Http\Controllers\Api\BaseLinkerController($this->token);
-            $param = ['invoice_id' => $this->invoice_id];
-            $pdfData = $BL->getInvoiceFile($param);
-            if ($pdfData && isset($pdfData['invoice'])) {
-                // Remove "data:" prefix before decoding
-                $base64 = preg_replace('/^data:/', '', $pdfData['invoice']);
-                Storage::disk('public')->put($filename, base64_decode($base64));
+            if ($this->invoice_id > 0) {
+
+                $param = ['invoice_id' => $this->invoice_id];
+                $pdfData = $BL->getInvoiceFile($param);
+                if ($pdfData && isset($pdfData['invoice'])) {
+                    // Remove "data:" prefix before decoding
+                    $base64 = preg_replace('/^data:/', '', $pdfData['invoice']);
+                    Storage::disk('public')->put($filename, base64_decode($base64));
+                }
             }
         }
     }
