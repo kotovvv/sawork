@@ -105,7 +105,33 @@ class CollectController extends Controller
             $allOrders = $allOrders->where(function ($order) use ($validOrderIds) {
                 return in_array($order->IDOrder, $validOrderIds);
             })->values();
+        } else if ($problem) {
+            //get orders with problem
+            $allOrderIds = $allOrders->pluck('IDOrder')->toArray();
+
+            $validOrderIds = DB::connection('second_mysql')->table('order_details as od')
+                ->leftJoin('for_ttn as f', function ($join) {
+                    $join->on('od.order_source_id', '=', 'f.order_source_id')
+                        ->on('od.IDWarehouse', '=', 'f.id_warehouse')
+                        ->on('od.order_source', '=', 'f.order_source')
+                        ->on('od.delivery_method', '=', 'f.delivery_method');
+                })
+                ->whereIn('od.order_id', $allOrderIds)
+                ->where(function ($query) {
+                    $query->where('f.courier_code', '!=', '')
+                        ->orWhere('f.account_id', '!=', 0);
+                })
+                ->groupBy('od.order_id')
+                ->havingRaw('COUNT(od.order_id) > 0')
+                ->pluck('od.order_id')
+                ->toArray();
+
+            // Фильтруем $allOrders по проблемным IDOrder
+            $allOrders = $allOrders->where(function ($order) use ($validOrderIds) {
+                return !in_array($order->IDOrder, $validOrderIds);
+            })->values();
         }
+
         return response()->json(['allOrders' => $allOrders, 'waiteOrders' => $waiteOrders]);
     }
 

@@ -42,7 +42,13 @@
             getAllOrders();
           "
         ></v-select>
-        <v-switch label="Problem" v-model="problem"></v-switch>
+        <v-switch
+          v-if="$attrs.user.IDRoli == 1"
+          label="Problem"
+          v-model="problem"
+          color="primary"
+          hide-details
+        ></v-switch>
       </v-col>
       <v-col cols="12" md="2" v-if="IDsWarehouses.length">
         <!-- prepend-icon="mdi-swap-horizontal" -->
