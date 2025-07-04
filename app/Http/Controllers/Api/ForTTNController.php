@@ -8,6 +8,7 @@ use App\Models\ForTtn;
 use App\Models\CourierForms;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ForTTNController extends Controller
 {
@@ -108,14 +109,19 @@ class ForTTNController extends Controller
             return response()->json(['error' => 'Token not found'], 404);
         }
 
-        $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
-        $response = $BL->getCouriersList([]);
-        if (!$response['status'] == 'SUCCESS') {
-            $messages[] = 'error getCodesFromBL: ';
-            throw new \Exception('Error getCodesFromBL in BL');
-        }
-        if (!isset($response['couriers']) || empty($response['couriers'])) {
-            return response()->json(['error' => 'No couriers found'], 404);
+        try {
+            $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
+            $response = $BL->getCouriersList([]);
+            if (!$response['status'] == 'SUCCESS') {
+                $messages[] = 'error getCodesFromBL: ';
+                throw new \Exception('Error getCodesFromBL in BL');
+            }
+            if (!isset($response['couriers']) || empty($response['couriers'])) {
+                return response()->json(['error' => 'No couriers found'], 404);
+            }
+        } catch (\Exception $e) {
+            Log::error('BaseLinker initialization or getCouriersList failed: ' . $e->getMessage());
+            return response()->json(['error' => 'BaseLinker error: ' . $e->getMessage()], 500);
         }
 
         $codeBL = $response['couriers'];
@@ -157,21 +163,26 @@ class ForTTNController extends Controller
             return response()->json(['error' => 'Token not found'], 404);
         }
 
-        $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
-        $response = $BL->getCourierAccounts(['courier_code' => $courier_code]);
-        if (!$response['status'] == 'SUCCESS') {
-            $messages[] = 'error getAccountsFromBL: ';
-            throw new \Exception('Error getAccountsFromBL in BL');
-        }
-        if (!isset($response['accounts']) || empty($response['accounts'])) {
-            return response()->json(['error' => 'No accounts found'], 404);
-        }
+        try {
+            $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
+            $response = $BL->getCourierAccounts(['courier_code' => $courier_code]);
+            if (!$response['status'] == 'SUCCESS') {
+                $messages[] = 'error getAccountsFromBL: ';
+                throw new \Exception('Error getAccountsFromBL in BL');
+            }
+            if (!isset($response['accounts']) || empty($response['accounts'])) {
+                return response()->json(['error' => 'No accounts found'], 404);
+            }
 
-        $accountBL = $response['accounts'];
-        //     cache()->put($cacheKey, $accountBL, now()->addDay());
-        // }
-        $this->getCourierFields($courier_code, $BL);
-        return $accountBL;
+            $accountBL = $response['accounts'];
+            //     cache()->put($cacheKey, $accountBL, now()->addDay());
+            // }
+            $this->getCourierFields($courier_code, $BL);
+            return $accountBL;
+        } catch (\Exception $e) {
+            Log::error('BaseLinker initialization or getCourierAccounts failed: ' . $e->getMessage());
+            return response()->json(['error' => 'BaseLinker error: ' . $e->getMessage()], 500);
+        }
     }
 
     private function getOrderInfo($IDOrder, $IDWarehouse)
@@ -274,16 +285,21 @@ class ForTTNController extends Controller
             return response()->json(['error' => 'Token not found'], 404);
         }
 
-        $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
+        try {
+            $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
 
-        $parameters = [
-            'order_id' => $data['Nr_Baselinker'],
-            'get_unconfirmed_orders' => true,
-            'include_custom_extra_fields' => true,
-        ];
-        if (!$BL->inKompletowanie($parameters)) {
-            $messages[] = 'Order BL ' . $data['Nr_Baselinker'] . ' ne Kompletowanie';
-            return response()->json(['error' => 'Order not in Kompletowanie status'], 404);
+            $parameters = [
+                'order_id' => $data['Nr_Baselinker'],
+                'get_unconfirmed_orders' => true,
+                'include_custom_extra_fields' => true,
+            ];
+            if (!$BL->inKompletowanie($parameters)) {
+                $messages[] = 'Order BL ' . $data['Nr_Baselinker'] . ' ne Kompletowanie';
+                return response()->json(['error' => 'Order not in Kompletowanie status'], 404);
+            }
+        } catch (\Exception $e) {
+            Log::error('BaseLinker initialization or inKompletowanie check failed: ' . $e->getMessage());
+            return response()->json(['error' => 'BaseLinker error: ' . $e->getMessage()], 500);
         }
 
         $forttn = $request->input('forttn', []);

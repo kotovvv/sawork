@@ -457,8 +457,14 @@ class CollectController extends Controller
                 $token = $this->getToken($IDMagazynu);
 
                 if ($token) {
-                    $BL = new BaseLinkerController($token);
-                    $bl_user_id = DB::table('settings')->where('obj_name', 'ext_id')->where('for_obj', $IDMagazynu)->where('key', $request->user->IDUzytkownika)->value('value');
+                    try {
+                        $BL = new BaseLinkerController($token);
+                        $bl_user_id = DB::table('settings')->where('obj_name', 'ext_id')->where('for_obj', $IDMagazynu)->where('key', $request->user->IDUzytkownika)->value('value');
+                    } catch (\Exception $e) {
+                        $messages[] = 'BaseLinker initialization failed for warehouse ' . $IDMagazynu . ': ' . $e->getMessage();
+                        Log::error('BaseLinker initialization failed for warehouse ' . $IDMagazynu . ': ' . $e->getMessage());
+                        continue;
+                    }
                 } else {
                     $messages[] = 'no token ' . $IDMagazynu;
                     continue;
@@ -1208,12 +1214,17 @@ class CollectController extends Controller
             return response()->json(['error' => 'Token not found'], 404);
         }
 
-        $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
-        $BL->getStatusId($status_name);
-        $BL->setOrderStatus([
-            'order_id' => $order['Nr_Baselinker'],
-            'status_id' =>  $BL->getStatusId($status_name),
-        ]);
+        try {
+            $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
+            $BL->getStatusId($status_name);
+            $BL->setOrderStatus([
+                'order_id' => $order['Nr_Baselinker'],
+                'status_id' =>  $BL->getStatusId($status_name),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('BaseLinker initialization or status update failed for order ' . $order['Nr_Baselinker'] . ': ' . $e->getMessage());
+            return response()->json(['error' => 'BaseLinker error: ' . $e->getMessage()], 500);
+        }
     }
 
     public function setOrderPackProducts(Request $request)
