@@ -1096,7 +1096,7 @@ class CollectController extends Controller
             if ($decoded_tow_loc && is_array($decoded_tow_loc)) {
                 foreach ($decoded_tow_loc as $idTowaru => $elements) {
                     if (isset($elements['min']) && is_array($elements['min'])) {
-                        dd('IDTowaru: ' . $idTowaru, $elements['min']);
+
                         // Get location codes for this IDTowaru using the min elements
                         $locations = DB::table('ElementRuchuMagazynowego as erm')
                             ->join('WarehouseLocations as wl', 'erm.IDWarehouseLocation', '=', 'wl.IDWarehouseLocation')
@@ -1105,14 +1105,7 @@ class CollectController extends Controller
                             ->pluck('wl.LocationCode')
                             ->unique()
                             ->toArray();
-                        dd(
-                            DB::table('ElementRuchuMagazynowego as erm')
-                                ->join('WarehouseLocations as wl', 'erm.IDWarehouseLocation', '=', 'wl.IDWarehouseLocation')
-                                ->whereIn('erm.IDElementuRuchuMagazynowego', $elements['min'])
-                                ->where('erm.IDTowaru', $idTowaru)
-                                ->select('wl.LocationCode')
-                                ->toSql()
-                        );
+
 
                         $locationCodes[$idTowaru] = $locations;
                     }
