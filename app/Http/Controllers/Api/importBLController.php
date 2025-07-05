@@ -874,7 +874,7 @@ HAVING
                 $body = "";
                 Mail::raw($body, function ($message) use ($idMagazynu, $order) {
                     $message->to('khanenko.igor@gmail.com')
-                        ->subject($this->getWarehouseSymbol($idMagazynu) . ' Zamówienie: ' . $order['_OrdersTempDecimal2'] . ' nie wysyłane z powodu braku metody dostawy.');
+                        ->subject($this->getWarehouseSymbol($idMagazynu) . ' Zamówienie: ' . $order->_OrdersTempDecimal2 . ' nie wysyłane z powodu braku metody dostawy.');
                 });
             }
         } catch (\Exception $e) {
