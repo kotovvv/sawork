@@ -18,7 +18,7 @@
             <span>
               <h5>
                 {{ product.Nazwa }}<br />cod: {{ product.KodKreskowy }}, sku:
-                {{ product.sku }}
+                {{ product.sku }}, loc: {{ product.locationCodes.join(", ") }}
               </h5>
             </span>
           </div>

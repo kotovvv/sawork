@@ -1025,8 +1025,10 @@ class CollectController extends Controller
         $showInOrder = $request->showInOrder ?? false;
         $a_pack = [];
         $IDOrder = (int)$IDOrder;
-        $collect = Collect::query()->where('IDOrder', $IDOrder)->first();
-        $o_ttn = Collect::query()->where('IDOrder', $IDOrder)->where('ttn', '!=', null)->value('ttn');
+        $req_collect = Collect::query()->where('IDOrder', $IDOrder);
+        $collect = $req_collect->first();
+        $o_ttn = $collect->ttn;
+        $a_tow_loc = $collect->IDsElementuRuchuMagazynowego;
 
         if (!$showInOrder) {
             //for get pdf invoice
@@ -1057,7 +1059,7 @@ class CollectController extends Controller
             // If $o_ttn is already an array, use it directly; otherwise, decode JSON
             $decoded_ttn = is_array($o_ttn) ? $o_ttn : json_decode($o_ttn, true);
         }
-        $o_pack = Collect::query()->where('IDOrder', $IDOrder)->where('pack', '!=', null)->value('pack');
+        $o_pack = $req_collect->where('pack', '!=', null)->value('pack');
         $decoded_pack = [];
         if ($o_pack) {
             // If $o_pack is already an array, use it directly; otherwise, decode JSON
@@ -1086,7 +1088,39 @@ class CollectController extends Controller
             ->whereIn('IDTowaru', $orderLines->pluck('IDTowaru'))
             ->pluck('Zdjecie', 'IDTowaru');
 
-        $orderLines = $orderLines->map(function ($item) use ($images, $decoded_pack) {
+        // Get location codes for each IDTowaru
+        $locationCodes = [];
+        if ($a_tow_loc) {
+            $decoded_tow_loc = is_array($a_tow_loc) ? $a_tow_loc : json_decode($a_tow_loc, true);
+
+            if ($decoded_tow_loc && is_array($decoded_tow_loc)) {
+                foreach ($decoded_tow_loc as $idTowaru => $elements) {
+                    if (isset($elements['min']) && is_array($elements['min'])) {
+                        dd('IDTowaru: ' . $idTowaru, $elements['min']);
+                        // Get location codes for this IDTowaru using the min elements
+                        $locations = DB::table('ElementRuchuMagazynowego as erm')
+                            ->join('WarehouseLocations as wl', 'erm.IDWarehouseLocation', '=', 'wl.IDWarehouseLocation')
+                            ->whereIn('erm.IDElementuRuchuMagazynowego', $elements['min'])
+                            ->where('erm.IDTowaru', $idTowaru)
+                            ->pluck('wl.LocationCode')
+                            ->unique()
+                            ->toArray();
+                        dd(
+                            DB::table('ElementRuchuMagazynowego as erm')
+                                ->join('WarehouseLocations as wl', 'erm.IDWarehouseLocation', '=', 'wl.IDWarehouseLocation')
+                                ->whereIn('erm.IDElementuRuchuMagazynowego', $elements['min'])
+                                ->where('erm.IDTowaru', $idTowaru)
+                                ->select('wl.LocationCode')
+                                ->toSql()
+                        );
+
+                        $locationCodes[$idTowaru] = $locations;
+                    }
+                }
+            }
+        }
+
+        $orderLines = $orderLines->map(function ($item) use ($images, $decoded_pack, $locationCodes) {
             if (isset($decoded_pack[0]['products']) && count($decoded_pack[0]['products']) > 0) {
                 // $decoded_pack[0]['products'] is an array of associative arrays with barcode as key
                 $qty = 0;
@@ -1106,6 +1140,10 @@ class CollectController extends Controller
             } else {
                 $item->img = null;
             }
+
+            // Add location codes for this item
+            $item->locationCodes = $locationCodes[$item->IDTowaru] ?? [];
+
             return $item;
         });
 

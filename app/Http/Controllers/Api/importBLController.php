@@ -266,15 +266,25 @@ class importBLController extends Controller
             $this->saveOrderDetails($orderData, $param['a_log']['order_id'],  $param['a_warehouse']->warehouse_id);
 
             $this->executeWithRetry(function () use ($param, $CustomerId, $orderSources, $orderData) {
-                DB::table('Orders')
+                $o_order = DB::table('Orders')
                     ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
-                    ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
-                    ->update([
-                        'IDAccount' => $CustomerId,
-                        '_OrdersTempString7' => $orderSources,
-                        '_OrdersTempString8' => $orderData['external_order_id'],
-                        '_OrdersTempString9' => $orderData['user_login']
-                    ]);
+                    ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
+
+                $o_order->update([
+                    'IDAccount' => $CustomerId,
+                    '_OrdersTempString7' => $orderSources,
+                    '_OrdersTempString8' => $orderData['external_order_id'],
+                    '_OrdersTempString9' => $orderData['user_login']
+                ]);
+                DB::connection('second_mysql')->table('order_details')->updateOrInsert(
+                    ['IDWarehouse' => $param['a_warehouse']->warehouse_id, 'order_id' => $param['a_log']['order_id']],
+                    [
+                        'delivery_method' => $orderData['delivery_method'] ?? null,
+                        'order_source' => $orderData['order_source'] ?? null,
+                        'order_source_id' => $orderData['order_source_id'] ?? null,
+                    ]
+                );
+                $this->checkOrder($o_order->value('IDOrder'), $param['a_warehouse']->warehouse_id);
             });
         } else {
             // Get current values from the database
@@ -296,7 +306,7 @@ class importBLController extends Controller
                 $body = 'Zamówienie: ' . $param['a_log']['order_id'] . ' ma status: ' . $OrderStatusLMName . ' i nie można zmienić danych zamówienia.';
                 Mail::raw($body, function ($message) use ($param) {
                     $message->to('khanenko.igor@gmail.com')
-                        ->subject('Zamówienie: ' . $param['a_log']['order_id'] . ' i nie można zmienić danych zamówienia dataOrder.');
+                        ->subject($this->getWarehouseSymbol($param['a_warehouse']->warehouse_id) . ' Zamówienie: ' . $param['a_log']['order_id'] . ' i nie można zmienić danych zamówienia dataOrder.');
                 });
             }
         }
@@ -357,7 +367,7 @@ class importBLController extends Controller
                 $body = 'Zamówienie: ' . $param['a_log']['order_id'] . ' ma status: ' . $OrderStatusLMName . ' i nie można zmienić danych dostawy.';
                 Mail::raw($body, function ($message) use ($param) {
                     $message->to('khanenko.igor@gmail.com')
-                        ->subject('Zamówienie: ' . $param['a_log']['order_id'] . ' i nie można zmienić danych dostawy.');
+                        ->subject($this->getWarehouseSymbol($param['a_warehouse']->warehouse_id) . ' Zamówienie: ' . $param['a_log']['order_id'] . ' i nie można zmienić danych dostawy.');
                 });
             }
         }
@@ -395,7 +405,7 @@ class importBLController extends Controller
             $body = 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id'];
             Mail::raw($body, function ($message) use ($param) {
                 $message->to('khanenko.igor@gmail.com')
-                    ->subject('Change Package Order BL' . $param['a_log']['order_id']);
+                    ->subject($this->getWarehouseSymbol($param['a_warehouse']->warehouse_id) . ' Change Package Order BL' . $param['a_log']['order_id']);
             });
         }
 
@@ -481,7 +491,7 @@ class importBLController extends Controller
                     $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Panel: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
                     Mail::raw($body, function ($message) use ($param) {
                         $message->to('khanenko.igor@gmail.com')
-                            ->subject('Status zmiany zamówienia w BaseLinker' . $param['a_log']['object_id']);
+                            ->subject($this->getWarehouseSymbol($param['a_warehouse']->warehouse_id) . ' Status zmiany zamówienia w BaseLinker' . $param['a_log']['object_id']);
                     });
 
                     LogOrder::create([
@@ -570,7 +580,7 @@ class importBLController extends Controller
                 $body = "Change products Order: {$order['order_id']}";
                 Mail::raw($body, function ($message) use ($param) {
                     $message->to('khanenko.igor@gmail.com')
-                        ->subject("Change products Order: {$param['a_log']['order_id']}");
+                        ->subject($this->getWarehouseSymbol($param['a_warehouse']->warehouse_id) . " Change products Order: {$param['a_log']['order_id']}");
                 });
 
                 LogOrder::create([
@@ -842,6 +852,9 @@ HAVING
                 'type' => 3,
                 'message' => "CreateOrder: {$orderData['order_id']}."
             ]);
+            // проверить на наличие ошибок в заказа
+            //если заказ в статусе реализация и не заполнено поле deliveryMethod - меняем статус невысылач с uvagi
+            $this->checkOrder($IDOrder, $idMagazynu);
         } catch (\Exception $e) {
 
             DB::rollBack();
@@ -849,6 +862,29 @@ HAVING
         }
     }
 
+    public function checkOrder($IDOrder, $idMagazynu)
+    {
+        try {
+            $order = DB::table('Orders')->where('IDOrder', $IDOrder)->where('IDWarehouse', $idMagazynu)->first();
+            if ($order && $order->IDOrderStatus == 23 && empty($orderData['delivery_method'])) {
+                DB::table('Orders')->where('IDOrder', $IDOrder)->where('IDWarehouse', $idMagazynu)->update([
+                    'Remarks' => DB::raw("ISNULL(Remarks, '') + ' Zamówienie nie wysyłane z powodu braku metody dostawy.'"),
+                    'Modified' => now(),
+                ]);
+                $body = "";
+                Mail::raw($body, function ($message) use ($idMagazynu, $order) {
+                    $message->to('khanenko.igor@gmail.com')
+                        ->subject($this->getWarehouseSymbol($idMagazynu) . ' Zamówienie: ' . $order['_OrdersTempDecimal2'] . ' nie wysyłane z powodu braku metody dostawy.');
+                });
+            }
+        } catch (\Exception $e) {
+            Log::error('Check Order failed', [
+                'order_id' => $IDOrder,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
 
     public function saveOrderForTtn(array $orderData, $IDOrder, $idMagazynu)
     {
@@ -1152,5 +1188,11 @@ HAVING
         }
 
         throw new \Exception('Maximum retry attempts reached');
+    }
+
+    private function getWarehouseSymbol($idMagazynu)
+    {
+        $Symbol = DB::table('Magazyn')->where('IDMagazynu', $idMagazynu)->value('Symbol');
+        return $Symbol;
     }
 }
