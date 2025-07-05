@@ -866,7 +866,9 @@ HAVING
     {
         try {
             $order = DB::table('Orders')->where('IDOrder', $IDOrder)->where('IDWarehouse', $idMagazynu)->first();
-            if ($order && $order->IDOrderStatus == 23 && empty($orderData['delivery_method'])) {
+            $deliveryDMethod = B::connection('second_mysql')->table('order_details')
+                ->where('order_id', $IDOrder)->value('delivery_method');
+            if ($order && $order->IDOrderStatus == 23 && empty($deliveryDMethod)) {
                 DB::table('Orders')->where('IDOrder', $IDOrder)->where('IDWarehouse', $idMagazynu)->update([
                     'Remarks' => DB::raw("COALESCE(Remarks, '') + ' Zamówienie nie wysyłane z powodu braku metody dostawy.'"),
                     'Modified' => now(),
