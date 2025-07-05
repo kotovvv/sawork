@@ -1092,21 +1092,22 @@ class CollectController extends Controller
         $locationCodes = [];
         if ($a_tow_loc) {
             $decoded_tow_loc = is_array($a_tow_loc) ? $a_tow_loc : json_decode($a_tow_loc, true);
-
             if ($decoded_tow_loc && is_array($decoded_tow_loc)) {
                 foreach ($decoded_tow_loc as $idTowaru => $elements) {
                     if (isset($elements['min']) && is_array($elements['min'])) {
 
-                        // Get location codes for this IDTowaru using the min elements
-                        $locations = DB::table('ElementRuchuMagazynowego as erm')
-                            ->join('WarehouseLocations as wl', 'erm.IDWarehouseLocation', '=', 'wl.IDWarehouseLocation')
-                            ->whereIn('erm.IDElementuRuchuMagazynowego', $elements['min'])
-                            ->where('erm.IDTowaru', $idTowaru)
-                            ->pluck('wl.LocationCode')
-                            ->unique()
-                            ->toArray();
-
-
+                        $locations = [];
+                        foreach ($elements['min'] as $elementMinId) {
+                            $locationCodesArr = DB::table('dbo.ZaleznosciPZWZ as pzwz')
+                                ->join('dbo.ElementRuchuMagazynowego as e', 'e.IDElementuRuchuMagazynowego', '=', 'pzwz.IDElementuPZ')
+                                ->join('dbo.WarehouseLocations as l', 'l.IDWarehouseLocation', '=', 'e.IDWarehouseLocation')
+                                ->where('pzwz.IDElementuWZ', $elementMinId)
+                                ->distinct()
+                                ->pluck('l.LocationCode')
+                                ->toArray();
+                            $locations = array_merge($locations, $locationCodesArr);
+                        }
+                        $locations = array_unique($locations);
                         $locationCodes[$idTowaru] = $locations;
                     }
                 }
