@@ -341,7 +341,7 @@ export default {
       package_id: "",
       package_number: "",
       courier_inner_number: "",
-
+      courier_code: "",
       filepath: "",
     };
   },
@@ -417,8 +417,8 @@ export default {
           this.package_id = response.data.package_id;
           this.courier_inner_number = response.data.courier_inner_number || "";
           this.package_number = response.data.package_number;
-
-          this.filepath = response.data.filePath || "";
+          this.courier_code = response.data.courier_code;
+          //this.filepath = response.data.filePath || "";
           this.workTTN();
         })
         .catch((error) => {
@@ -625,9 +625,14 @@ export default {
         .post("/api/writeTTN", {
           Order: this.transOrders[this.indexTransOrders],
           nttn: this.package_number,
+          package_id: this.package_id,
+          courier_inner_number: this.courier_inner_number,
+          package_number: this.package_number,
+          courier_code: this.courier_code,
           o_ttn: o_ttn,
         })
         .then((response) => {
+          this.filepath = response.data.filePath || "";
           this.dialogWeight = false;
           this.snackbar = true;
           this.message = response.data.message;

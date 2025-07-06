@@ -326,47 +326,13 @@ class ForTTNController extends Controller
             DB::table('Orders')->where('IDOrder', $data['IDOrder'])->where('IDWarehouse', $data['IDWarehouse'])
                 ->update(['_OrdersTempString2' => $createdTTN['package_number']]);
 
-            $label = $BL->getLabel([
-                'courier_code' => $orderInfo['courier_code'],
-                'package_id' => $createdTTN['package_id'],
-                'package_number' => $createdTTN['package_number']
-            ]);
-            if ($label['status'] == 'ERROR') {
-                return response()->json(['error_message' => $label['error_code'] . ' ' . $label['error_message']], 404);
-            }
-
-            // Save label to storage
-            $symbol = DB::table('Magazyn')->where('IDMagazynu', $data['IDWarehouse'])->value('Symbol');
-            $fileName = "pdf/{$symbol}/{$createdTTN['package_number']}.{$label['extension']}";
-            $filePath = storage_path('app/public/' . $fileName);
-            if (!file_exists(dirname($filePath))) {
-                mkdir(dirname($filePath), 0755, true);
-            }
-            file_put_contents($filePath, base64_decode($label['label']));
-
-            $req = new Request(
-                [
-                    'user' => $request->user,
-                    'doc' => 'label',
-                    'path' => $filePath,
-                    //'IDWarehouse' => $data['IDWarehouse'],
-                    // 'order' => [
-                    //     'IDOrder' => $data['IDOrder'],
-                    //     'invoice_number' => $createdTTN['package_number'],
-                    //     'invoice_id' => $createdTTN['package_id'],
-                    // ],
-                ]
-            );
-
-            $print = new \App\Http\Controllers\Api\PrintController($req);
-
-
             // Return three values: package_id, package_number, courier_inner_number
             return response()->json([
                 'package_id' => $createdTTN['package_id'],
                 'package_number' => $createdTTN['package_number'],
                 'courier_inner_number' => $createdTTN['courier_inner_number'],
-                'filePath' => $filePath,
+                'courier_code' => $forttn['courier_code'],
+                // 'filePath' => $filePath,
                 //'extension' => $label['extension'] ?? null,
                 //'label' => $label['label'] ?? null,
             ]);
