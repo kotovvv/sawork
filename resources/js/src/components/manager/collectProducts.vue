@@ -257,6 +257,17 @@
         </v-data-table>
       </v-col>
     </v-row>
+    <SlideDrawer
+      ref="slideDrawer"
+      v-model="drawerOpen"
+      :show-toggle-button="true"
+      title="меню"
+      :width="500"
+    >
+      <div class="drawer-content">
+        <v-btn color="success">Остатки</v-btn>
+      </div>
+    </SlideDrawer>
   </v-container>
 </template>
 
@@ -270,10 +281,11 @@ import { saveAs } from "file-saver";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import Pack from "./UI/Pack.vue";
+import SlideDrawer from "../UI/SlideDrawer.vue";
 
 export default {
   name: "FulstorcollectOrders",
-  components: { Pack },
+  components: { Pack, SlideDrawer },
   data() {
     return {
       snackbar: false,
@@ -320,6 +332,11 @@ export default {
       currentFunction: null,
       isHidenBtnZ: false,
       problem: false,
+      drawerOpen: false,
+      additionalParam1: "",
+      additionalParam2: "",
+      additionalFeature: false,
+      selectedOption: null,
     };
   },
 
@@ -327,7 +344,10 @@ export default {
     this.getWarehouse();
     this.getAllOrders();
     this.generatePDF = this.generatePDF.bind(this);
+    // Принудительно закрыть drawer при загрузке
+    this.drawerOpen = false;
   },
+  watch: {},
   computed: {
     currentHeaders() {
       if (this.currentFunction === "prepareDoc") {
@@ -595,6 +615,27 @@ export default {
         new Blob([wbout], { type: "application/octet-stream" }),
         "collect" + ".xlsx"
       );
+    },
+    applySettings() {
+      // Показать сообщение об успехе
+      this.snackbar = true;
+      this.message = "Настройки успешно применены";
+
+      this.drawerOpen = false;
+    },
+    closeDrawer() {
+      // Принудительно закрыть drawer
+      this.drawerOpen = false;
+
+      // Попробуем закрыть через ref
+      if (this.$refs.slideDrawer && this.$refs.slideDrawer.closeDrawer) {
+        this.$refs.slideDrawer.closeDrawer();
+      }
+
+      // Принудительно обновить компонент в следующем тике
+      this.$nextTick(() => {
+        this.$forceUpdate();
+      });
     },
   },
 };
