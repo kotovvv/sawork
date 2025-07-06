@@ -1332,7 +1332,7 @@ class CollectController extends Controller
                 $this->setStatus($Order, 'Do wysłania');
             }
 
-            if (env('APP_ENV' == 'production')) {
+            if (env('APP_ENV') == 'production') {
                 // Initialize BaseLinker controller
                 $IDWarehouse = $Order['IDWarehouse'];
                 $token = $this->getToken($IDWarehouse);
