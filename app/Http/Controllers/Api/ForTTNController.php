@@ -224,7 +224,7 @@ class ForTTNController extends Controller
         $res['KwotaBrutto'] = $order->KwotaBrutto;
         return $res;
     }
-    public function getForm($id)
+    public function getForm($request, $id)
     {
         $res = [];
 
@@ -248,7 +248,7 @@ class ForTTNController extends Controller
         }
         $res['fields'] = json_decode($values->form, true);
         $res['default_values'] = json_decode($values->default_values, true);
-
+        $res['hidden'] =  $request->user->IDRoli == 1 ? 0 : 1;
         $service = $values->service;
 
         $order = DB::table('orders as ord')

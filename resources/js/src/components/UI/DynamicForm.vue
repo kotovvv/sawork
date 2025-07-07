@@ -2,7 +2,14 @@
   <v-form ref="form" v-model="valid" @submit.prevent="save">
     <v-row>
       <v-col cols="12" md="6">
-        <div v-for="field in fields" :key="field.id" class="mb-1">
+        <div
+          v-for="field in fields"
+          :key="field.id"
+          class="mb-1"
+          :class="
+            field.id === 'size_type' || hidden == false ? 'd-block' : 'd-none'
+          "
+        >
           <template v-if="field.type === 'radio' && field.options">
             <v-label class="mb-2">{{ field.name }}</v-label>
             <v-radio-group
@@ -81,25 +88,23 @@
           </template>
         </div>
       </v-col>
-      <v-col cols="12" md="6">
-        <div v-if="packageFields && packageFields.length">
-          <div v-for="field in packageFields" :key="field.id" class="mb-1">
-            <component
-              :is="getComponent(field)"
-              v-model="packageFieldsData[field.id]"
-              :label="field.name"
-              :items="getOptions(field)"
-              :multiple="field.type === 'checkbox'"
-              :type="field.type === 'text' ? 'text' : undefined"
-              :hint="field.hint"
-              persistent-hint
-              :rules="field.rules || []"
-              :name="field.id"
-              :true-value="true"
-              :false-value="false"
-              @keydown.enter.prevent="save"
-            ></component>
-          </div>
+      <v-col cols="12" md="6" v-if="packageFields && packageFields.length">
+        <div v-for="field in packageFields" :key="field.id" class="mb-1">
+          <component
+            :is="getComponent(field)"
+            v-model="packageFieldsData[field.id]"
+            :label="field.name"
+            :items="getOptions(field)"
+            :multiple="field.type === 'checkbox'"
+            :type="field.type === 'text' ? 'text' : undefined"
+            :hint="field.hint"
+            persistent-hint
+            :rules="field.rules || []"
+            :name="field.id"
+            :true-value="true"
+            :false-value="false"
+            @keydown.enter.prevent="save"
+          ></component>
         </div>
       </v-col>
     </v-row>
@@ -115,6 +120,7 @@ const props = defineProps({
   fields: { type: Array, required: true },
   packageFields: { type: Array, default: () => [] },
   modelValue: { type: Object, default: () => ({}) },
+  hidden: { type: Boolean, default: false },
 });
 const emit = defineEmits(["update:modelValue", "save"]);
 
