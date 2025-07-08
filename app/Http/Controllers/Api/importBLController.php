@@ -380,7 +380,7 @@ class importBLController extends Controller
         if (!isset($OrderPackages['status']) || $OrderPackages['status'] != "SUCCESS") {
             return;
         }
-        $o_order = DB::table('Orders as o')
+        $o_order = DB::table('Orders')
             ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
             ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
         $package = collect($OrderPackages['packages'])->firstWhere('parcel_id', $createdParcelID);
@@ -395,16 +395,13 @@ class importBLController extends Controller
                 return;
             }
             $this->executeWithRetry(function () use ($package, $o_order) {
-                $o_order
-
-                    ->update(['_OrdersTempString2' => $package['courier_package_nr'], 'Modified' => now()]);
+                $o_order->update(['_OrdersTempString2' => $package['courier_package_nr'], 'Modified' => now()]);
             });
         }
-        $orderStatus = $o_order->leftJoin('OrderStatus as os', 'o.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
+        $orderStatus = $o_order->leftJoin('OrderStatus as os', 'Orders.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
         if (in_array($orderStatus, ['Do wysłania', 'Kompletowanie'])) {
             $this->executeWithRetry(function () use ($package, $o_order) {
-                $o_order
-                    ->update(['_OrdersTempString2' => $package['courier_package_nr'], 'Modified' => now()]);
+                $o_order->update(['_OrdersTempString2' => $package['courier_package_nr'], 'Modified' => now()]);
             });
         } else {
             // check for return
