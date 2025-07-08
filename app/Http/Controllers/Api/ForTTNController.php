@@ -224,7 +224,8 @@ class ForTTNController extends Controller
         $res['KwotaBrutto'] = $order->KwotaBrutto;
         return $res;
     }
-    public function getForm($request, $id)
+
+    public function getForm(Request $request, $id)
     {
         $res = [];
 

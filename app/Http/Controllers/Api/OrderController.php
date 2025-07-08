@@ -15,7 +15,7 @@ class OrderController extends Controller
         $res = [];
         if (isset($data['ordername'])) {
             $orderdata = trim($data['ordername']);
-            $res['order'] =  collect(DB::select('SELECT [IDOrder] , [Number] , cast ([Created] as date) Created , con.[Nazwa] cName , CAST([_OrdersTempDecimal2] AS INT) as pk , [Remarks] as Uwagi ,[_OrdersTempString7] as Zrodlo ,[_OrdersTempString8] as External_id ,[_OrdersTempString9] as Login_klienta FROM [dbo].[Orders] ord LEFT JOIN [dbo].[Kontrahent] con ON con.[IDKontrahenta] = ord.[IDAccount] WHERE ord.[IDWarehouse] = ' . (int) $data['warehouse'] . ' AND \'' . $orderdata . '\' IN (Number, _OrdersTempString1,_OrdersTempString2, _OrdersTempString3, _OrdersTempString4, CONVERT(NVARCHAR(255), _OrdersTempDecimal1),  CONVERT(NVARCHAR(255), CONVERT(INT, _OrdersTempDecimal2)))'))->first();
+            $res['order'] =  collect(DB::select('SELECT [IDOrder] , [Number] , cast ([Created] as date) Created , con.[Nazwa] cName , CAST([_OrdersTempDecimal2] AS INT) as pk , [Remarks] as Uwagi ,[_OrdersTempString7] as Zrodlo ,[_OrdersTempString8] as External_id ,[_OrdersTempString9] as Login_klienta FROM [dbo].[Orders] ord LEFT JOIN [dbo].[Kontrahent] con ON con.[IDKontrahenta] = ord.[IDAccount] WHERE ord.[IDWarehouse] = ' . (int) $data['warehouse'] . ' AND \'' . $orderdata . '\' IN (Number, _OrdersTempString1,_OrdersTempString2, _OrdersTempString3, _OrdersTempString4, _OrdersTempString10, CONVERT(NVARCHAR(255), _OrdersTempDecimal1),  CONVERT(NVARCHAR(255), CONVERT(INT, _OrdersTempDecimal2)))'))->first();
 
             if ($res['order']) {
                 $res['wz'] = collect(

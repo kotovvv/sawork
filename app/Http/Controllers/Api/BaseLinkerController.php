@@ -264,4 +264,12 @@ class BaseLinkerController extends Controller
         $response = $this->sendRequest('getOrderPackages', $parameters);
         return $response;
     }
+    public function getOrderReturns($parameters)
+    {
+        if (!isset($parameters['order_id'])) {
+            throw new \InvalidArgumentException('The "order_id" are required.');
+        }
+        $response = $this->sendRequest('getOrderReturns', $parameters);
+        return $response;
+    }
 }
