@@ -61,26 +61,9 @@ class CollectController extends Controller
             })
 
             ->whereNotNull('o._OrdersTempDecimal2') //Nr. Baselinker
-            ->where(function ($query) {
-                // If _OrdersTempString1 is empty, check for absence in order_details with 'personal'
-                $query->where(function ($q) {
-                    $q->whereNull('o._OrdersTempString1')
-                        ->orWhere('o._OrdersTempString1', '');
-                })
-                    ->whereExists(function ($subQuery) {
-                        $subQuery->select(DB::raw(1))
-                            ->from('order_details as od')
-                            ->whereRaw('od.order_id = o.IDOrder')
-                            ->where('od.order_source', 'like', '%personal%')
-                            ->connection('second_mysql');
-                    })
-                    // Or _OrdersTempString1 is not empty
-                    ->orWhere(function ($q) {
-                        $q->whereNotNull('o._OrdersTempString1')
-                            ->where('o._OrdersTempString1', '!=', '');
-                    });
+            ->when(!in_array('o._OrdersTempString7', ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka']), function ($query) {
+                return $query->whereNotNull('o._OrdersTempString1'); //Nr. Faktury BL);
             })
-
             ->whereNotNull('o._OrdersTempString7') //Źródło
             ->where(function ($query) {
                 $query->where('o._OrdersTempString5', '')
