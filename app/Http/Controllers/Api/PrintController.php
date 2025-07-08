@@ -23,11 +23,17 @@ class PrintController extends Controller
         if ($request->input('doc') == 'invoice') {
             $order = $request->order;
             $OrdersTempString1 = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->value('_OrdersTempString1');
-            $notprint = in_array($OrdersTempString1, ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka']);
-            if ($notprint) {
-                Log::info("Order {$order['IDOrder']} not printed due to condition {$OrdersTempString1}");
-                return response()->json(['status' => 'ok', 'message' => $OrdersTempString1 . ' nie ma faktury', 'nofaktura' => $OrdersTempString1 . ' nie ma faktury'], 200);
+            if (empty($OrdersTempString1)) {
+                $notprint = DB::connection('second_mysql')->table('order_details as od')
+                    ->where('order_id', $order['IDOrder'])
+                    ->whereLike('order_source', '%personal%')
+                    ->exists();
+                if ($notprint) {
+                    Log::info("Order {$order['IDOrder']} not printed due to condition {$OrdersTempString1}");
+                    return response()->json(['status' => 'ok', 'message' => $OrdersTempString1 . ' nie ma faktury', 'nofaktura' => $OrdersTempString1 . ' nie ma faktury'], 200);
+                }
             }
+
             $IDMagazynu = $order['IDWarehouse'];
             $symbol = DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol');
             $fileName =  str_replace(['/', '\\'], '_', $order['invoice_number']);
