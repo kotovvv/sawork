@@ -344,7 +344,7 @@ export default {
       courier_inner_number: "",
       courier_code: "",
       filepath: "",
-      hidden: false, // Default to 0 if not provided
+      hidden: 1,
     };
   },
 
@@ -832,7 +832,7 @@ export default {
           this.fields = Array.isArray(forFormData)
             ? forFormData
             : forFormData.fields || [];
-          this.hidden = forFormData.hidden == 0 ? false : true; // Default to 0 if not provided
+          this.hidden = response.data.hidden; // Default to 0 if not provided
           this.packageFields = forFormData.package_fields || [];
 
           this.formValues = response.data.default_values || {};

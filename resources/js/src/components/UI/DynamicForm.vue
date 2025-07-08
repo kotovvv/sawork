@@ -7,7 +7,7 @@
           :key="field.id"
           class="mb-1"
           :class="
-            field.id === 'size_type' || hidden == false ? 'd-block' : 'd-none'
+            field.id === 'size_type' || hidden == 0 ? 'd-block' : 'd-none'
           "
         >
           <template v-if="field.type === 'radio' && field.options">
@@ -120,7 +120,7 @@ const props = defineProps({
   fields: { type: Array, required: true },
   packageFields: { type: Array, default: () => [] },
   modelValue: { type: Object, default: () => ({}) },
-  hidden: { type: Boolean, default: false },
+  hidden: { type: Number, default: 1 },
 });
 const emit = defineEmits(["update:modelValue", "save"]);
 
