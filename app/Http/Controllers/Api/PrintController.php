@@ -22,16 +22,11 @@ class PrintController extends Controller
 
         if ($request->input('doc') == 'invoice') {
             $order = $request->order;
-            $OrdersTempString1 = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->value('_OrdersTempString1');
-            if (empty($OrdersTempString1)) {
-                $notprint = DB::connection('second_mysql')->table('order_details as od')
-                    ->where('order_id', $order['IDOrder'])
-                    ->whereLike('order_source', '%personal%')
-                    ->exists();
-                if ($notprint) {
-                    Log::info("Order {$order['IDOrder']} not printed due to condition {$OrdersTempString1}");
-                    return response()->json(['status' => 'ok', 'message' => $OrdersTempString1 . ' nie ma faktury', 'nofaktura' => $OrdersTempString1 . ' nie ma faktury'], 200);
-                }
+            $OrdersTempString7 = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->value('_OrdersTempString7');
+            $notprint = in_array($OrdersTempString7, ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka']);
+            if ($notprint) {
+                Log::info("Order {$order['IDOrder']} not printed due to condition {$OrdersTempString7}");
+                return response()->json(['status' => 'ok', 'message' => $OrdersTempString7 . ' nie ma faktury', 'nofaktura' => $OrdersTempString7 . ' nie ma faktury'], 200);
             }
 
             $IDMagazynu = $order['IDWarehouse'];
