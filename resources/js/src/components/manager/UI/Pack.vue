@@ -216,7 +216,13 @@
             </v-row>
             <h5 class="text-red" v-if="message_error">{{ message_error }}</h5>
             <h5 class="text-green" v-if="message">{{ message }}</h5>
-
+            <div
+              class="text-deep-orange-darken-4"
+              style="font-size: 3rem"
+              v-if="nofaktura"
+            >
+              {{ nofaktura }}
+            </div>
             <PackProductList
               :products="productsOrder[0]?.products || []"
               :ttn="productsOrder.ttn"
@@ -345,6 +351,7 @@ export default {
       courier_code: "",
       filepath: "",
       hidden: 1,
+      nofaktura: "",
     };
   },
 
@@ -442,6 +449,7 @@ export default {
         })
         .then((response) => {
           this.message_error = response.data.message;
+          this.nofaktura = response.data.nofaktura || "";
           // handle success if needed
         })
         .catch((error) => {

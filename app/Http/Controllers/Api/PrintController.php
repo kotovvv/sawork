@@ -26,7 +26,7 @@ class PrintController extends Controller
             $notprint = in_array($OrdersTempString1, ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka']);
             if ($notprint) {
                 Log::info("Order {$order['IDOrder']} not printed due to condition {$OrdersTempString1}");
-                return response()->json(['status' => 'ok', 'message' => $OrdersTempString1 . ' nie ma faktury'], 200);
+                return response()->json(['status' => 'ok', 'message' => $OrdersTempString1 . ' nie ma faktury', 'nofaktura' => $OrdersTempString1 . ' nie ma faktury'], 200);
             }
             $IDMagazynu = $order['IDWarehouse'];
             $symbol = DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol');
