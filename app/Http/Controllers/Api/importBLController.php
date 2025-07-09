@@ -390,6 +390,12 @@ class importBLController extends Controller
             $this->executeWithRetry(function () use ($package, $o_order) {
                 $o_order->update(['_OrdersTempString2' => $package['courier_package_nr'], 'Modified' => now()]);
             });
+            LogOrder::create([
+                'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                'number' => $param['a_log']['order_id'],
+                'type' => 9,
+                'message' => 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
+            ]);
         } else {
             // check for return
             $package = $this->BL->getOrderReturns(['order_id' => $param['a_log']['order_id']]);
@@ -406,14 +412,14 @@ class importBLController extends Controller
                         ]);
                 });
             }
-        }
 
-        LogOrder::create([
-            'IDWarehouse' => $param['a_warehouse']->warehouse_id,
-            'number' => $param['a_log']['order_id'],
-            'type' => 9,
-            'message' => 'Zmieniono numer paczki na: ' . $package['delivery_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
-        ]);
+            LogOrder::create([
+                'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                'number' => $param['a_log']['order_id'],
+                'type' => 9,
+                'message' => 'Zmieniono numer paczki na: ' . $package['delivery_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
+            ]);
+        }
     }
 
     private function changeInvoiceOrder($param)
