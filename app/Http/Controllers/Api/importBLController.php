@@ -412,7 +412,7 @@ class importBLController extends Controller
             'IDWarehouse' => $param['a_warehouse']->warehouse_id,
             'number' => $param['a_log']['order_id'],
             'type' => 9,
-            'message' => 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
+            'message' => 'Zmieniono numer paczki na: ' . $package['delivery_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
         ]);
     }
 
