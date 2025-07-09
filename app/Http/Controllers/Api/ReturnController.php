@@ -342,8 +342,16 @@ class ReturnController extends Controller
         foreach ($locations as $location) {
 
             foreach ($warehouses as $key => $value) {
-
-                $res[$location] = $this->getProductsInLocation($key, $location, true);
+                $userId = (int)str_replace('User', '', $location);
+                $userInfo = DB::table('Uzytkownik')->where('IDUzytkownika', $userId)->first();
+                // $res[$location . '_user'] = $userInfo;
+                $products = $this->getProductsInLocation($key, $location, true);
+                if (!empty($products)) {
+                    if (!isset($res[$userInfo->Login])) {
+                        $res[$userInfo->Login] = [];
+                    }
+                    $res[$userInfo->Login] = array_merge($res[$userInfo->Login], $products->toArray());
+                }
             }
         }
         return $res;
