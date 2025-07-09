@@ -400,7 +400,7 @@ class importBLController extends Controller
                 $this->executeWithRetry(function () use ($return, $o_order) {
                     $o_order
                         ->update([
-                            '_OrdersTempString4' => $return['courier_package_nr'], //Nr. Zwrotny BL
+                            '_OrdersTempString4' => $return['delivery_package_nr'], //Nr. Zwrotny BL
                             '_OrdersTempString10' => $return['reference_number'], //Numer Zwrotu
                             'Modified' => now()
                         ]);
