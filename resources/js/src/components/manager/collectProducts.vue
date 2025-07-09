@@ -261,12 +261,9 @@
       ref="slideDrawer"
       v-model="drawerOpen"
       :show-toggle-button="true"
-      title="меню"
-      :width="500"
+      title="Menu"
+      :width="250"
     >
-      <div class="drawer-content">
-        <v-btn color="success">Остатки</v-btn>
-      </div>
     </SlideDrawer>
   </v-container>
 </template>

@@ -1,6 +1,6 @@
 <template>
   <div class="slide-drawer-container">
-    <!-- Кнопка для открытия/закрытия drawer -->
+    <!-- Button for opening/closing the drawer -->
     <v-btn
       v-if="!isOpen && showToggleButton"
       class="drawer-toggle-btn"
@@ -12,18 +12,17 @@
       <v-icon>{{ toggleIcon }}</v-icon>
     </v-btn>
 
-    <!-- Drawer панель -->
+    <!-- Drawer panel -->
     <v-navigation-drawer
       v-if="isOpen"
       :model-value="true"
       @update:model-value="updateIsOpen"
       location="right"
       persistent
-      :width="drawerWidth"
       class="slide-drawer"
-      :style="{ zIndex: zIndex }"
+      :style="{ zIndex: zIndex, width: drawerWidth }"
     >
-      <!-- Заголовок с кнопкой закрытия -->
+      <!-- Header with close button -->
       <v-toolbar color="primary" dark flat class="drawer-header">
         <v-toolbar-title>{{ title }}</v-toolbar-title>
         <v-spacer></v-spacer>
@@ -32,13 +31,13 @@
         </v-btn>
       </v-toolbar>
 
-      <!-- Контент drawer -->
+      <!-- Drawer content -->
       <div class="drawer-content">
         <slot></slot>
       </div>
     </v-navigation-drawer>
 
-    <!-- Overlay для закрытия при клике вне drawer -->
+    <!-- Overlay for closing when clicking outside drawer -->
     <v-overlay
       v-if="isOpen && showOverlay"
       :model-value="isOpen"
@@ -55,7 +54,7 @@ export default {
   props: {
     title: {
       type: String,
-      default: "Панель",
+      default: "Panel",
     },
     width: {
       type: [String, Number],

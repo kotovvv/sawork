@@ -356,12 +356,14 @@ class CollectController extends Controller
         $makeOrders = [];
         foreach ($freeOrders as $IDOrder) {
             try {
-                Collect::create([
-                    'IDUzytkownika' => $request->user->IDUzytkownika,
-                    'Date' => Carbon::now(),
-                    'IDOrder' => $IDOrder,
-                    'status' => 0,
-                ]);
+                Collect::updateOrCreate(
+                    ['IDOrder' => $IDOrder],
+                    [
+                        'IDUzytkownika' => $request->user->IDUzytkownika,
+                        'Date' => Carbon::now(),
+                        'status' => 0,
+                    ]
+                );
 
                 $makeOrders[] = $IDOrder;
             } catch (\Throwable $th) {
@@ -588,16 +590,11 @@ class CollectController extends Controller
                             }
 
 
-
-
-
-
                             //Log::info("invoice_id", [$invoice_id]);
 
-                            $inserted = Collect::query()->insert([
+                            $inserted = Collect::updateOrCreate(['IDOrder' => $order['IDOrder']], [
                                 'IDUzytkownika' => $request->user->IDUzytkownika,
                                 'Date' => Carbon::now(),
-                                'IDOrder' => $order['IDOrder'],
                                 'status' => 0,
                                 'created_doc' => json_encode($createdDoc[$IDMagazynu]),
                                 'IDsElementuRuchuMagazynowego' => json_encode($IDsElementuRuchuMagazynowego),
