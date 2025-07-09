@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Collect;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -318,17 +319,54 @@ class ReturnController extends Controller
         }
         return $array;
     }
+    public function getProductsInLocationByUser(Request $request)
+    {
+        $isadmin = false;
+        $locations = $res = [];
+        if (isset($request->user)) {
+            $user = $request->user;
+            $isadmin = $user->IDRoli == 1 ? true : false;
+            if ($isadmin) {
+                $locations = Collect::select(DB::raw("DISTINCT CONCAT('User', IDUzytkownika) as locations"))
+                    ->whereDate('Date', '>', Carbon::now()->subDays(30))
+                    ->pluck('locations')
+                    ->toArray();
+            } else {
+                $locations[] = 'User' . $user->IDUzytkownika;
+            }
+        }
+        $request = new Request([
+            'user' => $request->user,
+        ]);
+        $warehouses = collect($this->getWarehouse($request))->pluck('Symbol', 'IDMagazynu')->toArray();
+        foreach ($locations as $location) {
 
-    public function getProductsInLocation($IDWarehouse, $location)
+            foreach ($warehouses as $key => $value) {
+
+                $res[$location] = $this->getProductsInLocation($key, $location, true);
+            }
+        }
+        return $res;
+    }
+
+    public function getProductsInLocation($IDWarehouse, $location, $foruser = false)
     {
         $location = htmlspecialchars($location, ENT_QUOTES, 'UTF-8');
         $IDWarehouse = htmlspecialchars($IDWarehouse, ENT_QUOTES, 'UTF-8');
         $date = Carbon::now()->format('Y/m/d H:i:s');
-        $WarehouseLocations = DB::table('dbo.EMailMagazyn')
-            ->select('IDLokalizaciiZwrot as Zwrot', 'Zniszczony', 'Naprawa')
-            ->where('IDMagazyn', $IDWarehouse)
-            ->where('IDLokalizaciiZwrot', '>', 0)
-            ->first();
+        if (!$foruser) {
+            $WarehouseLocations = DB::table('dbo.EMailMagazyn')
+                ->select('IDLokalizaciiZwrot as Zwrot', 'Zniszczony', 'Naprawa')
+                ->where('IDMagazyn', $IDWarehouse)
+                ->where('IDLokalizaciiZwrot', '>', 0)
+                ->first();
+            $idlocation = $WarehouseLocations->$location ?? null;
+        } else {
+            $idlocation = DB::table('dbo.WarehouseLocations')
+                ->where('IDMagazynu', $IDWarehouse)
+                ->where('LocationCode', $location)
+                ->value('IDWarehouseLocation');
+        }
         //$arrayKodKreskowy = array_map('strval', array_keys($this->arrayProductsInLocation($WarehouseLocations->$location)));
 
         $locationsActive = DB::table('Ustawienia')->where('Nazwa', 'WarehouseLocations')->value('Wartosc');
@@ -349,7 +387,7 @@ class ReturnController extends Controller
             ->where('r.Operator', '>', 0)
             ->where('r.Data', '<', $date)
             ->where('r.Data', '>=', DB::raw('BO.MinDate'))
-            ->where('e.IDWarehouseLocation', $WarehouseLocations->$location)
+            ->where('e.IDWarehouseLocation', $idlocation)
             ->where('t.Usluga', 0)
             ->select(
                 't.IDTowaru',
@@ -360,15 +398,21 @@ class ReturnController extends Controller
                 't.KodKreskowy',
                 'e.Uwagi',
                 'e.IDElementuRuchuMagazynowego',
+                'e.IDWarehouseLocation',
                 DB::raw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) as ilosc')
             )
-            ->groupBy('t.IDTowaru', 'r.NrDokumentu', 'r.Data', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy', 'e.Uwagi', 'e.IDElementuRuchuMagazynowego')
+            ->groupBy('t.IDTowaru', 'r.NrDokumentu', 'r.Data', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy', 'e.Uwagi', 'e.IDElementuRuchuMagazynowego', 'e.IDWarehouseLocation')
             ->havingRaw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) > 0');
 
         // Основной запрос для получения деталей товаров
         $details = DB::table(DB::raw("({$subQuery->toSql()}) as Q"))
             ->mergeBindings($subQuery)
-            ->leftJoin('dbo.WarehouseLocations as w', 'w.IDWarehouseLocation', '=', DB::raw($WarehouseLocations->$location))
+            ->leftJoin(
+                'dbo.WarehouseLocations as w',
+                'w.IDWarehouseLocation',
+                '=',
+                'Q.IDWarehouseLocation'
+            )
             ->select(
                 'Q.IDTowaru',
                 'Q.NrDokumentu',
@@ -378,9 +422,10 @@ class ReturnController extends Controller
                 'Q.KodKreskowy',
                 'Q.Uwagi',
                 'Q.IDElementuRuchuMagazynowego',
+                'Q.IDWarehouseLocation',
                 DB::raw('CAST(SUM(Q.ilosc) AS INT) as ilosc')
             )
-            ->groupBy('Q.IDTowaru', 'Q.NrDokumentu', 'Q.Data', 'Q.Nazwa', 'Q._TowarTempString1', 'Q.KodKreskowy', 'Q.Uwagi', 'Q.IDElementuRuchuMagazynowego', 'w.LocationCode')
+            ->groupBy('Q.IDTowaru', 'Q.NrDokumentu', 'Q.Data', 'Q.Nazwa', 'Q._TowarTempString1', 'Q.KodKreskowy', 'Q.Uwagi', 'Q.IDElementuRuchuMagazynowego', 'Q.IDWarehouseLocation', 'w.LocationCode')
             ->get();
 
         return $details;
