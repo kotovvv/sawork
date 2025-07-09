@@ -328,6 +328,7 @@ class ReturnController extends Controller
             $isadmin = $user->IDRoli == 1 ? true : false;
             if ($isadmin) {
                 $locations = Collect::select(DB::raw("DISTINCT CONCAT('User', IDUzytkownika) as locations"))
+                    ->whereDate('Date', '>', Carbon::now()->subDays(30))
                     ->pluck('locations')
                     ->toArray();
             } else {
@@ -342,9 +343,10 @@ class ReturnController extends Controller
 
             foreach ($warehouses as $key => $value) {
 
-                $res[$value] = $this->getProductsInLocation($key, $location, true);
+                $res[$location] = $this->getProductsInLocation($key, $location, true);
             }
         }
+        return $res;
     }
 
     public function getProductsInLocation($IDWarehouse, $location, $foruser = false)
@@ -396,9 +398,10 @@ class ReturnController extends Controller
                 't.KodKreskowy',
                 'e.Uwagi',
                 'e.IDElementuRuchuMagazynowego',
+                'e.IDWarehouseLocation',
                 DB::raw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) as ilosc')
             )
-            ->groupBy('t.IDTowaru', 'r.NrDokumentu', 'r.Data', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy', 'e.Uwagi', 'e.IDElementuRuchuMagazynowego')
+            ->groupBy('t.IDTowaru', 'r.NrDokumentu', 'r.Data', 't.Nazwa', 't._TowarTempString1', 't.KodKreskowy', 'e.Uwagi', 'e.IDElementuRuchuMagazynowego', 'e.IDWarehouseLocation')
             ->havingRaw('SUM(CASE WHEN pzwz.Ilosc IS NULL THEN e.Ilosc ELSE -pzwz.Ilosc END) > 0');
 
         // Основной запрос для получения деталей товаров
@@ -408,7 +411,7 @@ class ReturnController extends Controller
                 'dbo.WarehouseLocations as w',
                 'w.IDWarehouseLocation',
                 '=',
-                DB::raw($idlocation)
+                'Q.IDWarehouseLocation'
             )
             ->select(
                 'Q.IDTowaru',
@@ -419,9 +422,10 @@ class ReturnController extends Controller
                 'Q.KodKreskowy',
                 'Q.Uwagi',
                 'Q.IDElementuRuchuMagazynowego',
+                'Q.IDWarehouseLocation',
                 DB::raw('CAST(SUM(Q.ilosc) AS INT) as ilosc')
             )
-            ->groupBy('Q.IDTowaru', 'Q.NrDokumentu', 'Q.Data', 'Q.Nazwa', 'Q._TowarTempString1', 'Q.KodKreskowy', 'Q.Uwagi', 'Q.IDElementuRuchuMagazynowego', 'w.LocationCode')
+            ->groupBy('Q.IDTowaru', 'Q.NrDokumentu', 'Q.Data', 'Q.Nazwa', 'Q._TowarTempString1', 'Q.KodKreskowy', 'Q.Uwagi', 'Q.IDElementuRuchuMagazynowego', 'Q.IDWarehouseLocation', 'w.LocationCode')
             ->get();
 
         return $details;

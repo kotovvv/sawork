@@ -264,6 +264,13 @@
       title="Menu"
       :width="250"
     >
+      <v-list>
+        <v-list-item @click="getProductsInLocations()">
+          <v-list-item-content>
+            <v-list-item-title>Products In</v-list-item-title>
+          </v-list-item-content>
+        </v-list-item>
+      </v-list>
     </SlideDrawer>
   </v-container>
 </template>
@@ -357,6 +364,21 @@ export default {
     },
   },
   methods: {
+    getProductsInLocations() {
+      this.loading = true;
+      this.$refs.slideDrawer.updateIsOpen(true);
+      axios
+        .get("/api/getProductsInLocationByUser")
+        .then((response) => {
+          this.loading = false;
+          //this.productsInLocations = response.data;
+          console.log("Products in locations:", response.data);
+        })
+        .catch((error) => {
+          this.loading = false;
+          console.error("Error fetching products in locations:", error);
+        });
+    },
     generatePDF() {
       const doc = new jsPDF();
       const robotoRegularBase64 =

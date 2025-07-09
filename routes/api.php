@@ -34,6 +34,7 @@ Route::post('login', [AuthUserController::class, 'login']);
 
 Route::middleware(['jwt.verify'])->group(function () {
     Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
+    Route::get('getProductsInLocationByUser', [ReturnController::class, 'getProductsInLocationByUser']);
     Route::get('loadMagEmail', [MagazynController::class, 'loadMagEmail']);
     Route::post('saveMagEmail', [MagazynController::class, 'saveMagEmail']);
     Route::post('deleteMagEmail', [MagazynController::class, 'deleteMagEmail']);
