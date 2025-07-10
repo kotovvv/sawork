@@ -14,7 +14,7 @@
             <v-label class="mb-2">{{ field.name }}</v-label>
             <v-radio-group
               v-model="fieldsData[field.id]"
-              :rules="field.rules || []"
+              :rules="getFieldRules(field)"
               :name="field.id"
               @keydown.enter.prevent="save"
             >
@@ -35,7 +35,7 @@
                 v-model="fieldsData[field.id]"
                 :label="opt.title"
                 :value="opt.value"
-                :rules="field.rules || []"
+                :rules="getFieldRules(field)"
                 :name="field.id"
                 multiple
                 hide-details="auto"
@@ -57,7 +57,7 @@
                   v-model="fieldsData[field.id]"
                   :label="field.name"
                   readonly
-                  :rules="field.rules || []"
+                  :rules="getFieldRules(field)"
                   :name="field.id"
                   @keydown.enter.prevent="save"
                 />
@@ -79,7 +79,7 @@
               :value="fieldsData[field.id]"
               :hint="field.hint"
               persistent-hint
-              :rules="field.rules || []"
+              :rules="getFieldRules(field)"
               :name="field.id"
               :true-value="true"
               :false-value="false"
@@ -99,7 +99,7 @@
             :type="field.type === 'text' ? 'text' : undefined"
             :hint="field.hint"
             persistent-hint
-            :rules="field.rules || []"
+            :rules="getFieldRules(field, true)"
             :name="field.id"
             :true-value="true"
             :false-value="false"
@@ -172,6 +172,23 @@ function getComponent(field) {
   }
 }
 
+// Получаем правила валидации для поля
+function getFieldRules(field, isFromPackageFields = false) {
+  let rules = field.rules || [];
+
+  // Добавляем обязательность для size_type из fields
+  if (!isFromPackageFields && field.id === "size_type") {
+    rules = [...rules, (v) => !!v || `${field.name} jest wymagany`];
+  }
+
+  // Добавляем обязательность для всех полей из packageFields
+  if (isFromPackageFields) {
+    rules = [...rules, (v) => !!v || `${field.name} jest wymagany`];
+  }
+
+  return rules;
+}
+
 // Преобразуем options в массив для select/radio/checkbox-group
 function getOptions(field) {
   if (!field.options) return [];
@@ -181,8 +198,45 @@ function getOptions(field) {
   }));
 }
 
+// Проверка обязательных полей
+function validateRequiredFields() {
+  const errors = [];
+
+  // Проверяем поле size_type в fields
+  const sizeTypeField = props.fields.find((f) => f.id === "size_type");
+  if (
+    sizeTypeField &&
+    (!fieldsData["size_type"] || fieldsData["size_type"] === "")
+  ) {
+    errors.push(`${sizeTypeField.name} jest wymagany`);
+  }
+
+  // Проверяем все поля в packageFields
+  props.packageFields.forEach((field) => {
+    if (!packageFieldsData[field.id] || packageFieldsData[field.id] === "") {
+      errors.push(`${field.name} jest wymagany`);
+    }
+  });
+
+  return errors;
+}
+
 // Сохранение формы
 function save() {
+  // Проверяем валидность формы
+  if (!valid.value) {
+    return;
+  }
+
+  // Проверяем обязательные поля
+  const validationErrors = validateRequiredFields();
+  if (validationErrors.length > 0) {
+    console.error("Błędy walidacji:", validationErrors);
+    // Можно показать уведомление пользователю
+    alert("Wypełnij wszystkie wymagane pola:\n" + validationErrors.join("\n"));
+    return;
+  }
+
   emit("save", {
     fields: { ...fieldsData },
     packageFields: { ...packageFieldsData },
