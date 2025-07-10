@@ -295,6 +295,7 @@ export default {
     filterUsers() {
       this.page = 1;
       this.logs = [];
+      this.search = "";
       this.filteredUsers = this.settings.filter(
         (user) =>
           user.for_obj === this.selectedWarehouse && user.obj_name === "ext_id"
