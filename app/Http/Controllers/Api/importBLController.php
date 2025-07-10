@@ -85,7 +85,15 @@ class importBLController extends Controller
 
         foreach ($this->warehouses as $a_warehouse) {
             if ($this->shouldExecute($a_warehouse)) {
-                $this->BL = new BaseLinkerController($a_warehouse->sklad_token);
+                try {
+                    $this->BL = new BaseLinkerController($a_warehouse->sklad_token);
+                } catch (\Exception $e) {
+                    Log::error('Error initializing BaseLinkerController', [
+                        'warehouse_id' => $a_warehouse->warehouse_id,
+                        'error' => $e->getMessage()
+                    ]);
+                    continue; // Skip this warehouse if initialization fails
+                }
                 $this->GetOrders($a_warehouse->warehouse_id);
                 $this->getJournalList($a_warehouse);
                 $this->updateLastExecuted($a_warehouse->warehouse_id);
@@ -386,7 +394,7 @@ class importBLController extends Controller
         $package = collect($OrderPackages['packages'])->firstWhere('package_id', $createdParcelID);
 
         $orderStatus = $o_order->leftJoin('OrderStatus as os', 'Orders.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
-        if (in_array($orderStatus, ['Do wysłania', 'Kompletowanie'])) {
+        if (in_array($orderStatus, ['Kompletowanie', 'Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane', 'Wysłany', 'W realizacji'])) { //['Do wysłania', 'Kompletowanie']
             $this->executeWithRetry(function () use ($package, $o_order) {
                 $o_order->update(['_OrdersTempString2' => $package['courier_package_nr'], 'Modified' => now()]);
             });
@@ -473,12 +481,13 @@ class importBLController extends Controller
             $newOrderStatusLMID = DB::table('OrderStatus')->where('Name', $newOrderStatusBLName)->value('IDOrderStatus');
 
             if ($newOrderStatusBLName != $OrderStatusLMName) {
-                if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ']))
+                if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'NIE WYSYŁAJ', 'Nie wysyłać']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia']))
                     ||
                     (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
                     ||
-                    (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Wysłany', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane', 'Wysłany']))
+                    (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Wysłany', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane', 'Wysłany', 'W realizacji']))
                 ) {
+                    //del 'W realizacji'
                     LogOrder::create([
                         'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                         'number' => $param['a_log']['order_id'],
