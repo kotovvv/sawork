@@ -56,7 +56,7 @@
 import { defineAsyncComponent } from "vue";
 import dictionaryComponent from "./dictionaryComponent.vue";
 import locationComponent from "./locationComponent.vue";
-import ProductsInUser from "../manager/UI/ProductsInUser.vue";
+
 export default {
   name: "adminComponent",
   components: [dictionaryComponent, locationComponent],
@@ -79,11 +79,6 @@ export default {
       { text: "Zwroty", name: "zwroty", icon: "mdi-database-plus" },
       { text: "Zamówienia", name: "zo2wz", icon: "mdi-arrange-bring-forward" },
       { text: "Collect", name: "collect", icon: "mdi-package-variant-plus" },
-      {
-        text: "Products Users",
-        name: "ProductsInUser",
-        icon: "mdi-kettle-alert",
-      },
     ],
   }),
   computed: {
@@ -110,7 +105,6 @@ export default {
         return defineAsyncComponent(() =>
           import("../manager/collectProducts.vue")
         );
-      if (this.theMenu == "ProductsInUser") return ProductsInUser;
     },
   },
 };
