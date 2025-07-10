@@ -1385,6 +1385,11 @@ class CollectController extends Controller
 
     public function deleteTTN(Request $request)
     {
+        // TODO: при удалении ТТН нужно удалить этот TTN и в BL
+        // упаковка должна выглядеть так как до ТТН те выбраны все товары в для создания текущей ТТН
+        // BL status должен быть "Kompletowanie"
+
+
         $IDOrder = (int)$request->IDOrder;
         $nttn =  $request->nttn;
         $existingTtn = Collect::query()->where('IDOrder', $IDOrder)->value('ttn');

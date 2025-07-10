@@ -13,7 +13,7 @@
               v-if="product.img"
               :src="'data:image/jpeg;base64,' + product.img"
               alt="pic"
-              style="height: 3em"
+              style="height: 200px"
             />
             <span>
               <h5>
@@ -86,6 +86,8 @@
 
             <v-icon small class="mr-1">mdi-calendar</v-icon>
             {{ ttnData.lastUpdate }}
+
+            <!-- // TODO: добавить кнопку плохие заказы, при нажатии на которую заказ меняет пользователя и печатается примечание по какой причине он плохой. запись в таблице "collect.Uwagi" -->
             <v-btn
               v-if="showBtns"
               icon="mdi-file-document-remove-outline"
