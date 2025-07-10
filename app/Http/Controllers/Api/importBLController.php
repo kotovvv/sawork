@@ -394,7 +394,7 @@ class importBLController extends Controller
         $package = collect($OrderPackages['packages'])->firstWhere('package_id', $createdParcelID);
 
         $orderStatus = $o_order->leftJoin('OrderStatus as os', 'Orders.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
-        if (in_array($orderStatus, ['Kompletowanie', 'Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane', 'Wysłany', 'W realizacji'])) { //['Do wysłania', 'Kompletowanie']
+        if (in_array($orderStatus, ['Do wysłania', 'Kompletowanie'])) {
             $this->executeWithRetry(function () use ($package, $o_order) {
                 $o_order->update(['_OrdersTempString2' => $package['courier_package_nr'], 'Modified' => now()]);
             });
@@ -485,9 +485,8 @@ class importBLController extends Controller
                     ||
                     (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
                     ||
-                    (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Wysłany', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane', 'Wysłany', 'W realizacji']))
+                    (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Wysłany', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane', 'Wysłany']))
                 ) {
-                    //del 'W realizacji'
                     LogOrder::create([
                         'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                         'number' => $param['a_log']['order_id'],
