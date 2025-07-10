@@ -2,8 +2,7 @@
 
 namespace Tests\Feature;
 
-use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
+
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -11,7 +10,22 @@ use Tests\TestCase;
 
 class UmlautPrintingTest extends TestCase
 {
-    use RefreshDatabase, WithFaker;
+    // REMOVED RefreshDatabase - this test works with existing production data
+    // use RefreshDatabase, WithFaker; // DANGEROUS - would delete all database data!
+    // use WithFaker;
+
+    /**
+     * Setup method to ensure we're not running in production
+     */
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Safety check - prevent running in production
+        if (app()->environment('production')) {
+            $this->markTestSkipped('This test should not run in production environment');
+        }
+    }
 
     /**
      * Тест печати файлов с умляутами в имени файла
