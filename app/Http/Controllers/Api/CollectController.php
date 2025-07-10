@@ -980,7 +980,57 @@ class CollectController extends Controller
         }
     }
 
-    public function getListPackProducts(Request $request) {}
+    public function getListPackProducts(Request $request)
+    {
+        $result = [];
+
+        // Получаем заказы для зарегистрированного пользователя
+        $packOrdersResponse = $this->getPackOrders($request);
+        $packOrdersData = $packOrdersResponse->getData(true);
+        $orders = $packOrdersData['orders'];
+
+        // Для каждого заказа получаем товары
+        foreach ($orders as $order) {
+            $orderRequest = new Request();
+            $orderRequest->merge($request->all());
+            $orderRequest->merge(['showInOrder' => true]);
+            $orderRequest->setUserResolver(function () use ($request) {
+                return $request->user;
+            });
+
+            $orderPackProducts = $this->getOrderPackProducts($orderRequest, $order['IDOrder']);
+
+            // Получаем товары из $a_pack[0]['products']
+            if (isset($orderPackProducts[0]['products'])) {
+                $products = $orderPackProducts[0]['products'];
+
+                foreach ($products as $product) {
+                    // Создаем уникальный ключ из EAN и locationCode
+                    $locationCodesStr = is_array($product->locationCodes) ? implode(',', $product->locationCodes) : '';
+                    $key = $product->KodKreskowy . '_' . $locationCodesStr;
+
+                    if (isset($result[$key])) {
+                        // Если товар с таким EAN и locationCode уже есть, суммируем количество
+                        $result[$key]['qty'] += $product->ilosc;
+                    } else {
+                        // Добавляем новый товар
+                        $result[$key] = [
+                            'Nazwa' => $product->Nazwa,
+                            'EAN' => $product->KodKreskowy,
+                            'SKU' => $product->sku,
+                            'locationCode' => $locationCodesStr,
+                            'qty' => $product->ilosc,
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Преобразуем ассоциативный массив в индексированный
+        $finalResult = array_values($result);
+
+        return response()->json($finalResult);
+    }
 
     public function getPackOrders(Request $request)
     {

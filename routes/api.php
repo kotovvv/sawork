@@ -99,6 +99,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('deleteTTN', [CollectController::class, 'deleteTTN']);
     Route::get('getRodzajTransportu', [CollectController::class, 'getRodzajTransportu']);
     Route::post('setRodzajTransportu', [CollectController::class, 'setRodzajTransportu']);
+    Route::get('getListPackProducts', [CollectController::class, 'getListPackProducts']);
 
     // Add routes for UsersController
     Route::get('settings', [UsersController::class, 'index']);

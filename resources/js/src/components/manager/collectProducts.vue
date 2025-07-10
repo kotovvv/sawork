@@ -94,7 +94,13 @@
           ></v-text-field>
         </div>
       </v-col>
-      <v-col><Pack /></v-col>
+      <v-col><Pack /> </v-col>
+      <v-col>
+        <v-btn
+          @click="getListPackProducts()"
+          icon="mdi-cloud-print-outline"
+        ></v-btn
+      ></v-col>
       <v-col v-if="makeOrders && makeOrders.length > 0" cols="12" md="2">
         <v-select
           label="Wybrane zamówienia"
@@ -340,6 +346,22 @@ export default {
     },
   },
   methods: {
+    getListPackProducts() {
+      axios.get("/api/getListPackProducts").then(
+        (response) => {
+          this.ordersPropucts = response.data;
+          this.currentFunction = "prepareDoc";
+          this.generatePDF();
+          this.ordersPropucts = [];
+          this.currentFunction = null;
+        },
+        (error) => {
+          this.snackbar = true;
+          this.message = "Błąd podczas pobierania listy produktów z paczek";
+          console.error(error);
+        }
+      );
+    },
     generatePDF() {
       const doc = new jsPDF();
       const robotoRegularBase64 =
