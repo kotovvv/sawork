@@ -19,6 +19,13 @@ class importBLController extends Controller
     const MAX_DEADLOCK_RETRIES = 3;
     const DEADLOCK_RETRY_BASE_DELAY_MS = 100;
 
+    // Rate limiting constants
+    const MAX_REQUESTS_PER_10_MIN = 500;
+    const RATE_LIMIT_WINDOW_SECONDS = 600; // 10 minutes
+    const BATCH_SIZE = 50; // Process warehouses in batches
+    const MIN_DELAY_BETWEEN_REQUESTS_MS = 1200; // 1.2 seconds (500 requests in 10 min = 1.2s interval)
+
+
     private $warehouses;
     private $statuses = [];
     private $invoices = [];
@@ -83,22 +90,172 @@ class importBLController extends Controller
     {
         $this->warehouses = $this->getAllWarehouses();
 
-        foreach ($this->warehouses as $a_warehouse) {
-            if ($this->shouldExecute($a_warehouse)) {
-                try {
-                    $this->BL = new BaseLinkerController($a_warehouse->sklad_token);
-                } catch (\Exception $e) {
-                    Log::error('Error initializing BaseLinkerController', [
-                        'warehouse_id' => $a_warehouse->warehouse_id,
-                        'error' => $e->getMessage()
-                    ]);
-                    continue; // Skip this warehouse if initialization fails
+        // Process warehouses in batches to avoid overwhelming the API
+        $warehouseBatches = array_chunk($this->warehouses, self::BATCH_SIZE);
+
+        foreach ($warehouseBatches as $batchIndex => $batch) {
+            Log::info("Processing warehouse batch", [
+                'batch_number' => $batchIndex + 1,
+                'total_batches' => count($warehouseBatches),
+                'warehouses_in_batch' => count($batch)
+            ]);
+
+            foreach ($batch as $a_warehouse) {
+                if ($this->shouldExecute($a_warehouse)) {
+                    $this->processWarehouse($a_warehouse);
                 }
-                $this->GetOrders($a_warehouse->warehouse_id);
-                $this->getJournalList($a_warehouse);
-                $this->updateLastExecuted($a_warehouse->warehouse_id);
+            }
+
+            // Delay between batches if not the last batch
+            if ($batchIndex < count($warehouseBatches) - 1) {
+                sleep(5); // 5 second delay between batches
             }
         }
+    }
+    private function processWarehouse($a_warehouse)
+    {
+        try {
+            // Check rate limit before processing
+            if (!$this->canMakeRequest($a_warehouse->warehouse_id)) {
+                Log::warning("Rate limit exceeded for warehouse", [
+                    'warehouse_id' => $a_warehouse->warehouse_id,
+                    'will_retry_later' => true
+                ]);
+                return;
+            }
+
+            $this->BL = new BaseLinkerController($a_warehouse->sklad_token);
+
+            // Track request count for this warehouse
+            $this->incrementRequestCount($a_warehouse->warehouse_id);
+
+            // Process orders with rate limiting
+            $this->GetOrdersWithRateLimit($a_warehouse->warehouse_id);
+
+            // Add delay between API calls
+            $this->rateLimitDelay();
+
+            // Process journal with rate limiting
+            $this->getJournalListWithRateLimit($a_warehouse);
+
+            $this->updateLastExecuted($a_warehouse->warehouse_id);
+        } catch (\Exception $e) {
+            Log::error('Error processing warehouse', [
+                'warehouse_id' => $a_warehouse->warehouse_id,
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+    private function GetOrdersWithRateLimit($warehouseId, $orderId = null)
+    {
+        // Check rate limit before making API call
+        if (!$this->canMakeRequest($warehouseId)) {
+            Log::warning("Rate limit reached, skipping GetOrders for warehouse", [
+                'warehouse_id' => $warehouseId
+            ]);
+            return;
+        }
+
+        $this->GetOrders($warehouseId, $orderId);
+        $this->incrementRequestCount($warehouseId);
+    }
+
+    private function getJournalListWithRateLimit($a_warehouse)
+    {
+        // Check rate limit before making API call
+        if (!$this->canMakeRequest($a_warehouse->warehouse_id)) {
+            Log::warning("Rate limit reached, skipping getJournalList for warehouse", [
+                'warehouse_id' => $a_warehouse->warehouse_id
+            ]);
+            return;
+        }
+
+        $this->getJournalList($a_warehouse);
+        $this->incrementRequestCount($a_warehouse->warehouse_id);
+    }
+
+    /**
+     * Check if we can make a request for the given warehouse
+     */
+    private function canMakeRequest($warehouseId)
+    {
+        $cacheKey = "api_requests_count_{$warehouseId}";
+        $requestCount = cache()->get($cacheKey, 0);
+
+        return $requestCount < self::MAX_REQUESTS_PER_10_MIN;
+    }
+
+    /**
+     * Increment request count for warehouse
+     */
+    private function incrementRequestCount($warehouseId)
+    {
+        $cacheKey = "api_requests_count_{$warehouseId}";
+        $currentCount = cache()->get($cacheKey, 0);
+
+        // Increment and set with TTL of 10 minutes
+        cache()->put($cacheKey, $currentCount + 1, self::RATE_LIMIT_WINDOW_SECONDS);
+
+        Log::debug("API request count updated", [
+            'warehouse_id' => $warehouseId,
+            'current_count' => $currentCount + 1,
+            'max_allowed' => self::MAX_REQUESTS_PER_10_MIN
+        ]);
+    }
+
+    /**
+     * Add delay between API requests to respect rate limits
+     */
+    private function rateLimitDelay()
+    {
+        usleep(self::MIN_DELAY_BETWEEN_REQUESTS_MS * 1000); // Convert to microseconds
+    }
+
+    /**
+     * Get remaining requests for warehouse (for monitoring)
+     */
+    private function getRemainingRequests($warehouseId)
+    {
+        $cacheKey = "api_requests_count_{$warehouseId}";
+        $currentCount = cache()->get($cacheKey, 0);
+
+        return max(0, self::MAX_REQUESTS_PER_10_MIN - $currentCount);
+    }
+
+    /**
+     * Reset request count for warehouse (for manual reset if needed)
+     */
+    private function resetRequestCount($warehouseId)
+    {
+        $cacheKey = "api_requests_count_{$warehouseId}";
+        cache()->forget($cacheKey);
+
+        Log::info("API request count reset for warehouse", [
+            'warehouse_id' => $warehouseId
+        ]);
+    }
+
+    /**
+     * Get API usage statistics for all warehouses
+     */
+    public function getApiUsageStats()
+    {
+        $stats = [];
+
+        foreach ($this->getAllWarehouses() as $warehouse) {
+            $cacheKey = "api_requests_count_{$warehouse->warehouse_id}";
+            $currentCount = cache()->get($cacheKey, 0);
+
+            $stats[$warehouse->warehouse_id] = [
+                'used_requests' => $currentCount,
+                'remaining_requests' => max(0, self::MAX_REQUESTS_PER_10_MIN - $currentCount),
+                'limit' => self::MAX_REQUESTS_PER_10_MIN,
+                'warehouse_symbol' => $this->getWarehouseSymbol($warehouse->warehouse_id)
+            ];
+        }
+
+        return $stats;
     }
 
     private function getJournalList($a_warehouse)
@@ -106,41 +263,6 @@ class importBLController extends Controller
         $last_log_id = $a_warehouse->last_log_id;
 
         $parameters = [
-            /*
-            Event type:
-            1 - Order creation
-            2 - DOF download (order confirmation)
-            3 - Payment of the order
-            4 - Removal of order/invoice/receipt
-            5 - Merging the orders
-            6 - Splitting the order
-            7 - Issuing an invoice
-            8 - Issuing a receipt
-            9 - Package creation
-            10 - Deleting a package
-            11 - Editing delivery data
-            12 - Adding a product to an order
-            13 - Editing the product in the order
-            14 - Removing the product from the order
-            15 - Adding a buyer to a blacklist
-            16 - Editing order data
-            17 - Copying an order
-            18 - Order status change
-            19 - Invoice deletion
-            20 - Receipt deletion
-            21 - Editing invoice data
-
-            object_id:
-            Additional information, depending on the event type:
-            5 - ID of the merged order
-            6 - ID of the new order created by the order separation
-            7 - Invoice ID
-            9 - Created parcel ID
-            10 - Deleted parcel ID
-            14 - Deleted product ID
-            17 - Created order ID
-            18 - Order status ID
-            */
             'logs_types' => [7, 9, 11, 12, 13, 14, 16, 18]
         ];
 
@@ -155,9 +277,9 @@ class importBLController extends Controller
         }
 
         foreach ($response['logs'] as $log) {
-
             $last_log_id = max($last_log_id, $log['log_id']);
             if ($a_warehouse->last_log_id == $log['log_id']) continue;
+
             switch ($log['log_type']) {
                 case 7:
                     $this->changeInvoiceOrder([
@@ -203,14 +325,13 @@ class importBLController extends Controller
                     ]);
                     break;
             }
-            /* { "log_id": 456269, "log_type": 13, "order_id": 6911942, "object_id": 0, "date": 1516369287 }, */
         }
+
         DB::table('settings')
             ->updateOrInsert(
                 ['obj_name' => 'last_log_id', 'for_obj' => $a_warehouse->warehouse_id, 'key' => $a_warehouse->warehouse_id],
                 ['value' => $last_log_id]
             );
-        /* { "status": "SUCCESS", "logs": [ { "log_id": 82280791, "log_type": 12, "order_id": 12017786, "object_id": 0, "date": 1745384688 }, { "log_id": 82280827, "log_type": 13, "order_id": 12017786, "object_id": 0, "date": 1745384739 } ] } */
     }
 
     private function writeLog($param)
@@ -518,18 +639,29 @@ class importBLController extends Controller
         });
     }
 
-
     private function changeProductsOrder($param)
     {
+        // Add rate limiting check before API call
+        if (!$this->canMakeRequest($param['a_warehouse']->warehouse_id)) {
+            Log::warning("Rate limit reached in changeProductsOrder", [
+                'warehouse_id' => $param['a_warehouse']->warehouse_id,
+                'order_id' => $param['a_log']['order_id']
+            ]);
+            return;
+        }
 
         $parameters = [
             'order_id' => $param['a_log']['order_id'],
         ];
 
         $response = $this->BL->getOrders($parameters);
+        $this->incrementRequestCount($param['a_warehouse']->warehouse_id);
+        $this->rateLimitDelay();
+
         if (!isset($response['status']) || $response['status'] != "SUCCESS") {
             return;
         }
+
         $orderPN = DB::table('Orders')
             ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
             ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
@@ -539,34 +671,14 @@ class importBLController extends Controller
 
         foreach ($response['orders'] as $order) {
             if (in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ'])) {
-
-                /*
-                23|W realizacji - zamiana
-                Sprawdź z nami to zamówienie w tych statusach:
-                16|Nowe zamówienia
-                19|Anulowane
-                27| NIE WYSYŁAJ
-                29|Nie wysyłać
-                32|Zawieszony
-                33|Anulowany
-                43|NIE WYSYŁAJ
-                następnie zmienić status na 23 i towary
-
-                W przeciwnym razie zapisujemy dziennik i nic nie zmieniamy
-
-                */
-
-                // this order has already been imported by the integrator
                 $a_order = $orderPN->first();
                 if ($a_order) {
-
                     LogOrder::create([
                         'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                         'number' => $order['order_id'],
                         'type' => $param['a_log']['log_type'],
                         'message' => "Change products: {$order['order_id']}"
                     ]);
-
 
                     $uwagi = 'Nr zamówienia w BaseLinker: ' . $order['order_id'] . ' Zmiana zamówienia w BaseLinker ' . $order['user_comments'] ?: $order['admin_comments'] ?: '';
 
@@ -605,6 +717,7 @@ class importBLController extends Controller
             }
         }
     }
+
 
     /**
      * Check if the task should be executed based on the interval and last execution time.
@@ -659,47 +772,60 @@ HAVING
         $w_realizacji_id = $this->BL->getStatusId('W realizacji');
         $this->orderSources = $this->BL->getOrderSources();
 
-
         if ($order_id) {
             $parameters['order_id'] = $order_id;
         } else {
             $parameters = [
-                // 'order_id' => 12017786,
-                // 'get_unconfirmed_orders' => true,
-                // 'include_custom_extra_fields' => true,
                 'status_id' => $w_realizacji_id,
             ];
         }
 
         $response = $this->BL->getOrders($parameters);
 
+        // Add rate limiting tracking for main request
+        if (!$order_id) { // Only track if it's not a single order request
+            $this->incrementRequestCount($idMagazynu);
+            $this->rateLimitDelay();
+        }
+
         if (count($response['orders']) == 100) {
-
-            $cacheKey = "max_date_confirmed_{$idMagazynu}";
-
-            if (cache()->has($cacheKey)) {
-                $maxDateConfirmed = cache()->get($cacheKey);
+            // Check if we can make another request
+            if (!$this->canMakeRequest($idMagazynu)) {
+                Log::warning("Rate limit reached, cannot fetch additional orders", [
+                    'warehouse_id' => $idMagazynu,
+                    'remaining_requests' => $this->getRemainingRequests($idMagazynu)
+                ]);
+                // Process only what we have
             } else {
+                $cacheKey = "max_date_confirmed_{$idMagazynu}";
+
+                if (cache()->has($cacheKey)) {
+                    $maxDateConfirmed = cache()->get($cacheKey);
+                } else {
+                    $dateConfirmedArray = array_column($response['orders'], 'date_confirmed');
+                    if (!empty($dateConfirmedArray)) {
+                        $maxDateConfirmed = max($dateConfirmedArray);
+                        cache()->put($cacheKey, $maxDateConfirmed, 900);
+                    }
+                }
+
+                $parameters = [
+                    'date_confirmed_from' => $maxDateConfirmed + 1,
+                    'status_id' => $w_realizacji_id,
+                ];
+
+                $response = $this->BL->getOrders($parameters);
+                $this->incrementRequestCount($idMagazynu);
+                $this->rateLimitDelay();
+
                 $dateConfirmedArray = array_column($response['orders'], 'date_confirmed');
                 if (!empty($dateConfirmedArray)) {
                     $maxDateConfirmed = max($dateConfirmedArray);
                     cache()->put($cacheKey, $maxDateConfirmed, 900);
                 }
             }
-
-            $parameters = [
-                'date_confirmed_from' => $maxDateConfirmed + 1, // +1 to get orders after the last confirmed order
-                'status_id' => $w_realizacji_id,
-            ];
-
-            $response = $this->BL->getOrders($parameters);
-            $dateConfirmedArray = array_column($response['orders'], 'date_confirmed');
-            if (!empty($dateConfirmedArray)) {
-                $maxDateConfirmed = max($dateConfirmedArray);
-                cache()->put($cacheKey, $maxDateConfirmed, 900);
-            }
         }
-        //$ordersToProcess = array_slice($response['orders'], 0, 80); // Process only the first 80 orders
+
         $i = 80;
 
         if (!is_array($response) || !isset($response['orders']) || !is_array($response['orders'])) {
@@ -708,18 +834,16 @@ HAVING
         }
 
         foreach ($response['orders'] as $order) {
-            // this order has already been imported by the integrator
             if ($i < 0) {
                 break;
             }
+
             if (is_array($order) && isset($order['order_id'])) {
-                // Check if transaction exists for this order_id and warehouse
                 $existingOrder = DB::table('IntegratorTransactions')
                     ->where('transId', $order['order_id'])
                     ->first();
 
                 if ($existingOrder) {
-                    // If IDWarehouse is null, update it
                     if (is_null($existingOrder->IDWarehouse)) {
                         $this->executeWithRetry(function () use ($order, $idMagazynu) {
                             DB::table('IntegratorTransactions')
@@ -727,7 +851,7 @@ HAVING
                                 ->update(['IDWarehouse' => $idMagazynu]);
                         });
                     }
-                    // Now check if transaction exists for this order_id and warehouse
+
                     $wasImported = DB::table('IntegratorTransactions')
                         ->where('transId', $order['order_id'])
                         ->where('IDWarehouse', $idMagazynu)
@@ -739,13 +863,26 @@ HAVING
                 Log::error("Invalid order data encountered.", ['order' => $order]);
                 throw new \Exception("Invalid order data. Expected an array with 'order_id'.");
             }
+
             if ($wasImported) {
-                // \Log::info("Order already imported", ['order_id' => $order['order_id'], 'warehouse_id' => $idMagazynu,'$i'=> $i]);
                 continue;
             }
 
+            // Check rate limit before making invoice request
+            if (!$this->canMakeRequest($idMagazynu)) {
+                Log::warning("Rate limit reached, stopping order processing", [
+                    'warehouse_id' => $idMagazynu,
+                    'remaining_orders' => $i
+                ]);
+                break;
+            }
+
             $this->invoices = $this->BL->getInvoices(['order_id' => $order['order_id']]);
+            $this->incrementRequestCount($idMagazynu);
+            $this->rateLimitDelay();
+
             if (!isset($this->invoices['status']) || $this->invoices['status'] != "SUCCESS") continue;
+
             $this->importOrder($order, $idMagazynu);
             $i--;
         }
