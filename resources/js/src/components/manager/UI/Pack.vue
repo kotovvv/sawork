@@ -18,6 +18,7 @@
     <v-btn
       @click="
         dialogPack = true;
+        clearDialogOrders();
         getPackOrders();
       "
       icon="mdi-package-down"
@@ -89,6 +90,7 @@
                     >
                       {{ company.title }}
                     </span>
+                    <!-- <b>11111111111111</b> -->
                   </span>
                 </span>
               </v-col>
@@ -354,7 +356,11 @@ export default {
       nofaktura: "",
     };
   },
-
+  created() {
+    // this.transOrders = [];
+    // this.selectTransCompany = null;
+    // this.productsOrder = [];
+  },
   mounted() {},
   watch: {
     indexTransOrders: function (newValue, oldValue) {

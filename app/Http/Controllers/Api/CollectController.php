@@ -980,6 +980,8 @@ class CollectController extends Controller
         }
     }
 
+    public function getListPackProducts(Request $request) {}
+
     public function getPackOrders(Request $request)
     {
         $res = [];
