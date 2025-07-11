@@ -26,26 +26,11 @@ class importBLController extends Controller
     private $BL;
     private $warehouse = '';
 
-    /**
-     * Set the transaction isolation level to reduce deadlock probability
-     * READ COMMITTED is generally better for high-concurrency scenarios
-     */
-    private function setOptimalIsolationLevel()
-    {
-        try {
-            DB::statement('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
-        } catch (\Exception $e) {
-            Log::warning('Could not set transaction isolation level', [
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
+
 
     /* Get all mwarehouse for loop */
     public function __construct($warehouseId = null, $orderId = null)
     {
-        // Set optimal isolation level to reduce deadlock probability
-        $this->setOptimalIsolationLevel();
 
         if ($warehouseId && $orderId) {
 
@@ -147,8 +132,10 @@ class importBLController extends Controller
         }
 
         foreach ($response['logs'] as $log) {
-
-            $last_log_id = max($last_log_id, $log['log_id']);
+            // Log::info("Processing log_id: " . $log['log_id'] . " for order_id: " . $log['order_id'] . " in warehouse: " . $a_warehouse->warehouse_id);
+            // Log:
+            // info("Log details: " . $a_warehouse->last_log_id);
+            $last_log_id =  $log['log_id'];
             if ($a_warehouse->last_log_id == $log['log_id']) continue;
             switch ($log['log_type']) {
                 case 7:
@@ -197,6 +184,8 @@ class importBLController extends Controller
             }
             /* { "log_id": 456269, "log_type": 13, "order_id": 6911942, "object_id": 0, "date": 1516369287 }, */
         }
+        $a_warehouse->last_log_id = $last_log_id;
+        // Log::info("Updating last_log_id for warehouse: " . $a_warehouse->warehouse_id . " to " . $last_log_id);
         DB::table('settings')
             ->updateOrInsert(
                 ['obj_name' => 'last_log_id', 'for_obj' => $a_warehouse->warehouse_id, 'key' => $a_warehouse->warehouse_id],
@@ -276,12 +265,46 @@ class importBLController extends Controller
                     '_OrdersTempString8' => $orderData['external_order_id'],
                     '_OrdersTempString9' => $orderData['user_login']
                 ]);
+                $IDOrder = DB::table('Orders')
+                    ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+                    ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)->value('IDOrder');
                 DB::connection('second_mysql')->table('order_details')->updateOrInsert(
-                    ['IDWarehouse' => $param['a_warehouse']->warehouse_id, 'order_id' => $param['a_log']['order_id']],
+                    ['IDWarehouse' => $param['a_warehouse']->warehouse_id, 'order_id' => $IDOrder],
                     [
-                        'delivery_method' => $orderData['delivery_method'] ?? null,
+                        'currency' => $orderData['currency'] ?? null,
                         'order_source' => $orderData['order_source'] ?? null,
                         'order_source_id' => $orderData['order_source_id'] ?? null,
+                        'payment_method' => $orderData['payment_method'] ?? null,
+                        'payment_method_cod' => $orderData['payment_method_cod'] ?? null,
+                        'payment_done' => $orderData['payment_done'] ?? null,
+                        'delivery_method' => $orderData['delivery_method'] ?? null,
+                        'delivery_price' => $orderData['delivery_price'] ?? null,
+                        'delivery_package_module' => $orderData['delivery_package_module'] ?? null,
+                        'delivery_package_nr' => $orderData['delivery_package_nr'] ?? null,
+                        'delivery_fullname' => $orderData['delivery_fullname'] ?? null,
+                        'delivery_company' => $orderData['delivery_company'] ?? null,
+                        'delivery_address' => $orderData['delivery_address'] ?? null,
+                        'delivery_city' => $orderData['delivery_city'] ?? null,
+                        'delivery_state' => $orderData['delivery_state'] ?? null,
+                        'delivery_postcode' => $orderData['delivery_postcode'] ?? null,
+                        'delivery_country_code' => $orderData['delivery_country_code'] ?? null,
+                        'delivery_point_id' => $orderData['delivery_point_id'] ?? null,
+                        'delivery_point_name' => $orderData['delivery_point_name'] ?? null,
+                        'delivery_point_address' => $orderData['delivery_point_address'] ?? null,
+                        'delivery_point_postcode' => $orderData['delivery_point_postcode'] ?? null,
+                        'delivery_point_city' => $orderData['delivery_point_city'] ?? null,
+                        'invoice_fullname' => $orderData['invoice_fullname'] ?? null,
+                        'invoice_company' => $orderData['invoice_company'] ?? null,
+                        'invoice_nip' => $orderData['invoice_nip'] ?? null,
+                        'invoice_address' => $orderData['invoice_address'] ?? null,
+                        'invoice_city' => $orderData['invoice_city'] ?? null,
+                        'invoice_state' => $orderData['invoice_state'] ?? null,
+                        'invoice_postcode' => $orderData['invoice_postcode'] ?? null,
+                        'invoice_country_code' => $orderData['invoice_country_code'] ?? null,
+                        'delivery_country' => $orderData['delivery_country'] ?? null,
+                        'invoice_country' => $orderData['invoice_country'] ?? null,
+                        'updated_at' => now(),
+                        'created_at' => now(),
                     ]
                 );
                 $this->checkOrder($o_order->value('IDOrder'), $param['a_warehouse']->warehouse_id);
@@ -403,6 +426,12 @@ class importBLController extends Controller
             $this->executeWithRetry(function () use ($package, $o_order) {
                 $o_order->update(['_OrdersTempString2' => $package['courier_package_nr'], 'Modified' => now()]);
             });
+            LogOrder::create([
+                'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                'number' => $param['a_log']['order_id'],
+                'type' => 9,
+                'message' => 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
+            ]);
         } else {
             // check for return
             $package = $this->BL->getOrderReturns(['order_id' => $param['a_log']['order_id']]);
@@ -413,20 +442,19 @@ class importBLController extends Controller
                 $this->executeWithRetry(function () use ($return, $o_order) {
                     $o_order
                         ->update([
-                            '_OrdersTempString4' => $return['courier_package_nr'], //Nr. Zwrotny BL
+                            '_OrdersTempString4' => $return['delivery_package_nr'], //Nr. Zwrotny BL
                             '_OrdersTempString10' => $return['reference_number'], //Numer Zwrotu
                             'Modified' => now()
                         ]);
                 });
+                LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                    'number' => $param['a_log']['order_id'],
+                    'type' => 9,
+                    'message' => 'Zmieniono numer paczki na: ' . $return['delivery_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
+                ]);
             }
         }
-
-        LogOrder::create([
-            'IDWarehouse' => $param['a_warehouse']->warehouse_id,
-            'number' => $param['a_log']['order_id'],
-            'type' => 9,
-            'message' => 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
-        ]);
     }
 
     private function changeInvoiceOrder($param)
@@ -465,56 +493,55 @@ class importBLController extends Controller
 
     private function changeStatusOrder($param)
     {
-        return $this->executeWithRetry(function () use ($param) {
-            $newOrderStatusBL = $param['a_log']['object_id'];
-            $newOrderStatusBLName = $this->BL->getStatusName($newOrderStatusBL);
 
-            // Use a fresh query builder for each attempt to avoid stale data
-            $order = DB::table('Orders')
-                ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
-                ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
+        $newOrderStatusBL = $param['a_log']['object_id'];
+        $newOrderStatusBLName = $this->BL->getStatusName($newOrderStatusBL);
 
-            $OrderStatusLMName = $order
-                ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
-                ->value('OrderStatus.Name');
+        // Use a fresh query builder for each attempt to avoid stale data
+        $order = DB::table('Orders')
+            ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+            ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
 
-            $newOrderStatusLMID = DB::table('OrderStatus')->where('Name', $newOrderStatusBLName)->value('IDOrderStatus');
+        $OrderStatusLMName = $order
+            ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
+            ->value('OrderStatus.Name');
 
-            if ($newOrderStatusBLName != $OrderStatusLMName) {
-                if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ']))
-                    ||
-                    (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
-                    ||
-                    (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Wysłany', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane', 'Wysłany']))
-                ) {
-                    LogOrder::create([
-                        'IDWarehouse' => $param['a_warehouse']->warehouse_id,
-                        'number' => $param['a_log']['order_id'],
-                        'type' => 18,
-                        'message' => 'Status zmieniony na: ' . $newOrderStatusBLName . ' od statusu w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
-                    ]);
+        $newOrderStatusLMID = DB::table('OrderStatus')->where('Name', $newOrderStatusBLName)->value('IDOrderStatus');
 
-                    // Create a fresh query builder for the update to avoid deadlocks
-                    DB::table('Orders')
-                        ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
-                        ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
-                        ->update(['IDOrderStatus' => $newOrderStatusLMID]);
-                } else {
-                    $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Panel: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
-                    Mail::raw($body, function ($message) use ($param) {
-                        $message->to('khanenko.igor@gmail.com')
-                            ->subject($this->getWarehouseSymbol($param['a_warehouse']->warehouse_id) . ' Status zmiany zamówienia w BaseLinker' . $param['a_log']['object_id']);
-                    });
+        if ($newOrderStatusBLName != $OrderStatusLMName) {
+            if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ']))
+                ||
+                (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
+                ||
+                (in_array($newOrderStatusBLName, ['Do wysłania', 'Wysłane', 'Wysłany', 'Do odbioru', 'Odebrane']) && in_array($OrderStatusLMName, ['Kompletowanie', 'Do wysłania', 'Wysłane', 'Do odbioru', 'Odebrane', 'Wysłany']))
+            ) {
+                LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                    'number' => $param['a_log']['order_id'],
+                    'type' => 18,
+                    'message' => 'Status zmieniony na: ' . $newOrderStatusBLName . ' od statusu w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
+                ]);
 
-                    LogOrder::create([
-                        'IDWarehouse' => $param['a_warehouse']->warehouse_id,
-                        'number' => $param['a_log']['order_id'],
-                        'type' => 91118,
-                        'message' => 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
-                    ]);
-                }
+                // Create a fresh query builder for the update to avoid deadlocks
+                DB::table('Orders')
+                    ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
+                    ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+                    ->update(['IDOrderStatus' => $newOrderStatusLMID]);
+            } else {
+                $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Panel: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
+                Mail::raw($body, function ($message) use ($param) {
+                    $message->to('khanenko.igor@gmail.com')
+                        ->subject($this->getWarehouseSymbol($param['a_warehouse']->warehouse_id) . ' Status zmiany zamówienia w BaseLinker' . $param['a_log']['object_id']);
+                });
+
+                LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                    'number' => $param['a_log']['order_id'],
+                    'type' => 91118,
+                    'message' => 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
+                ]);
             }
-        });
+        }
     }
 
 
