@@ -26,26 +26,10 @@ class importBLController extends Controller
     private $BL;
     private $warehouse = '';
 
-    /**
-     * Set the transaction isolation level to reduce deadlock probability
-     * READ COMMITTED is generally better for high-concurrency scenarios
-     */
-    private function setOptimalIsolationLevel()
-    {
-        try {
-            DB::statement('SET TRANSACTION ISOLATION LEVEL READ COMMITTED');
-        } catch (\Exception $e) {
-            Log::warning('Could not set transaction isolation level', [
-                'error' => $e->getMessage()
-            ]);
-        }
-    }
 
     /* Get all mwarehouse for loop */
     public function __construct($warehouseId = null, $orderId = null)
     {
-        // Set optimal isolation level to reduce deadlock probability
-        $this->setOptimalIsolationLevel();
 
         if ($warehouseId && $orderId) {
 
@@ -87,7 +71,7 @@ class importBLController extends Controller
             if ($this->shouldExecute($a_warehouse)) {
                 $this->BL = new BaseLinkerController($a_warehouse->sklad_token);
                 $this->GetOrders($a_warehouse->warehouse_id);
-                $this->getJournalList($a_warehouse);
+                //$this->getJournalList($a_warehouse);
                 $this->updateLastExecuted($a_warehouse->warehouse_id);
             }
         }
