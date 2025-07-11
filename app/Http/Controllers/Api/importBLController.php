@@ -85,18 +85,10 @@ class importBLController extends Controller
 
         foreach ($this->warehouses as $a_warehouse) {
             if ($this->shouldExecute($a_warehouse)) {
-                try {
-                    $this->BL = new BaseLinkerController($a_warehouse->sklad_token);
-                } catch (\Exception $e) {
-                    Log::error('Error initializing BaseLinkerController', [
-                        'warehouse_id' => $a_warehouse->warehouse_id,
-                        'error' => $e->getMessage()
-                    ]);
-                    continue; // Skip this warehouse if initialization fails
-                }
-                //$this->GetOrders($a_warehouse->warehouse_id);
-                //$this->getJournalList($a_warehouse);
-                //$this->updateLastExecuted($a_warehouse->warehouse_id);
+                $this->BL = new BaseLinkerController($a_warehouse->sklad_token);
+                $this->GetOrders($a_warehouse->warehouse_id);
+                $this->getJournalList($a_warehouse);
+                $this->updateLastExecuted($a_warehouse->warehouse_id);
             }
         }
     }
@@ -481,7 +473,7 @@ class importBLController extends Controller
             $newOrderStatusLMID = DB::table('OrderStatus')->where('Name', $newOrderStatusBLName)->value('IDOrderStatus');
 
             if ($newOrderStatusBLName != $OrderStatusLMName) {
-                if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'NIE WYSYŁAJ', 'Nie wysyłać']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia']))
+                if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ']))
                     ||
                     (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
                     ||
