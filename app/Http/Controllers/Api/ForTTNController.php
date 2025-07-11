@@ -195,7 +195,7 @@ class ForTTNController extends Controller
             ->first();
 
         if (!$delivery) {
-            return response()->json(['error' => 'Delivery information not found'], 404);
+            return ['error' => 'Delivery information not found'];
         }
 
         $forttn = ForTtn::where('id_warehouse', $IDWarehouse)
@@ -208,7 +208,7 @@ class ForTTNController extends Controller
             ->first();
 
         if (!$forttn) {
-            return response()->json(['error' => 'Courier/account not found'], 404);
+            return ['error' => 'Courier/account not found'];
         }
 
         $res = [
