@@ -216,7 +216,12 @@
               <v-spacer></v-spacer>
               <GetQrCode @result="handleResult" />
             </v-row>
-            <h5 class="text-red" v-if="message_error">{{ message_error }}</h5>
+            <h5 class="text-red" v-if="message_error">
+              {{ message_error }}
+              <v-btn icon @click="sendOrderToAdmin"
+                ><v-icon>mdi-cube-send</v-icon></v-btn
+              >
+            </h5>
             <h5 class="text-green" v-if="message">{{ message }}</h5>
             <div
               class="text-deep-orange-darken-4"
@@ -378,6 +383,29 @@ export default {
     },
   },
   methods: {
+    sendOrderToAdmin() {
+      axios
+        .post("/api/print", {
+          doc: "sendOrderToAdmin",
+          message: this.message_error,
+          order: this.transOrders[this.indexTransOrders],
+        })
+        .then((response) => {
+          if (response.data.status === "ok") {
+            this.transOrders.splice(this.indexTransOrders, 1);
+            if (this.indexTransOrders >= this.transOrders.length) {
+              this.indexTransOrders = 0;
+            }
+            this.message = "Zamówienie wysłane do administratora";
+            this.snackbar = true;
+          }
+        })
+        .catch((error) => {
+          this.message_error = error.request.response;
+          this.snackbar = true;
+          console.log(error);
+        });
+    },
     clearDialogOrders() {
       this.imputCod = "";
       this.test = "";
