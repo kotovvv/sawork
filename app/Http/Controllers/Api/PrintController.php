@@ -65,7 +65,9 @@ class PrintController extends Controller
             //     Log::error("Printer {$printer} is not ready for user {$userId}");
             //     return response()->json(['status' => 'error', 'message' => 'Printer not ready'], 400);
             // }
+            Log::info("Printing label for user {$userId} on printer {$printer} with path {$request->path}");
             if (file_exists($request->path)) {
+                Log::info("File exists: " . $request->path);
                 exec("lpr -P " . $printer . " " . $request->path);
             } else {
                 Log::error("File not found: " . $request->path);
