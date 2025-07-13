@@ -1094,7 +1094,7 @@ class CollectController extends Controller
                 ->first();
 
             $IDMagazynu = $order->IDMagazynu;
-            $symbol = DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol');
+            $symbol = str_replace(' ', '_', DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol'));
             $fileName =  str_replace(['/', '\\'], '_', $order->invoice_number);
             $fileName = "pdf/{$symbol}/{$fileName}.pdf";
             //$path = storage_path('app/public/' . $fileName);
@@ -1403,7 +1403,7 @@ class CollectController extends Controller
                 }
 
                 // Save label to storage
-                $symbol = DB::table('Magazyn')->where('IDMagazynu', $Order['IDWarehouse'])->value('Symbol');
+                $symbol = str_replace(' ', '_', DB::table('Magazyn')->where('IDMagazynu', $Order['IDWarehouse'])->value('Symbol'));
                 $fileName = "pdf/{$symbol}/{$package_number}.{$label['extension']}";
                 $filePath = storage_path('app/public/' . $fileName);
                 if (!file_exists(dirname($filePath))) {

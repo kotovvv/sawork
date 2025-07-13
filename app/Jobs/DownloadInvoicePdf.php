@@ -23,7 +23,7 @@ class DownloadInvoicePdf implements ShouldQueue
 
     public function __construct($IDMagazynu, $invoice_number, $invoice_id, $token)
     {
-        $this->symbol = DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol');
+        $this->symbol = str_replace(' ', '_', DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol'));
         $this->IDMagazynu = $IDMagazynu;
         $this->invoice_number = str_replace(['/', '\\'], '_', $invoice_number);
         $this->invoice_id = $invoice_id;

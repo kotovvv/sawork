@@ -32,7 +32,7 @@ class PrintController extends Controller
             }
 
             $IDMagazynu = $order['IDWarehouse'];
-            $symbol = DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol');
+            $symbol = str_replace(' ', '_', DB::table('Magazyn')->where('IDMagazynu', $IDMagazynu)->value('Symbol'));
             $fileName =  str_replace(['/', '\\'], '_', $order['invoice_number']);
             $fileName = "pdf/{$symbol}/{$fileName}.pdf";
             $path = storage_path('app/public/' . $fileName);
