@@ -36,9 +36,7 @@ class PrintController extends Controller
             $fileName = "pdf/{$symbol}/{$fileName}.pdf";
             $path = storage_path('app/public/' . $fileName);
             $printer = $this->usersPrinters[$userId]['invoice'];
-            Log::info("Printing invoice for order {$order['IDOrder']} using printer {$printer} with path {$path}");
             if (file_exists($path)) {
-                Log::info("File exists: " . escapeshellarg($path));
                 exec("lpr -P " . $printer . " " . $path);
             } else {
                 $token = $this->getToken($IDMagazynu);
@@ -46,7 +44,7 @@ class PrintController extends Controller
                     ->chain([
                         function () use ($printer, $path) {
                             if (file_exists($path)) {
-                                exec("lpr -P " . escapeshellarg($printer) . " " . escapeshellarg($path));
+                                exec("lpr -P " . $printer . " " . $path);
                             }
                         }
                     ]);
@@ -68,7 +66,7 @@ class PrintController extends Controller
             //     return response()->json(['status' => 'error', 'message' => 'Printer not ready'], 400);
             // }
             if (file_exists($request->path)) {
-                exec("lpr -P " . escapeshellarg($printer) . " " . escapeshellarg($request->path));
+                exec("lpr -P " . $printer . " " . $request->path);
             } else {
                 Log::error("File not found: " . $request->path);
                 return response()->json(['status' => 'error', 'message' => 'File not found'], 404);
