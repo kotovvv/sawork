@@ -14,8 +14,8 @@
             <v-label class="mb-2">{{ field.name }}</v-label>
             <v-radio-group
               v-model="fieldsData[field.id]"
-              :rules="getFieldRules(field)"
               :name="field.id"
+              :rules="getFieldRules(field)"
               @keydown.enter.prevent="save"
             >
               <v-radio
@@ -35,8 +35,8 @@
                 v-model="fieldsData[field.id]"
                 :label="opt.title"
                 :value="opt.value"
+                :name="`${field.id}_${opt.value}`"
                 :rules="getFieldRules(field)"
-                :name="field.id"
                 multiple
                 hide-details="auto"
                 @keydown.enter.prevent="save"
@@ -57,8 +57,8 @@
                   v-model="fieldsData[field.id]"
                   :label="field.name"
                   readonly
-                  :rules="getFieldRules(field)"
                   :name="field.id"
+                  :rules="getFieldRules(field)"
                   @keydown.enter.prevent="save"
                 />
               </template>
@@ -79,8 +79,8 @@
               :value="fieldsData[field.id]"
               :hint="field.hint"
               persistent-hint
+              :name="`package_${field.id}`"
               :rules="getFieldRules(field)"
-              :name="field.id"
               :true-value="true"
               :false-value="false"
               @keydown.enter.prevent="save"
@@ -99,8 +99,8 @@
             :type="field.type === 'text' ? 'text' : undefined"
             :hint="field.hint"
             persistent-hint
-            :rules="getFieldRules(field, true)"
             :name="field.id"
+            :rules="getFieldRules(field)"
             :true-value="true"
             :false-value="false"
             @keydown.enter.prevent="save"

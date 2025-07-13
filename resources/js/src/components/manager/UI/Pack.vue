@@ -478,7 +478,7 @@ export default {
     printTTN(ttnNumber) {
       axios
         .post("/api/print", {
-          doc: "ttn",
+          doc: "label",
           path: this.filepath,
         })
         .then((response) => {
