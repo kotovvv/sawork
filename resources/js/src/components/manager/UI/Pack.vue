@@ -483,6 +483,7 @@ export default {
         })
         .then((response) => {
           // handle success if needed
+          console.log("Print response:", response.data);
         })
         .catch((error) => {
           if (

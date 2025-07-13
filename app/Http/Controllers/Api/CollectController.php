@@ -1378,7 +1378,6 @@ class CollectController extends Controller
         $ttn = Collect::query()->where('IDOrder', $Order['IDOrder'])->update(['ttn' => $ttn, 'pack' => $packJson]);
 
 
-
         if ($ttn) {
             if (Cache::get('order_all_done_' . $Order['IDOrder'])) {
                 $this->setStatus($Order, 'Do wysłania');
@@ -1425,8 +1424,8 @@ class CollectController extends Controller
                         // ],
                     ]
                 );
-
-                $print = new \App\Http\Controllers\Api\PrintController($req);
+                $print = new \App\Http\Controllers\Api\PrintController();
+                $print->print($req);
             }
             return response()->json(['status' => 'success', 'filePath' => $filePath]);
         }

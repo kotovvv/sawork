@@ -19,6 +19,7 @@ class PrintController extends Controller
 
     public function print(Request $request)
     {
+
         $userId = $request->user->IDUzytkownika;
 
         if ($request->input('doc') == 'invoice') {
@@ -52,22 +53,8 @@ class PrintController extends Controller
         }
         if ($request->input('doc') == 'label') {
             $printer = $this->usersPrinters[$userId]['label'];
-            // $printerStatus = [];
-            // exec("lpstat -p " . escapeshellarg($printer), $printerStatus);
-            // $isReady = false;
-            // foreach ($printerStatus as $line) {
-            //     if (strpos($line, 'is idle') !== false || strpos($line, 'is ready') !== false) {
-            //         $isReady = true;
-            //         break;
-            //     }
-            // }
-            // if (!$isReady) {
-            //     Log::error("Printer {$printer} is not ready for user {$userId}");
-            //     return response()->json(['status' => 'error', 'message' => 'Printer not ready'], 400);
-            // }
-            Log::info("Printing label for user {$userId} on printer {$printer} with path {$request->path}");
+
             if (file_exists($request->path)) {
-                Log::info("File exists: " . $request->path);
                 exec("lpr -P " . $printer . " " . $request->path);
             } else {
                 Log::error("File not found: " . $request->path);
