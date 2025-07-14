@@ -216,6 +216,9 @@
               <v-spacer></v-spacer>
               <GetQrCode @result="handleResult" />
             </v-row>
+            <p class="text-orange-darken-4 text-h4" v-if="UwagiForAdmin">
+              {{ UwagiForAdmin }}
+            </p>
             <h5 class="text-red" v-if="message_error">
               {{ message_error }}
               <v-btn icon @click="sendOrderToAdmin"
@@ -359,6 +362,7 @@ export default {
       filepath: "",
       hidden: 1,
       nofaktura: "",
+      UwagiForAdmin: "",
     };
   },
   created() {
@@ -851,6 +855,7 @@ export default {
         .post("/api/getOrderPackProducts/" + id)
         .then((response) => {
           this.productsOrder = response.data;
+          this.UwagiForAdmin = response.data.UwagiForAdmin;
           this.getForm(id);
           this.loading = false;
         })

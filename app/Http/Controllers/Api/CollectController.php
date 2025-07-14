@@ -82,6 +82,8 @@ class CollectController extends Controller
         // Получаем IDOrder из $allOrders
         $allOrderIds = $allOrders->pluck('IDOrder')->toArray();
 
+
+
         if ($user_role != 1 || $problem) {
             // Получаем валидные IDOrder из второй базы, только для тех, что есть в $allOrders
             $validOrderIds = DB::connection('second_mysql')->table('order_details as od')
@@ -1066,8 +1068,8 @@ class CollectController extends Controller
             )
             ->orderBy('transport_name')
             ->get();
-        $res['orders'] = $orders;
 
+        $res['orders'] = $orders;
         return response()->json($res);
     }
 
@@ -1081,6 +1083,7 @@ class CollectController extends Controller
         $collect = $req_collect->first();
         $o_ttn = $collect->ttn;
         $a_tow_loc = $collect->IDsElementuRuchuMagazynowego;
+        $a_pack['UwagiForAdmin'] = $collect->Uwagi ?? '';
 
         if (!$showInOrder) {
             //for get pdf invoice
