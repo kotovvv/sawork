@@ -216,7 +216,14 @@
               <v-spacer></v-spacer>
               <GetQrCode @result="handleResult" />
             </v-row>
-            <p class="text-orange-darken-4 text-h4" v-if="UwagiForAdmin">
+            <p
+              class="text-orange-darken-4 text-h4"
+              v-if="
+                UwagiForAdmin &&
+                productsOrder[0]?.products &&
+                productsOrder[0].products.length > 0
+              "
+            >
               {{ UwagiForAdmin }}
             </p>
             <h5 class="text-red" v-if="message_error">
