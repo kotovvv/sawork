@@ -28,7 +28,7 @@ class importBLController extends Controller
 
 
 
-    /* Get all mwarehouse for loop */
+
     public function __construct($warehouseId = null, $orderId = null)
     {
 
@@ -66,6 +66,7 @@ class importBLController extends Controller
 
     private function runAll()
     {
+        /* Get all warehouse for loop */
         $this->warehouses = $this->getAllWarehouses();
 
         foreach ($this->warehouses as $a_warehouse) {

@@ -55,7 +55,7 @@ class BaseLinkerController extends Controller
 
     public function __construct($token)
     {
-        $this->token = Crypt::decryptString($token);;
+        $this->token = Crypt::decryptString($token);
         $this->statuses = $this->getOrderStatusList();
         $this->ExtraFields = $this->getOrderExtraFields();
     }
