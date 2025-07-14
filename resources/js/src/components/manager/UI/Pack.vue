@@ -620,7 +620,11 @@ export default {
           lastUpdate: "",
         },
       };
-
+      if (this.productsOrder[0].products.length == 0) {
+        this.message_error = "Brak produktów do zapakowania";
+        this.snackbar = true;
+        return;
+      }
       // Iterate backwards to safely remove items while looping
       for (let i = this.productsOrder[0].products.length - 1; i >= 0; i--) {
         const product = this.productsOrder[0].products[i];
