@@ -260,31 +260,47 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
         $symbol = DB::table('Magazyn')->where('IDMagazynu', $idWarehause)->value('Symbol');
         // 1. chech if doc cteated
 
-        if ($createdDoc == null) {
-
+        // Функция для создания документа
+        $createDocument = function () use ($symbol, $idWarehause, $Uwagi, $IDUzytkownika) {
             $NrDokumentu = $this->lastNumber('ZL', $symbol);
 
-            $creat_zl = [];
-
-            $creat_zl['IDRodzajuRuchuMagazynowego'] = 27;
-            $creat_zl['Data'] = Date('m-d-Y H:i:s');
-            $creat_zl['IDMagazynu'] = $idWarehause;
-            $creat_zl['NrDokumentu'] = $NrDokumentu;
-            $creat_zl['Uwagi'] = $Uwagi;
-            $creat_zl['Operator'] = 1;
-            $creat_zl['IDCompany'] = 1;
-            $creat_zl['IDUzytkownika'] = $IDUzytkownika;
+            $creat_zl = [
+                'IDRodzajuRuchuMagazynowego' => 27,
+                'Data' => date('m-d-Y H:i:s'),
+                'IDMagazynu' => $idWarehause,
+                'NrDokumentu' => $NrDokumentu,
+                'Uwagi' => $Uwagi,
+                'Operator' => 1,
+                'IDCompany' => 1,
+                'IDUzytkownika' => $IDUzytkownika,
+            ];
 
             // create doc
             DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
-            $resnonse['createdDoc']['idmin'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
+            $idmin = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
 
             DB::table('dbo.RuchMagazynowy')->insert($creat_zl);
-            $resnonse['createdDoc']['idpls'] = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
+            $idpls = DB::table('dbo.RuchMagazynowy')->orderBy('IDRuchuMagazynowego', 'desc')->take(1)->value('IDRuchuMagazynowego');
 
-            DB::table('PrzesunieciaMM')->insert(['IDRuchuMagazynowegoZ' => $resnonse['createdDoc']['idmin'], 'IDRuchuMagazynowegoDo' => $resnonse['createdDoc']['idpls']]);
+            DB::table('PrzesunieciaMM')->insert(['IDRuchuMagazynowegoZ' => $idmin, 'IDRuchuMagazynowegoDo' => $idpls]);
+
+            return ['idmin' => $idmin, 'idpls' => $idpls];
+        };
+
+        if ($createdDoc == null) {
+            $resnonse['createdDoc'] = $createDocument();
         } else {
-            $resnonse['createdDoc'] = $createdDoc;
+            // Проверяем, что документ действительно существует
+            $docExists = DB::table('dbo.RuchMagazynowy')
+                ->where('IDRuchuMagazynowego', $createdDoc['idmin'])
+                ->exists();
+
+            if (!$docExists) {
+                // Если документ не существует, создаем новый
+                $resnonse['createdDoc'] = $createDocument();
+            } else {
+                $resnonse['createdDoc'] = $createdDoc;
+            }
         }
 
         //2. ElementRuchuMagazynowego

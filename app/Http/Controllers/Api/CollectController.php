@@ -441,6 +441,12 @@ class CollectController extends Controller
     }
 
 
+    /**
+     * Prepares a document based on the incoming request.
+     *
+     * @param \Illuminate\Http\Request $request The HTTP request containing document data.
+     * @return \Illuminate\Http\Response|\Illuminate\Http\JsonResponse
+     */
     public function prepareDoc(Request $request)
     {
         $messages = [];
@@ -649,6 +655,10 @@ class CollectController extends Controller
                 } catch (\Exception $e) {
                     Log::error($e->getMessage());
                     $messages[] = $e->getMessage();
+
+                    // Clearing the createdDoc for the current warehouse after a failed transaction
+                    $createdDoc[$IDMagazynu] = null;
+
                     if (env('APP_ENV') != 'local') {
                         $parameters = [
                             'order_id' => $order['NumberBL'],
