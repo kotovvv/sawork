@@ -379,7 +379,10 @@ class importBLController extends Controller
         $OrderStatusLMName =  $LM_order
             ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
             ->value('OrderStatus.Name');
-        $idTransportBL = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
+        $idTransportBL = null;
+        if (isset($orderData['delivery_method']) && $orderData['delivery_method'] !== null) {
+            $idTransportBL = DB::table('RodzajTransportu')->where('Nazwa', $orderData['delivery_method'])->value('IDRodzajuTransportu');
+        }
         if ($idTransportLM != $idTransportBL) {
 
 
