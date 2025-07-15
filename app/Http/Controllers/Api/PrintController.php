@@ -27,14 +27,14 @@ class PrintController extends Controller
             $OrderNumber = $request->order['OrderNumber'];
             $Nr_Baselinker = $request->order['Nr_Baselinker'];
             $message = $request->message;
-            $user = DB::table('Uzytkownicy')->where('IDUzytkownika', $userId)->value('Login');
+            $user = DB::table('Uzytkownik')->where('IDUzytkownika', $userId)->value('Login');
             $date = date('Y-m-d H:i:s');
             $addmessage = "ERROR Order: !{$message}! - {$user} - {$date}";
             Collect::where('IDUzytkownika', $userId)
-                ->where('IDZamowienia', $IDOrder)
+                ->where('IDOrder', $IDOrder)
                 ->update(['IDUzytkownika' => 4, 'Uwagi' => DB::raw("CONCAT(IFNULL(Uwagi, ''), ' {$addmessage}')")]);
             Log::info("OrderID: {$IDOrder}, OrderNumber: {$OrderNumber}, Message: {$message}, User: {$user}, Date: {$date}");
-            $printText = "Nr_Baselinker: {$Nr_Baselinker}\nOrderNumber: {$OrderNumber}\nMessage: {$message}\nUser: {$user}\nDate: {$date}\n";
+            $printText = "\n\nNr_Baselinker: {$Nr_Baselinker}\nOrderNumber: {$OrderNumber}\nMessage: {$message}\nUser: {$user}\nDate: {$date}\n";
 
             $printer = $this->usersPrinters[$userId]['label'];
             $tmpFile = tempnam(sys_get_temp_dir(), 'print_');
