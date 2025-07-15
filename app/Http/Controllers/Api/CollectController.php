@@ -61,7 +61,7 @@ class CollectController extends Controller
             })
 
             ->whereNotNull('o._OrdersTempDecimal2') //Nr. Baselinker
-            ->when(!in_array('o._OrdersTempString7', ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka']), function ($query) {
+            ->when(!in_array('o._OrdersTempString7', ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka.']), function ($query) {
                 return $query->whereNotNull('o._OrdersTempString1'); //Nr. Faktury BL);
             })
             ->whereNotNull('o._OrdersTempString7') //Źródło

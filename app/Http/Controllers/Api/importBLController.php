@@ -231,13 +231,29 @@ class importBLController extends Controller
         }
         $orderData = collect($o_orderBL['orders'])->firstWhere('order_id', $param['a_log']['order_id']);
         if (!$orderData) {
-            LogOrder::create([
-                'IDWarehouse' => $param['a_warehouse']->warehouse_id,
-                'number' => $param['a_log']['order_id'],
-                'type' => 16,
-                'message' => 'Nie znaleziono zamówienia o ID: ' . $param['a_log']['order_id']
-            ]);
-            return;
+
+            //TO DONE:message start "Nie znaleziono zamówienia o" status  in BL ['W realizacji', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Nowe zamówienia', 'NIE WYSYŁAJ'] in order field "get_unconfirmed_orders": false
+            //create order in LM
+            $o_orderBL = $this->BL->getOrders(['get_unconfirmed_orders' => false, 'order_id' => $param['a_log']['order_id']]);
+            if (!isset($o_orderBL['status']) || $o_orderBL['status'] != "SUCCESS") {
+                return;
+            }
+            $orderData = collect($o_orderBL['orders'])->firstWhere('order_id', $param['a_log']['order_id']);
+            if (!$orderData) {
+                return;
+            }
+            if (in_array($this->BL->getStatusName($orderData['order_status_id']), ['W realizacji', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Nowe zamówienia', 'NIE WYSYŁAJ'])) {
+                $this->importOrder($orderData, $param['a_warehouse']->warehouse_id);
+                return;
+            } else {
+                LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                    'number' => $param['a_log']['order_id'],
+                    'type' => 16,
+                    'message' => 'Nie znaleziono zamówienia o ID: ' . $param['a_log']['order_id']
+                ]);
+                return;
+            }
         }
         $LM_order = DB::table('Orders')
             ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
@@ -748,11 +764,9 @@ HAVING
                 if ($existingOrder) {
                     // If IDWarehouse is null, update it
                     if (is_null($existingOrder->IDWarehouse)) {
-                        $this->executeWithRetry(function () use ($order, $idMagazynu) {
-                            DB::table('IntegratorTransactions')
-                                ->where('transId', $order['order_id'])
-                                ->update(['IDWarehouse' => $idMagazynu]);
-                        });
+                        DB::table('IntegratorTransactions')
+                            ->where('transId', $order['order_id'])
+                            ->update(['IDWarehouse' => $idMagazynu]);
                     }
                     // Now check if transaction exists for this order_id and warehouse
                     $wasImported = DB::table('IntegratorTransactions')
@@ -770,7 +784,11 @@ HAVING
                 // \Log::info("Order already imported", ['order_id' => $order['order_id'], 'warehouse_id' => $idMagazynu,'$i'=> $i]);
                 continue;
             }
-
+            DB::table('IntegratorTransactions')->insert([
+                'transId' => $order['order_id'],
+                'IDWarehouse' => $idMagazynu,
+                'typ' => 3,
+            ]);
             $this->invoices = $this->BL->getInvoices(['order_id' => $order['order_id']]);
             if (!isset($this->invoices['status']) || $this->invoices['status'] != "SUCCESS") continue;
             $this->importOrder($order, $idMagazynu);
@@ -851,6 +869,11 @@ HAVING
                 );
             } catch (\Exception $e) {
                 if (class_exists(LogOrder::class)) {
+                    DB::table('IntegratorTransactions')->where([
+                        'transId' => $orderData['order_id'],
+                        'IDWarehouse' => $idMagazynu,
+                        'typ' => 3,
+                    ])->delete();
                     LogOrder::create([
                         'IDWarehouse' => $idMagazynu,
                         'number' => $orderData['order_id'],
@@ -881,11 +904,7 @@ HAVING
             });
 
             DB::commit();
-            DB::table('IntegratorTransactions')->insert([
-                'transId' => $orderData['order_id'],
-                'IDWarehouse' => $idMagazynu,
-                'typ' => 3,
-            ]);
+
             LogOrder::create([
                 'IDWarehouse' => $idMagazynu,
                 'number' => $orderData['order_id'],
@@ -896,7 +915,11 @@ HAVING
             //если заказ в статусе реализация и не заполнено поле deliveryMethod - меняем статус невысылач с uvagi
             $this->checkOrder($IDOrder, $idMagazynu);
         } catch (\Exception $e) {
-
+            DB::table('IntegratorTransactions')->where([
+                'transId' => $orderData['order_id'],
+                'IDWarehouse' => $idMagazynu,
+                'typ' => 3,
+            ])->delete();
             DB::rollBack();
             throw $e;
         }

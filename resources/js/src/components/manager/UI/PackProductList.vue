@@ -87,7 +87,6 @@
             <v-icon small class="mr-1">mdi-calendar</v-icon>
             {{ ttnData.lastUpdate }}
 
-            <!-- // TODO: добавить кнопку плохие заказы, при нажатии на которую заказ меняет пользователя и печатается примечание по какой причине он плохой. запись в таблице "collect.Uwagi" -->
             <v-btn
               v-if="showBtns"
               icon="mdi-file-document-remove-outline"
@@ -95,6 +94,7 @@
             >
             </v-btn>
             <v-btn
+              v-if="!/\d{2}/.test(ttnNumber)"
               icon="mdi-printer-pos-outline"
               @click="$emit('print-ttn', ttnNumber)"
             >

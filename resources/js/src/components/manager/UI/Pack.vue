@@ -226,7 +226,14 @@
             >
               {{ UwagiForAdmin }}
             </p>
-            <h5 class="text-red" v-if="message_error">
+            <h5
+              class="text-red"
+              v-if="
+                message_error &&
+                productsOrder[0]?.products &&
+                productsOrder[0].products.length > 0
+              "
+            >
               {{ message_error }}
               <v-btn icon @click="sendOrderToAdmin"
                 ><v-icon>mdi-cube-send</v-icon></v-btn
