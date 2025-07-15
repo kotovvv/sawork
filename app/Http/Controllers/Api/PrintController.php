@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Models\Collect;
 
 class PrintController extends Controller
 {
@@ -21,7 +22,26 @@ class PrintController extends Controller
     {
 
         $userId = $request->user->IDUzytkownika;
+        if ($request->input('doc') == 'sendOrderToAdmin') {
+            $IDOrder = $request->order['IDOrder'];
+            $OrderNumber = $request->order['OrderNumber'];
+            $Nr_Baselinker = $request->order['Nr_Baselinker'];
+            $message = $request->message;
+            $user = DB::table('Uzytkownicy')->where('IDUzytkownika', $userId)->value('Login');
+            $date = date('Y-m-d H:i:s');
+            $addmessage = "ERROR Order: !{$message}! - {$user} - {$date}";
+            Collect::where('IDUzytkownika', $userId)
+                ->where('IDZamowienia', $IDOrder)
+                ->update(['IDUzytkownika' => 4, 'Uwagi' => DB::raw("CONCAT(IFNULL(Uwagi, ''), ' {$addmessage}')")]);
+            Log::info("OrderID: {$IDOrder}, OrderNumber: {$OrderNumber}, Message: {$message}, User: {$user}, Date: {$date}");
+            $printText = "Nr_Baselinker: {$Nr_Baselinker}\nOrderNumber: {$OrderNumber}\nMessage: {$message}\nUser: {$user}\nDate: {$date}\n";
 
+            $printer = $this->usersPrinters[$userId]['label'];
+            $tmpFile = tempnam(sys_get_temp_dir(), 'print_');
+            file_put_contents($tmpFile, $printText);
+            exec("lpr -P " . escapeshellarg($printer) . " " . escapeshellarg($tmpFile));
+            unlink($tmpFile);
+        }
         if ($request->input('doc') == 'invoice') {
             $order = $request->order;
             $OrdersTempString7 = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->value('_OrdersTempString7');

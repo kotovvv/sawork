@@ -216,7 +216,22 @@
               <v-spacer></v-spacer>
               <GetQrCode @result="handleResult" />
             </v-row>
-            <h5 class="text-red" v-if="message_error">{{ message_error }}</h5>
+            <p
+              class="text-orange-darken-4 text-h4"
+              v-if="
+                UwagiForAdmin &&
+                productsOrder[0]?.products &&
+                productsOrder[0].products.length > 0
+              "
+            >
+              {{ UwagiForAdmin }}
+            </p>
+            <h5 class="text-red" v-if="message_error">
+              {{ message_error }}
+              <v-btn icon @click="sendOrderToAdmin"
+                ><v-icon>mdi-cube-send</v-icon></v-btn
+              >
+            </h5>
             <h5 class="text-green" v-if="message">{{ message }}</h5>
             <div
               class="text-deep-orange-darken-4"
@@ -354,6 +369,7 @@ export default {
       filepath: "",
       hidden: 1,
       nofaktura: "",
+      UwagiForAdmin: "",
     };
   },
   created() {
@@ -378,6 +394,29 @@ export default {
     },
   },
   methods: {
+    sendOrderToAdmin() {
+      axios
+        .post("/api/print", {
+          doc: "sendOrderToAdmin",
+          message: this.message_error,
+          order: this.transOrders[this.indexTransOrders],
+        })
+        .then((response) => {
+          if (response.data.status === "ok") {
+            this.transOrders.splice(this.indexTransOrders, 1);
+            if (this.indexTransOrders >= this.transOrders.length) {
+              this.indexTransOrders = 0;
+            }
+            this.message = "Zamówienie wysłane do administratora";
+            this.snackbar = true;
+          }
+        })
+        .catch((error) => {
+          this.message_error = error.request.response;
+          this.snackbar = true;
+          console.log(error);
+        });
+    },
     clearDialogOrders() {
       this.imputCod = "";
       this.test = "";
@@ -828,6 +867,7 @@ export default {
         .post("/api/getOrderPackProducts/" + id)
         .then((response) => {
           this.productsOrder = response.data;
+          this.UwagiForAdmin = response.data.UwagiForAdmin;
           this.getForm(id);
           this.loading = false;
         })
