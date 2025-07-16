@@ -654,6 +654,7 @@ export default {
       //}
     },
     async writeTTN() {
+      this.filepath = "";
       let o_ttn = {
         [this.package_number]: {
           package_id: this.package_id,
