@@ -15,6 +15,7 @@
             <v-radio-group
               v-model="fieldsData[field.id]"
               :name="field.id"
+              :rules="getFieldRules(field)"
               @keydown.enter.prevent="save"
             >
               <v-radio
@@ -35,6 +36,7 @@
                 :label="opt.title"
                 :value="opt.value"
                 :name="`${field.id}_${opt.value}`"
+                :rules="getFieldRules(field)"
                 multiple
                 hide-details="auto"
                 @keydown.enter.prevent="save"
@@ -56,6 +58,7 @@
                   :label="field.name"
                   readonly
                   :name="field.id"
+                  :rules="getFieldRules(field)"
                   @keydown.enter.prevent="save"
                 />
               </template>
@@ -77,6 +80,7 @@
               :hint="field.hint"
               persistent-hint
               :name="`package_${field.id}`"
+              :rules="getFieldRules(field)"
               :true-value="true"
               :false-value="false"
               @keydown.enter.prevent="save"
@@ -96,6 +100,7 @@
             :hint="field.hint"
             persistent-hint
             :name="field.id"
+            :rules="getFieldRules(field, true)"
             :true-value="true"
             :false-value="false"
             @keydown.enter.prevent="save"
@@ -218,6 +223,20 @@ function validateRequiredFields() {
 
 // Сохранение формы
 function save() {
+  // Проверяем валидность формы
+  if (!valid.value) {
+    return;
+  }
+
+  // Проверяем обязательные поля
+  const validationErrors = validateRequiredFields();
+  if (validationErrors.length > 0) {
+    console.error("Błędy walidacji:", validationErrors);
+    // Можно показать уведомление пользователю
+    alert("Wypełnij wszystkie wymagane pola:\n" + validationErrors.join("\n"));
+    return;
+  }
+
   emit("save", {
     fields: { ...fieldsData },
     packageFields: { ...packageFieldsData },

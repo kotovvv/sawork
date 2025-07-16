@@ -264,6 +264,7 @@ class ForTTNController extends Controller
         $res['default_values']['fields']['insurance'] = $order->KwotaBrutto;
         $res['default_values']['fields']['reference_number'] = (int)$order->NumberBL;
         $res['default_values']['fields']['package_description'] = str_replace(['/', '-'], [' ', ''], $order->Number);
+        $res['default_values']['package_fields']['parcel_reference'] = $order->NumberBL;
         if (!is_null($service)) {
             $res['default_values']['fields']['service'] = $service;
         }
