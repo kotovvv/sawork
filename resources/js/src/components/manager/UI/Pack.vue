@@ -185,7 +185,8 @@
                     productsOrder[0].products.some(
                       (product) =>
                         product.qty > 0 && product.qty <= product.ilosc
-                    )
+                    ) &&
+                    message_error == ''
                   "
                   class="btn"
                   @click.once="
@@ -199,7 +200,10 @@
                   @click="ConfirmAnuluy()"
                   v-if="
                     productsOrder[0]?.products &&
-                    productsOrder[0].products.some((product) => product.qty > 0)
+                    productsOrder[0].products.some(
+                      (product) => product.qty > 0
+                    ) &&
+                    message_error == ''
                   "
                   >Anulowanie pakowania</v-btn
                 >
@@ -208,7 +212,8 @@
                   @click="print"
                   v-if="
                     productsOrder[0]?.products &&
-                    productsOrder[0].products.length > 0
+                    productsOrder[0].products.length > 0 &&
+                    message_error == ''
                   "
                   >Print faktura</v-btn
                 >
@@ -234,10 +239,20 @@
                 productsOrder[0].products.length > 0
               "
             >
-              {{ message_error }}
-              <v-btn icon @click="sendOrderToAdmin"
-                ><v-icon>mdi-cube-send</v-icon></v-btn
+
+              <span class="d-block mb-2" style="font-size: 0.9em">
+                Помилка - натисни кнопку, наклей наклейку на замовлення та
+                віддай адміну
+              </span>
+              <v-btn
+                icon
+                size="large"
+                color="red"
+                style="background-color: red;"
+                @click="sendOrderToAdmin"
               >
+                <v-icon>mdi-cube-send</v-icon>
+              </v-btn>
             </h5>
             <h5 class="text-green" v-if="message">{{ message }}</h5>
             <div
