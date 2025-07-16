@@ -223,17 +223,17 @@ function validateRequiredFields() {
 
 // Сохранение формы
 function save() {
-  // Проверяем валидность формы
-  if (!valid.value) {
-    return;
-  }
-
   // Проверяем обязательные поля
   const validationErrors = validateRequiredFields();
   if (validationErrors.length > 0) {
     console.error("Błędy walidacji:", validationErrors);
     // Можно показать уведомление пользователю
     alert("Wypełnij wszystkie wymagane pola:\n" + validationErrors.join("\n"));
+    return;
+  }
+
+  // Проверяем валидность формы
+  if (!valid.value) {
     return;
   }
 

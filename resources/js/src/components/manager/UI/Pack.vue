@@ -239,7 +239,6 @@
                 productsOrder[0].products.length > 0
               "
             >
-
               <span class="d-block mb-2" style="font-size: 0.9em">
                 Помилка - натисни кнопку, наклей наклейку на замовлення та
                 віддай адміну
@@ -248,7 +247,7 @@
                 icon
                 size="large"
                 color="red"
-                style="background-color: red;"
+                style="background-color: red"
                 @click="sendOrderToAdmin"
               >
                 <v-icon>mdi-cube-send</v-icon>
@@ -425,10 +424,20 @@ export default {
         })
         .then((response) => {
           if (response.data.status === "ok") {
+            this.orders.splice(
+              this.orders.findIndex(
+                (order) =>
+                  order.IDOrder ===
+                  this.transOrders[this.indexTransOrders].IDOrder
+              ),
+              1
+            );
             this.transOrders.splice(this.indexTransOrders, 1);
             if (this.indexTransOrders >= this.transOrders.length) {
               this.indexTransOrders = 0;
             }
+            this.getTransOrders();
+            this.clearDialogOrders();
             this.message = "Zamówienie wysłane do administratora";
             this.snackbar = true;
           }
