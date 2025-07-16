@@ -434,12 +434,10 @@ export default {
       this.productsOrder = [];
     },
     getTTN() {
-      //   if (this.$refs.weightForm.validate()) {
-      //     if (!this.weight || !this.length || !this.width || !this.height) {
-      //       this.message = "Wszystkie pola muszą być wypełnione!";
-      //       this.snackbar = true;
-      //       return;
-      //     }
+      this.package_id = "";
+      this.courier_inner_number = "";
+      this.package_number = "";
+      this.courier_code = "";
 
       let data = {
         IDOrder: this.transOrders[this.indexTransOrders].IDOrder,

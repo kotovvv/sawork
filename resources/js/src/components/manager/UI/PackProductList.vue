@@ -94,7 +94,7 @@
             >
             </v-btn>
             <v-btn
-              v-if="!/\d{2}/.test(ttnNumber)"
+              v-if="/\d{2}/.test(ttnNumber)"
               icon="mdi-printer-pos-outline"
               @click="$emit('print-ttn', ttnNumber)"
             >

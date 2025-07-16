@@ -320,6 +320,24 @@ class ForTTNController extends Controller
 
         if (env('APP_ENV') == 'production') {
             $createdTTN = $BL->createPackage($forttn);
+            $attempts = 0;
+            $maxAttempts = 3;
+            $valid = false;
+            while ($attempts < $maxAttempts && !$valid) {
+                if (isset($createdTTN['package_number']) && preg_match('/\d.*\d/', $createdTTN['package_number'])) {
+                    $valid = true;
+                } else {
+                    $attempts++;
+                    if ($attempts < $maxAttempts) {
+                        usleep(2000000); // 2 сек задержка
+                        $createdTTN = $BL->createPackage($forttn);
+                    }
+                }
+            }
+
+            if (!$valid) {
+                return response()->json(['error' => 'Invalid package number'], 404);
+            }
 
             if ($createdTTN['status'] == 'ERROR') {
                 return response()->json(['error_message' => $createdTTN['error_code'] . ' ' . $createdTTN['error_message']], 404);
