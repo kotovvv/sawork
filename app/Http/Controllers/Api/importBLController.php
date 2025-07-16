@@ -529,7 +529,7 @@ class importBLController extends Controller
         $newOrderStatusLMID = DB::table('OrderStatus')->where('Name', $newOrderStatusBLName)->value('IDOrderStatus');
 
         if ($newOrderStatusBLName != $OrderStatusLMName) {
-            if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ']))
+            if ((in_array($newOrderStatusBLName, ['W realizacji', 'Anulowane', 'Nie wysyłać']) && in_array($OrderStatusLMName, ['W realizacji', 'Anulowane', ' NIE WYSYŁAJ', 'Nie wysyłać', 'Anulowany', 'Nowe zamówienia', 'NIE WYSYŁAJ']))
                 ||
                 (($newOrderStatusBLName == 'Kompletowanie') && in_array($OrderStatusLMName, ['W realizacji', 'Kompletowanie']))
                 ||
@@ -543,9 +543,7 @@ class importBLController extends Controller
                 ]);
 
                 // Create a fresh query builder for the update to avoid deadlocks
-                DB::table('Orders')
-                    ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
-                    ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
+                $order
                     ->update(['IDOrderStatus' => $newOrderStatusLMID]);
             } else {
                 $body = 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Panel: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'];
