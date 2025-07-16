@@ -135,7 +135,7 @@ props.fields.forEach(
 );
 props.packageFields.forEach(
   (f) =>
-    (packageFieldsData[f.id] = props.modelValue?.packageFields?.[f.id] ?? "")
+    (packageFieldsData[f.id] = props.modelValue?.package_fields?.[f.id] ?? "")
 );
 
 watchEffect(() => {
