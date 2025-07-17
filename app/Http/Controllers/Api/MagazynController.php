@@ -39,10 +39,10 @@ class MagazynController extends Controller
             $koef = '';
         }
         $IDKontrahenta = $data['IDKontrahenta'];
-        $IDLokalizaciiZwrot = $data['Zwrot'];
-        $Zniszczony = $data['Zniszczony'];
-        $Naprawa = $data['Naprawa'];
-        $noklient = $data['noklient'];
+        $IDLokalizaciiZwrot = isset($data['Zwrot']) ? $data['Zwrot'] : null;
+        $Zniszczony = isset($data['Zniszczony']) ? $data['Zniszczony'] : null;
+        $Naprawa = isset($data['Naprawa']) ? $data['Naprawa'] : null;
+        $noklient = isset($data['noklient']) ? $data['noklient'] : [];
 
         if (isset($data['id'])) {
             $res = DB::table('dbo.EMailMagazyn')
