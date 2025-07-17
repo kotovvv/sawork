@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\ForTtn;
 use App\Models\CourierForms;
+use App\Models\Collect;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -320,6 +321,23 @@ class ForTTNController extends Controller
         }
 
         if (env('APP_ENV') == 'production') {
+            // Get the JSON string from 'ttn' column
+            $ttnJson = Collect::where('IDOrder', $data['IDOrder'])
+                ->where('IDWarehouse', $data['IDWarehouse'])
+                ->value('ttn');
+
+            // Decode JSON to array
+            $ttnArray = json_decode($ttnJson, true);
+
+            // Extract all package_id values into an array
+            $package_ids = [];
+            if (is_array($ttnArray)) {
+                foreach ($ttnArray as $item) {
+                    if (isset($item['package_id'])) {
+                        $package_ids[] = $item['package_id'];
+                    }
+                }
+            }
             $createdTTN = $BL->createPackage($forttn);
             $attempts = 0;
             $maxAttempts = 3;
@@ -330,8 +348,29 @@ class ForTTNController extends Controller
                 } else {
                     $attempts++;
                     if ($attempts < $maxAttempts) {
-                        usleep(2000000); // 2 сек задержка
-                        $createdTTN = $BL->createPackage($forttn);
+                        usleep(3000000); // 3 сек задержка
+                        $package = $BL->getOrderPackages(['order_id' => $data['Nr_Baselinker']]);
+                        if (!isset($package['status']) || $package['status'] != "SUCCESS") {
+                            return response()->json(['error' => 'Failed to get order packages'], 404);
+                        }
+                        if (count($package['packages']) == 1 && count($package_ids) == 0) {
+                            $createdTTN['package_number'] = $package['packages'][0]['courier_package_nr'];
+                            $createdTTN['package_id'] = $package['packages'][0]['package_id'];
+                            $createdTTN['courier_inner_number'] = $package['packages'][0]['courier_inner_number'];
+                            if (isset($createdTTN['package_number']) && preg_match('/\d.*\d/', $createdTTN['package_number'])) {
+                                $valid = true;
+                            }
+                        } else {
+                            foreach ($package['packages'] as $package) {
+                                if (isset($package['courier_package_nr']) && preg_match('/\d.*\d/', $package['courier_package_nr']) && !in_array($package['package_id'], $package_ids)) {
+                                    $createdTTN['package_number'] = $package['courier_package_nr'];
+                                    $createdTTN['package_id'] = $package['package_id'];
+                                    $createdTTN['courier_inner_number'] = $package['courier_inner_number'];
+                                    $valid = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
                 }
             }
