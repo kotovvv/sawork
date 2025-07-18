@@ -419,33 +419,82 @@ class importBLController extends Controller
     private function changePackageOrder($param)
     {
         $createdParcelID = $param['a_log']['object_id'];
-        $OrderPackages = $this->BL->getOrderPackages(['order_id' => $param['a_log']['order_id']]);
-        if (!isset($OrderPackages['status']) || $OrderPackages['status'] != "SUCCESS") {
+
+        // Add timeout handling for the first API call
+        try {
+            $OrderPackages = $this->BL->getOrderPackages(['order_id' => $param['a_log']['order_id']]);
+            if (!isset($OrderPackages['status']) || $OrderPackages['status'] != "SUCCESS") {
+                LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                    'number' => $param['a_log']['order_id'],
+                    'type' => 9,
+                    'message' => 'Failed to get order packages for order: ' . $param['a_log']['order_id']
+                ]);
+                return;
+            }
+        } catch (\Exception $e) {
+            LogOrder::create([
+                'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                'number' => $param['a_log']['order_id'],
+                'type' => 9,
+                'message' => 'API timeout getting order packages for order: ' . $param['a_log']['order_id'] . '. Error: ' . $e->getMessage()
+            ]);
             return;
         }
+
         $o_order = DB::table('Orders')
             ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
             ->where('IDWarehouse', $param['a_warehouse']->warehouse_id);
+
         $package = collect($OrderPackages['packages'])->firstWhere('parcel_id', $createdParcelID);
+
         if (!$package) {
-            // retrieve the bill of lading from the BL
-            $package = $this->BL->getOrderPackages(['order_id' => $param['a_log']['order_id']]);
-            if (!isset($package['status']) || $package['status'] != "SUCCESS") {
+            // Add timeout handling for the second API call
+            try {
+                $package = $this->BL->getOrderPackages(['order_id' => $param['a_log']['order_id']]);
+                if (!isset($package['status']) || $package['status'] != "SUCCESS") {
+                    LogOrder::create([
+                        'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                        'number' => $param['a_log']['order_id'],
+                        'type' => 9,
+                        'message' => 'Failed to get order packages (retry) for order: ' . $param['a_log']['order_id']
+                    ]);
+                    return;
+                }
+            } catch (\Exception $e) {
+                LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                    'number' => $param['a_log']['order_id'],
+                    'type' => 9,
+                    'message' => 'API timeout getting order packages (retry) for order: ' . $param['a_log']['order_id'] . '. Error: ' . $e->getMessage()
+                ]);
                 return;
             }
+
             $package = collect($package['packages'])->firstWhere('package_id', $createdParcelID);
             if (!$package) {
+                LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                    'number' => $param['a_log']['order_id'],
+                    'type' => 9,
+                    'message' => 'Package not found with ID: ' . $createdParcelID . ' for order: ' . $param['a_log']['order_id']
+                ]);
                 return;
             }
+
             $this->executeWithRetry(function () use ($package, $o_order) {
                 $o_order->update(['_OrdersTempString2' => $package['courier_package_nr'], 'Modified' => now()]);
             });
+            return;
         }
+
         $orderStatus = $o_order->leftJoin('OrderStatus as os', 'Orders.IDOrderStatus', 'os.IDOrderStatus')->value('os.Name');
+
         if (in_array($orderStatus, ['Do wysłania', 'Kompletowanie'])) {
             $this->executeWithRetry(function () use ($package, $o_order) {
                 $o_order->update(['_OrdersTempString2' => $package['courier_package_nr'], 'Modified' => now()]);
             });
+
             LogOrder::create([
                 'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                 'number' => $param['a_log']['order_id'],
@@ -453,20 +502,37 @@ class importBLController extends Controller
                 'message' => 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
             ]);
         } else {
-            // check for return
-            $package = $this->BL->getOrderReturns(['order_id' => $param['a_log']['order_id']]);
-            if (!isset($package['status']) || $package['status'] != "SUCCESS") {
+            // Add timeout handling for the returns API call
+            try {
+                $returnPackage = $this->BL->getOrderReturns(['order_id' => $param['a_log']['order_id']]);
+                if (!isset($returnPackage['status']) || $returnPackage['status'] != "SUCCESS") {
+                    LogOrder::create([
+                        'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                        'number' => $param['a_log']['order_id'],
+                        'type' => 9,
+                        'message' => 'Failed to get order returns for order: ' . $param['a_log']['order_id']
+                    ]);
+                    return;
+                }
+            } catch (\Exception $e) {
+                LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                    'number' => $param['a_log']['order_id'],
+                    'type' => 9,
+                    'message' => 'API timeout getting order returns for order: ' . $param['a_log']['order_id'] . '. Error: ' . $e->getMessage()
+                ]);
                 return;
             }
-            foreach (collect($package['returns']) as $return) {
+
+            foreach (collect($returnPackage['returns']) as $return) {
                 $this->executeWithRetry(function () use ($return, $o_order) {
-                    $o_order
-                        ->update([
-                            '_OrdersTempString4' => $return['delivery_package_nr'], //Nr. Zwrotny BL
-                            '_OrdersTempString10' => $return['reference_number'], //Numer Zwrotu
-                            'Modified' => now()
-                        ]);
+                    $o_order->update([
+                        '_OrdersTempString4' => $return['delivery_package_nr'],
+                        '_OrdersTempString10' => $return['reference_number'],
+                        'Modified' => now()
+                    ]);
                 });
+
                 LogOrder::create([
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
