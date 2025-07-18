@@ -323,11 +323,11 @@ class ForTTNController extends Controller
         if (env('APP_ENV') == 'production') {
             // Get the JSON string from 'ttn' column
             $ttnJson = Collect::where('IDOrder', $data['IDOrder'])
-                ->where('IDWarehouse', $data['IDWarehouse'])
+                //->where('IDWarehouse', $data['IDWarehouse'])
                 ->value('ttn');
 
             // Decode JSON to array
-            $ttnArray = json_decode($ttnJson, true);
+            $ttnArray = is_string($ttnJson) ? json_decode($ttnJson, true) : (is_array($ttnJson) ? $ttnJson : []);
 
             // Extract all package_id values into an array
             $package_ids = [];
