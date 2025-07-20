@@ -14,7 +14,8 @@
       item-value="IDRuchuMagazynowego"
       :search="searchInTable"
       @click:row="handleClick"
-      select-strategy="single"
+      v-model="selected"
+      show-select
       :row-props="colorRowItem"
       fixed-header
       return-object
@@ -66,6 +67,13 @@
               >
             </div>
           </v-col>
+          <v-col>
+            <v-btn
+              @click="downloadPDFs"
+              :disabled="selected.length == 0"
+              icon="mdi-file-download"
+            ></v-btn>
+          </v-col>
         </v-row>
       </template>
     </v-data-table>
@@ -116,7 +124,8 @@ export default {
     dateMin: moment().subtract(2, "months").format("YYYY-MM-DD"),
     dateMax: moment().format("YYYY-MM-DD"),
     docsWZk: [],
-    selected: {},
+    marked: {},
+    selected: [],
     wzk_headers: [
       { title: "NrDokumentu", key: "NrDokumentu", nowrap: true },
       { title: "Data", key: "Data" },
@@ -125,6 +134,7 @@ export default {
       { title: "Uwagi Sprzedawcy", key: "uwagiSprzedawcy", nowrap: true },
       { title: "Pieniądze zwrócone", key: "isWartosc" },
       { title: "Status", key: "status" },
+      { title: "Źródło", key: "Zrodlo" },
     ],
     searchInTable: "",
     loading: false,
@@ -140,6 +150,33 @@ export default {
     this.getDocsWZk();
   },
   methods: {
+    downloadPDFs() {
+      const vm = this;
+      axios
+        .post(
+          "/api/downloadPdfs",
+          {
+            ids: vm.selected.map((item) => item.IDRuchuMagazynowego),
+          },
+          {
+            responseType: "blob", // Important for binary data
+          }
+        )
+        .then((res) => {
+          if (res.status === 200) {
+            // Create a blob from the response
+            const url = window.URL.createObjectURL(new Blob([res.data]));
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", "documents.zip");
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+          }
+        })
+        .catch((error) => console.log(error));
+    },
     openDialog(location) {
       this.location = location;
       this.dialogProductsInLocation = true;
@@ -162,14 +199,14 @@ export default {
         .catch((error) => console.log(error));
     },
     handleClick(e, row) {
-      this.selected = row.item;
-      this.$emit("item-selected", this.selected); // Emit event with selected item
+      this.marked = row.item;
+      this.$emit("item-selected", this.marked); // Emit event with selected item
     },
 
     colorRowItem(item) {
       if (
         item.item.IDRuchuMagazynowego != undefined &&
-        item.item.IDRuchuMagazynowego == this.selected.IDRuchuMagazynowego
+        item.item.IDRuchuMagazynowego == this.marked.IDRuchuMagazynowego
       ) {
         return { class: "bg-red-darken-4" };
       }

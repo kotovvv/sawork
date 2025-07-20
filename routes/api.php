@@ -126,4 +126,6 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('getTTN', [ForTTNController::class, 'getTTN']);
 
     Route::get('importSingleOrder/{warehouseId}/{orderId}', [\App\Http\Controllers\Api\importBLController::class, 'importSingleOrder']);
+
+    Route::post('downloadPdfs', [SendPDF::class, 'downloadPdfs']);
 });

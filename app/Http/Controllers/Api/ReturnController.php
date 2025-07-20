@@ -260,7 +260,7 @@ class ReturnController extends Controller
                 'NrDokumentu',
                 'Data',
                 'rm.IDKontrahenta',
-                'IDCompany',
+                'rm.IDCompany',
                 'IDUzytkownika',
                 'Operator',
                 'IDMagazynu',
@@ -276,12 +276,14 @@ class ReturnController extends Controller
                 '_RuchMagazynowyTempBool3 as isWartosc',
                 'kon.Nazwa as Kontrahent',
                 'ic.photo as photo',
-                'ic.locations as status'
+                'ic.locations as status',
+                'o._OrdersTempString7 as Zrodlo',
                 // DB::raw('MAX(ic.photo) as photo'),
                 // DB::raw('MAX(CAST(ic.locations AS VARCHAR(MAX))) as status')
             )
             ->leftJoin('Kontrahent as kon', 'rm.IDKontrahenta', '=', 'kon.IDKontrahenta')
             ->leftJoin('InfoComming as ic', 'ic.IDRuchuMagazynowego', '=', 'rm.IDRuchuMagazynowego')
+            ->leftJoin('Orders as o', 'o._OrdersTempDecimal2', '=', 'rm._RuchMagazynowyTempDecimal1')
             ->where('NrDokumentu', 'like', 'WZk%')
             ->where('rm.IDMagazynu', $IDWarehouse)
             ->whereBetween('Data', [$dateMin, $dateMax])

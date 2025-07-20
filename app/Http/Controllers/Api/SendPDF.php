@@ -22,12 +22,34 @@ class SendPDF extends Controller
         $magazin = [];
         $my = DB::selectOne("SELECT  k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.Kontrahent k WHERE k.IDKontrahenta = 1");
 
-        $docsWZk = DB::select("SELECT rm.IDRuchuMagazynowego, rm.Data, rm.Uwagi, rm.IDMagazynu, rm.NrDokumentu, rm.IDKontrahenta, rm.IDUzytkownika, rm.WartoscDokumentu, k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon
-FROM dbo.RuchMagazynowy rm
-LEFT JOIN dbo.Kontrahent k ON (k.IDKontrahenta = rm.IDKontrahenta)
-WHERE NrDokumentu LIKE 'WZk%' AND cast(Data AS date) = cast(GETDATE() AS date) AND rm.IDRuchuMagazynowego NOT IN (SELECT IDRuchuMagazynowego FROM dbo.EMailLog WHERE CAST(Data AS date) = cast(GETDATE() AS date) AND Status IS NULL)
-ORDER BY IDRuchuMagazynowego DESC, DATA ASC");
-        // $docsWZk = DB::select("SELECT  rm.IDRuchuMagazynowego, rm.Data, rm.Uwagi , rm.IDMagazynu, rm.NrDokumentu, rm.IDKontrahenta, rm.IDUzytkownika, rm.WartoscDokumentu, k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.RuchMagazynowy rm left JOIN dbo.Kontrahent k ON (k.IDKontrahenta = rm.IDKontrahenta) WHERE cast(Data AS date) >= DATEADD(day, DATEDIFF(day, 0, GETDATE()), 0) AND NrDokumentu LIKE '%WZk%' ORDER BY IDRuchuMagazynowego DESC , Data ASC");
+        $docsWZk = DB::table('dbo.RuchMagazynowy as rm')
+            ->leftJoin('dbo.Kontrahent as k', 'k.IDKontrahenta', '=', 'rm.IDKontrahenta')
+            ->select(
+                'rm.IDRuchuMagazynowego',
+                'rm.Data',
+                'rm.Uwagi',
+                'rm.IDMagazynu',
+                'rm.NrDokumentu',
+                'rm.IDKontrahenta',
+                'rm.IDUzytkownika',
+                'rm.WartoscDokumentu',
+                'k.Nazwa',
+                'k.UlicaLokal',
+                'k.KodPocztowy',
+                'k.Miejscowosc',
+                'k.Telefon'
+            )
+            ->where('rm.NrDokumentu', 'like', 'WZk%')
+            ->whereRaw('cast(rm.Data AS date) = cast(GETDATE() AS date)')
+            ->whereNotIn('rm.IDRuchuMagazynowego', function ($query) {
+                $query->select('IDRuchuMagazynowego')
+                    ->from('dbo.EMailLog')
+                    ->whereRaw('CAST(Data AS date) = cast(GETDATE() AS date)')
+                    ->whereNull('Status');
+            })
+            ->orderByDesc('rm.IDRuchuMagazynowego')
+            ->orderBy('rm.Data', 'asc')
+            ->get();
 
         foreach ($docsWZk as $key => $docWZk) {
             $forpdf = [];
@@ -78,5 +100,86 @@ ORDER BY IDRuchuMagazynowego DESC, DATA ASC");
         }
 
         return response("Zwroty wysłane: " . count($docsWZk), '200');
+    }
+
+    public function downloadPdfs(Request $request)
+    {
+        $ids = $request->input('ids', []);
+        if (empty($ids)) {
+            return response()->json(['error' => 'No ids provided'], 400);
+        }
+
+        $docsWZk = DB::table('dbo.RuchMagazynowy as rm')
+            ->leftJoin('dbo.Kontrahent as k', 'k.IDKontrahenta', '=', 'rm.IDKontrahenta')
+            ->select(
+                'rm.IDRuchuMagazynowego',
+                'rm.Data',
+                'rm.Uwagi',
+                'rm.IDMagazynu',
+                'rm.NrDokumentu',
+                'rm.IDKontrahenta',
+                'rm.IDUzytkownika',
+                'rm.WartoscDokumentu',
+                'k.Nazwa',
+                'k.UlicaLokal',
+                'k.KodPocztowy',
+                'k.Miejscowosc',
+                'k.Telefon'
+            )
+            ->whereIn('rm.IDRuchuMagazynowego', $ids)
+
+            ->orderByDesc('rm.IDRuchuMagazynowego')
+            ->orderBy('rm.Data', 'asc')
+            ->get();
+
+
+        $pdfs = [];
+        $my = DB::selectOne("SELECT  k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.Kontrahent k WHERE k.IDKontrahenta = 1");
+        foreach ($docsWZk as $key => $docWZk) {
+            $forpdf = [];
+            if ($docWZk->IDUzytkownika != 1) {
+                $forpdf['my'] = DB::selectOne("SELECT  k.Nazwa, k.UlicaLokal, k.KodPocztowy, k.Miejscowosc,k.Telefon FROM dbo.Kontrahent k WHERE k.IDKontrahenta = " . $docWZk->IDUzytkownika);
+            } else {
+                $forpdf['my'] = $my;
+            }
+            $forpdf['docWZk'] = $docWZk;
+            $forpdf['Magazyn'] = DB::selectOne("SELECT Nazwa FROM dbo.Magazyn WHERE IDMagazynu = " . $docWZk->IDMagazynu);
+
+            $forpdf['products'] = DB::select("SELECT t.Nazwa, t.KodKreskowy, erm.Uwagi, erm.Ilosc, erm.CenaJednostkowa, jm.Nazwa ed FROM ElementRuchuMagazynowego erm LEFT JOIN dbo.Towar t ON (erm.IDTowaru = t.IDTowaru) left JOIN JednostkaMiary jm ON (t.IDJednostkiMiary =  jm.IDJednostkiMiary) WHERE IDRuchuMagazynowego = " . $docWZk->IDRuchuMagazynowego);
+            //generating pdf with user data
+            $pdf = Pdf::loadView('mail', $forpdf);
+            $pdfs[] = [
+                'pdf' => $pdf->output(),
+                'name' => str_replace(['\\', ' ', '/'], '_', $docWZk->NrDokumentu) . '.pdf',
+            ];
+        }
+
+        // Generating PDFs for each document send to browser to download
+        if (empty($pdfs)) {
+            return response()->json(['error' => 'No PDFs generated'], 404);
+        }
+        foreach ($pdfs as $pdf) {
+            // You can use the response()->stream() to send the PDF directly to the browser
+            // return response()->stream(function () use ($pdf) {
+            //     echo $pdf['pdf'];
+            // }, 200, [
+            //     'Content-Type' => 'application/pdf',
+            //     'Content-Disposition' => 'attachment; filename="' . $pdf['name'] . '"',
+            // ]);
+        }
+
+        // If you want to return a zip file with all PDFs
+        $zip = new \ZipArchive();
+        $zipFileName = 'documents.zip';
+        if ($zip->open($zipFileName, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return response()->json(['error' => 'Could not create zip file'], 500);
+        }
+
+        foreach ($pdfs as $pdf) {
+            $zip->addFromString($pdf['name'], $pdf['pdf']);
+        }
+        $zip->close();
+
+        return response()->download($zipFileName)->deleteFileAfterSend(true);
     }
 }
