@@ -323,7 +323,6 @@ export default {
         } else {
           return false;
         }
-        return true;
       });
     },
   },
@@ -464,7 +463,13 @@ export default {
     },
     prepareXLSX() {
       const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(this.filteredListZO);
+      // Применяем фильтрацию по поиску, как в таблице
+      const filteredData = this.filteredListZO.filter((order) => {
+        if (!this.searchInTable) return true;
+        const search = this.searchInTable.toLowerCase();
+        return Object.values(order).join(" ").toLowerCase().includes(search);
+      });
+      const ws = XLSX.utils.json_to_sheet(filteredData);
       XLSX.utils.book_append_sheet(wb, ws, "");
 
       // File generation and saving
