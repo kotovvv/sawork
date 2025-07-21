@@ -182,7 +182,7 @@ function getFieldRules(field, isFromPackageFields = false) {
   }
 
   // Добавляем обязательность для всех полей из packageFields
-  if (isFromPackageFields) {
+  if (isFromPackageFields && field.id !== "size_custom") {
     rules = [...rules, (v) => !!v || `${field.name} jest wymagany`];
   }
 
