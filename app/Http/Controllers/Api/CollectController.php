@@ -74,7 +74,8 @@ class CollectController extends Controller
                                 'personal_Blogger',
                                 'personal_Reklamacja, ponowna wysyłka.'
                             ])
-                                ->whereNotNull('o._OrdersTempString1');
+                                ->whereNotNull('o._OrdersTempString1')
+                                ->where('o._OrdersTempString1', '!=', '');
                         });
                 });
             })

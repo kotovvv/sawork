@@ -559,7 +559,7 @@ class importBLController extends Controller
                 DB::table('Orders')
                     ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
                     ->where('IDWarehouse', $param['a_warehouse']->warehouse_id)
-                    ->where('_OrdersTempString1', '!=', $invoice_number)
+                    //->where('_OrdersTempString1', '!=', $invoice_number)
                     ->update([
                         '_OrdersTempString1' =>  $invoice_number,
                         'Modified' => now(),

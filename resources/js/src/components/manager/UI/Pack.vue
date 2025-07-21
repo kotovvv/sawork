@@ -449,6 +449,7 @@ export default {
         });
     },
     clearDialogOrders() {
+      this.nofaktura = "";
       this.imputCod = "";
       this.test = "";
       this.message = "";
@@ -458,6 +459,7 @@ export default {
       this.productsOrder = [];
     },
     getTTN() {
+      this.nofaktura = "";
       this.package_id = "";
       this.courier_inner_number = "";
       this.package_number = "";
