@@ -153,7 +153,7 @@ ilosc, CenaJednostkowa as Cena, --Jednostka, Wartosc as ''Wartość'',
 NumerSerii, DataWaznosci, NrDokumentu, DataDokumentu, IDWarehouseLocation as Idloc, LocationCode, LocationName,LocationPriority
 FROM StanySzczegolowo(@DataMax)
 WHERE IDTowaru = @IDTowaru
-AND IDElementuPZ <> @ExcludeElementID" . ($fromLocation ? " AND LocationCode = ''$fromLocation''" : " AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%'' AND LocationCode NOT LIKE N''%rihod%''") . "
+AND IDElementuPZ <> @ExcludeElementID" . ($fromLocation ? " AND LocationCode = ''$fromLocation''" : " AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%'' AND LocationCode NOT LIKE N''prihod%''") . "
 UNION ALL  -- дополнительное существующие элементы
 SELECT PZ.IDElementuRuchuMagazynowego ID, PZWZ.ilosc as Edycja,
 PZWZ.ilosc,ISNULL(PZ.CenaJednostkowa ,0) as Cena,
@@ -169,7 +169,7 @@ LEFT OUTER JOIN WarehouseLocations AS loc ON PZ.IDWarehouseLocation = loc.IDWare
 WHERE
 t.IdTowaru = @IDTowaru
 AND WZ.IDElementuRuchuMagazynowego = @IDElementuRuchuMagazynowego
-" . ($fromLocation ? " AND LocationCode = ''$fromLocation''" : " AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%'' AND LocationCode NOT LIKE N''%rihod%''") . "
+" . ($fromLocation ? " AND LocationCode = ''$fromLocation''" : " AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%'' AND LocationCode NOT LIKE N''prihod%''") . "
 ) X
 INNER JOIN [dbo].[ElementRuchuMagazynowego] ON ElementRuchuMagazynowego.IDElementuRuchuMagazynowego = X.ID
 INNER JOIN [dbo].[RuchMagazynowy] ON RuchMagazynowy.IDRuchuMagazynowego = ElementRuchuMagazynowego.IDRuchuMagazynowego
