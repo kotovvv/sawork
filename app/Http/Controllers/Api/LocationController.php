@@ -18,13 +18,13 @@ class LocationController extends Controller
         $dataMin = Carbon::now()->subDays($days)->format('Y-m-d H:i:s');
         $dataMax = Carbon::now()->format('Y-m-d H:i:s');
         $idMag = $stor;
-        $sql = ';
+        $sql = '';
 
         DB::table('TowarLocationTipTab')->delete();
         // Выполнение первого блока запросов
-        $towarItems = DB::table('Towar')->select('IDTowaru', 'IDMagazynu')->where('Usluga', 0)->where('KodKreskowy', '!=', ')->where('IDMagazynu', $idMag)->get();
+        $towarItems = DB::table('Towar')->select('IDTowaru', 'IDMagazynu')->where('Usluga', 0)->where('KodKreskowy', '!=', '')->where('IDMagazynu', $idMag)->get();
 
-        $sql = ';
+        $sql = '';
         foreach ($towarItems as $item) {
             $sql = "EXEC TowarLocationTip {$item->IDTowaru}, {$item->IDMagazynu}; ";
             if (!empty($sql)) {
@@ -37,7 +37,7 @@ class LocationController extends Controller
         //     UPDATE tlt
         //     SET tlt.IloscZa5dni = ISNULL(CAST(CASE WHEN s.SumIlosci > 9999999999999.9999 THEN 9999999999999.9999 ELSE s.SumIlosci END AS decimal(38, 4)), 0)
         //     FROM TowarLocationTipTab tlt
-        //     JOIN Towar t ON tlt.IDTowaru = t.IDTowaru and t.Usluga = 0 and t.KodKreskowy != '
+        //     JOIN Towar t ON tlt.IDTowaru = t.IDTowaru and t.Usluga = 0 and t.KodKreskowy != ''
         //     CROSS APPLY (
         //     SELECT dbo.SumaIlosciTowaruDlaRuchow(2, t.IDTowaru, '$dataMin', '$dataMax', $idMag) AS SumIlosci
         //     ) AS s
@@ -46,7 +46,7 @@ class LocationController extends Controller
             UPDATE tlt
             SET tlt.IloscZa5dni = s.SumIlosci + ISNULL(r.rezerv, 0)
             FROM TowarLocationTipTab tlt
-            LEFT JOIN Towar t ON tlt.IDTowaru = t.IDTowaru AND t.Usluga = 0 AND t.KodKreskowy != '
+            LEFT JOIN Towar t ON tlt.IDTowaru = t.IDTowaru AND t.Usluga = 0 AND t.KodKreskowy != ''
             CROSS APPLY (
                 SELECT SUM(Ilosc) AS SumIlosci
                 FROM dbo.ElementRuchuMagazynowego e
@@ -137,28 +137,28 @@ class LocationController extends Controller
         $IDElementuRuchuMagazynowego = -1;
         $ExcludeElementID = -1;
         $query = "
-exec sp_executesql N'Select ID, Sum(Edycja) as Edycja, sum(X.ilosc) as 'qty', AVG(Cena) as Cena,
-X.NumerSerii as 'Numer serii',
-CONVERT(DateTime, CONVERT(Char, X.DataWaznosci, 103), 103) as 'Data ważności',
-X.Idloc as 'IDWarehouseLocation', X.LocationCode, X.LocationName as 'Nazwa lokalizacji', X.LocationPriority,
-X.NrDokumentu as 'Nr Dokumentu', X.DataDokumentu As 'Data Dokumentu',
-ElementRuchuMagazynowego.Reserved as 'Rezerwacje dostaw',
-Kontrahent.Nazwa as 'Kontrahent'
-, RuchMagazynowy.[_RuchMagazynowyTempBool1] AS 'Niepełnowartościowe' , RuchMagazynowy.[_RuchMagazynowyTempDecimal1] AS 'Nr. Baselinker' , RuchMagazynowy.[_RuchMagazynowyTempString2] AS 'Nr. Faktury BL' , RuchMagazynowy.[_RuchMagazynowyTempString3] AS 'Nr. Korekty BL' , RuchMagazynowy.[_RuchMagazynowyTempString1] AS 'Nr. Nadania BL' , RuchMagazynowy.[_RuchMagazynowyTempString4] AS 'Nr. Zwrotny BL' ,RuchMagazynowy.[_RuchMagazynowyTempLink1] AS 'Link do Korekty BL' , RuchMagazynowy.[_RuchMagazynowyTempLink2] AS 'Link do Faktury BL' , RuchMagazynowy.[_RuchMagazynowyTempBool2] AS 'Zweryfikowane' , RuchMagazynowy.[_RuchMagazynowyTempString5] AS 'Product_Chang' , RuchMagazynowy.[_RuchMagazynowyTempString6] AS 'Uwagi sprzedawcy' , RuchMagazynowy.[_RuchMagazynowyTempBool3] AS 'Pieniądze zwrócone' , RuchMagazynowy.[_RuchMagazynowyTempString7] AS 'Źródło:' , RuchMagazynowy.[_RuchMagazynowyTempString8] AS 'External_id' , RuchMagazynowy.[_RuchMagazynowyTempString9] AS 'Login_klienta'
+exec sp_executesql N'Select ID, Sum(Edycja) as Edycja, sum(X.ilosc) as ''qty'', AVG(Cena) as Cena,
+X.NumerSerii as ''Numer serii'',
+CONVERT(DateTime, CONVERT(Char, X.DataWaznosci, 103), 103) as ''Data ważności'',
+X.Idloc as ''IDWarehouseLocation'', X.LocationCode, X.LocationName as ''Nazwa lokalizacji'', X.LocationPriority,
+X.NrDokumentu as ''Nr Dokumentu'', X.DataDokumentu As ''Data Dokumentu'',
+ElementRuchuMagazynowego.Reserved as ''Rezerwacje dostaw'',
+Kontrahent.Nazwa as ''Kontrahent''
+, RuchMagazynowy.[_RuchMagazynowyTempBool1] AS ''Niepełnowartościowe'' , RuchMagazynowy.[_RuchMagazynowyTempDecimal1] AS ''Nr. Baselinker'' , RuchMagazynowy.[_RuchMagazynowyTempString2] AS ''Nr. Faktury BL'' , RuchMagazynowy.[_RuchMagazynowyTempString3] AS ''Nr. Korekty BL'' , RuchMagazynowy.[_RuchMagazynowyTempString1] AS ''Nr. Nadania BL'' , RuchMagazynowy.[_RuchMagazynowyTempString4] AS ''Nr. Zwrotny BL'' ,RuchMagazynowy.[_RuchMagazynowyTempLink1] AS ''Link do Korekty BL'' , RuchMagazynowy.[_RuchMagazynowyTempLink2] AS ''Link do Faktury BL'' , RuchMagazynowy.[_RuchMagazynowyTempBool2] AS ''Zweryfikowane'' , RuchMagazynowy.[_RuchMagazynowyTempString5] AS ''Product_Chang'' , RuchMagazynowy.[_RuchMagazynowyTempString6] AS ''Uwagi sprzedawcy'' , RuchMagazynowy.[_RuchMagazynowyTempBool3] AS ''Pieniądze zwrócone'' , RuchMagazynowy.[_RuchMagazynowyTempString7] AS ''Źródło:'' , RuchMagazynowy.[_RuchMagazynowyTempString8] AS ''External_id'' , RuchMagazynowy.[_RuchMagazynowyTempString9] AS ''Login_klienta''
 FROM
 (
 -- stany w danym punkcie czasu:
 SELECT IDElementuPZ as ID, CAST(0 as decimal(18,6)) as Edycja,
-ilosc, CenaJednostkowa as Cena, --Jednostka, Wartosc as 'Wartość',
+ilosc, CenaJednostkowa as Cena, --Jednostka, Wartosc as ''Wartość'',
 NumerSerii, DataWaznosci, NrDokumentu, DataDokumentu, IDWarehouseLocation as Idloc, LocationCode, LocationName,LocationPriority
 FROM StanySzczegolowo(@DataMax)
 WHERE IDTowaru = @IDTowaru
-AND IDElementuPZ <> @ExcludeElementID" . ($fromLocation ? " AND LocationCode = '$fromLocation'" : " AND LocationCode NOT IN ('Zniszczony', 'Naprawa') AND LocationCode NOT LIKE 'User%' AND LocationCode NOT LIKE '%rihod%'") . "
+AND IDElementuPZ <> @ExcludeElementID" . ($fromLocation ? " AND LocationCode = ''$fromLocation''" : " AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%'' AND LocationCode NOT LIKE N''%rihod%''") . "
 UNION ALL  -- дополнительное существующие элементы
 SELECT PZ.IDElementuRuchuMagazynowego ID, PZWZ.ilosc as Edycja,
 PZWZ.ilosc,ISNULL(PZ.CenaJednostkowa ,0) as Cena,
 PZ.NumerSerii, PZ.DataWaznosci,	RuchPZ.NrDokumentu, RuchPZ.Data,
-loc.IDWarehouseLocation as Idloc, isnull(loc.LocationCode,'') LocationCode, isnull(loc.LocationName,'') LocationName, loc.Priority as LocationPriority
+loc.IDWarehouseLocation as Idloc, isnull(loc.LocationCode,'''') LocationCode, isnull(loc.LocationName,'''') LocationName, loc.Priority as LocationPriority
 FROM ZaleznosciPZWZ PZWZ
 INNER JOIN ElementRuchuMagazynowego AS WZ ON WZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuWZ
 INNER JOIN ElementRuchuMagazynowego AS PZ ON PZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuPZ
@@ -169,7 +169,7 @@ LEFT OUTER JOIN WarehouseLocations AS loc ON PZ.IDWarehouseLocation = loc.IDWare
 WHERE
 t.IdTowaru = @IDTowaru
 AND WZ.IDElementuRuchuMagazynowego = @IDElementuRuchuMagazynowego
-" . ($fromLocation ? " AND LocationCode = '$fromLocation'" : " AND LocationCode NOT IN ('Zniszczony', 'Naprawa') AND LocationCode NOT LIKE 'User%' AND LocationCode NOT LIKE '%rihod%'") . "
+" . ($fromLocation ? " AND LocationCode = ''$fromLocation''" : " AND LocationCode NOT IN (''Zniszczony'', ''Naprawa'') AND LocationCode NOT LIKE ''User%'' AND LocationCode NOT LIKE N''%rihod%''") . "
 ) X
 INNER JOIN [dbo].[ElementRuchuMagazynowego] ON ElementRuchuMagazynowego.IDElementuRuchuMagazynowego = X.ID
 INNER JOIN [dbo].[RuchMagazynowy] ON RuchMagazynowy.IDRuchuMagazynowego = ElementRuchuMagazynowego.IDRuchuMagazynowego
@@ -177,7 +177,7 @@ LEFT JOIN dbo.Kontrahent ON Kontrahent.IDKontrahenta = RuchMagazynowy.IDKontrahe
 group by ID, X.NumerSerii, X.DataWaznosci ,	X.NrDokumentu , X.DataDokumentu, X.Idloc , X.LocationCode , X.LocationName, X.LocationPriority,
 ElementRuchuMagazynowego.Reserved, Kontrahent.Nazwa
 , RuchMagazynowy.[_RuchMagazynowyTempBool1] , RuchMagazynowy.[_RuchMagazynowyTempDecimal1] , RuchMagazynowy.[_RuchMagazynowyTempString2] , RuchMagazynowy.[_RuchMagazynowyTempString3] , RuchMagazynowy.[_RuchMagazynowyTempString1] , RuchMagazynowy.[_RuchMagazynowyTempString4] , RuchMagazynowy.[_RuchMagazynowyTempLink1] , RuchMagazynowy.[_RuchMagazynowyTempLink2] , RuchMagazynowy.[_RuchMagazynowyTempBool2] , RuchMagazynowy.[_RuchMagazynowyTempString5] , RuchMagazynowy.[_RuchMagazynowyTempString6] , RuchMagazynowy.[_RuchMagazynowyTempBool3] , RuchMagazynowy.[_RuchMagazynowyTempString7] , RuchMagazynowy.[_RuchMagazynowyTempString8] , RuchMagazynowy.[_RuchMagazynowyTempString9]
-ORDER BY LocationPriority asc,'Data Dokumentu', Edycja desc
+ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
 ',N'@IDTowaru int,@DataMax datetime,@IDElementuRuchuMagazynowego int,@ExcludeElementID int',@IDTowaru=?,@DataMax=?,@IDElementuRuchuMagazynowego=?,@ExcludeElementID=?
 ";
 
@@ -248,7 +248,7 @@ ORDER BY LocationPriority asc,'Data Dokumentu', Edycja desc
         if (isset($data['Uwagi'])) {
             $Uwagi = $data['Uwagi'];
         } else {
-            $Uwagi = ';
+            $Uwagi = '';
         }
         if (isset($data['IDUzytkownika'])) {
             $IDUzytkownika = $data['IDUzytkownika'];
