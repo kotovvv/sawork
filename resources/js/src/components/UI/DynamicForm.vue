@@ -15,6 +15,7 @@
             <v-radio-group
               v-model="fieldsData[field.id]"
               :name="field.id"
+              :rules="getFieldRules(field)"
               @keydown.enter.prevent="save"
             >
               <v-radio
@@ -35,6 +36,7 @@
                 :label="opt.title"
                 :value="opt.value"
                 :name="`${field.id}_${opt.value}`"
+                :rules="getFieldRules(field)"
                 multiple
                 hide-details="auto"
                 @keydown.enter.prevent="save"
@@ -56,6 +58,7 @@
                   :label="field.name"
                   readonly
                   :name="field.id"
+                  :rules="getFieldRules(field)"
                   @keydown.enter.prevent="save"
                 />
               </template>
@@ -77,6 +80,7 @@
               :hint="field.hint"
               persistent-hint
               :name="`package_${field.id}`"
+              :rules="getFieldRules(field)"
               :true-value="true"
               :false-value="false"
               @keydown.enter.prevent="save"
@@ -96,6 +100,7 @@
             :hint="field.hint"
             persistent-hint
             :name="field.id"
+            :rules="getFieldRules(field, true)"
             :true-value="true"
             :false-value="false"
             @keydown.enter.prevent="save"
@@ -208,7 +213,10 @@ function validateRequiredFields() {
 
   // Проверяем все поля в packageFields
   props.packageFields.forEach((field) => {
-    if (!packageFieldsData[field.id] || packageFieldsData[field.id] === "") {
+    if (
+      field.id !== "size_custom" &&
+      (!packageFieldsData[field.id] || packageFieldsData[field.id] === "")
+    ) {
       errors.push(`${field.name} jest wymagany`);
     }
   });
@@ -219,18 +227,18 @@ function validateRequiredFields() {
 // Сохранение формы
 function save() {
   // Проверяем обязательные поля
-  //   const validationErrors = validateRequiredFields();
-  //   if (validationErrors.length > 0) {
-  //     console.error("Błędy walidacji:", validationErrors);
-  //     // Можно показать уведомление пользователю
-  //     alert("Wypełnij wszystkie wymagane pola:\n" + validationErrors.join("\n"));
-  //     return;
-  //   }
+  const validationErrors = validateRequiredFields();
+  if (validationErrors.length > 0) {
+    console.error("Błędy walidacji:", validationErrors);
+    // Можно показать уведомление пользователю
+    alert("Wypełnij wszystkie wymagane pola:\n" + validationErrors.join("\n"));
+    return;
+  }
 
-  //   // Проверяем валидность формы
-  //   if (!valid.value) {
-  //     return;
-  //   }
+  // Проверяем валидность формы
+  if (!valid.value) {
+    return;
+  }
 
   emit("save", {
     fields: { ...fieldsData },
@@ -238,6 +246,12 @@ function save() {
   });
 }
 </script>
+
+<style>
+#size_custom {
+  display: none;
+}
+</style>
 
 /*   <DynamicForm
 :fields="fields"
