@@ -84,10 +84,15 @@ class importBLController extends Controller
 
                 // Если токен заблокирован, отключаем автозапуск для этого склада
                 if (strpos($e->getMessage(), 'account is blocked') !== false) {
-                    // DB::table('settings')
-                    //     ->where('for_obj', $a_warehouse->warehouse_id)
-                    //     ->where('obj_name', 'interval_minutes')
-                    //     ->update(['value' => 0]);
+                    DB::table('settings')
+                        ->where('for_obj', $a_warehouse->warehouse_id)
+                        ->where('obj_name', 'interval_minutes')
+                        ->update(['value' => 0]);
+                    $body = 'Token for warehouse ' . $a_warehouse->warehouse_id . ' is blocked. Auto-execution disabled.';
+                    Mail::raw($body, function ($message) use ($a_warehouse) {
+                        $message->to('khanenko.igor@gmail.com')
+                            ->subject($this->getWarehouseSymbol($a_warehouse->warehouse_id) . ' Token zablokowany');
+                    });
 
                     Log::warning('Disabled auto-execution for warehouse due to blocked token: ' . $a_warehouse->warehouse_id);
                 }
