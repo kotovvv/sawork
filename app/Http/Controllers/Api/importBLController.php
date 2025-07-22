@@ -779,11 +779,13 @@ class importBLController extends Controller
 FROM
     settings
 WHERE
-    obj_name IN ('sklad_token', 'last_log_id', 'interval_minutes', 'last_executed_at') AND 'interval_minutes' > 0
+    obj_name IN ('sklad_token', 'last_log_id', 'interval_minutes', 'last_executed_at')
 GROUP BY
     for_obj
 HAVING
-    MAX(CASE WHEN obj_name = 'sklad_token' THEN value ELSE '' END) != ''");
+    MAX(CASE WHEN obj_name = 'sklad_token' THEN value ELSE '' END) != ''
+    AND MAX(CASE WHEN obj_name = 'interval_minutes' THEN TRY_CAST(value AS INT) ELSE 0 END) > 0
+    ");
     }
 
     public function GetOrders($idMagazynu, $order_id = null)
@@ -793,6 +795,7 @@ HAVING
         $this->orderSources = $this->BL->getOrderSources();
 
 
+        $parameters = [];
         if ($order_id) {
             $parameters['order_id'] = $order_id;
         } else {
