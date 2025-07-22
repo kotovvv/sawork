@@ -66,15 +66,33 @@ class importBLController extends Controller
 
     private function runAll()
     {
-        /* Get all warehouse for loop */
         $this->warehouses = $this->getAllWarehouses();
 
         foreach ($this->warehouses as $a_warehouse) {
-            if ($this->shouldExecute($a_warehouse)) {
-                $this->BL = new BaseLinkerController($a_warehouse->sklad_token);
+            try {
+                $baseLinker = new BaseLinkerController($a_warehouse->sklad_token);
+                $this->BL = $baseLinker;
                 $this->GetOrders($a_warehouse->warehouse_id);
                 $this->getJournalList($a_warehouse);
                 $this->updateLastExecuted($a_warehouse->warehouse_id);
+            } catch (\Exception $e) {
+                // Логируем ошибку и продолжаем с другими складами
+                Log::error('Failed to process warehouse: ' . $a_warehouse->warehouse_id, [
+                    'error' => $e->getMessage(),
+                    'warehouse' => $a_warehouse
+                ]);
+
+                // Если токен заблокирован, отключаем автозапуск для этого склада
+                if (strpos($e->getMessage(), 'account is blocked') !== false) {
+                    // DB::table('settings')
+                    //     ->where('for_obj', $a_warehouse->warehouse_id)
+                    //     ->where('obj_name', 'interval_minutes')
+                    //     ->update(['value' => 0]);
+
+                    Log::warning('Disabled auto-execution for warehouse due to blocked token: ' . $a_warehouse->warehouse_id);
+                }
+
+                continue; // Продолжаем с следующим складом
             }
         }
     }

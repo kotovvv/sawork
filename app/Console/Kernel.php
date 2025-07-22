@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\importBLController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class Kernel extends ConsoleKernel
 {
@@ -36,7 +37,11 @@ class Kernel extends ConsoleKernel
 
             $schedule->call(
                 function () {
-                    new importBLController();
+                    try {
+                        new importBLController();
+                    } catch (\Exception $e) {
+                        Log::error('Scheduled importBLController failed: ' . $e->getMessage());
+                    }
                 }
             )->everyMinute();
 

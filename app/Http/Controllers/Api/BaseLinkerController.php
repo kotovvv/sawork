@@ -74,10 +74,31 @@ class BaseLinkerController extends Controller
     public function getOrderStatusList()
     {
         $response = $this->sendRequest('getOrderStatusList');
-        if (!isset($response['status']) && $response['status'] != 'SUCCESS') {
-            Log::error('getOrderStatusList response error:', ['response' => $response]);
-            throw new \Exception('Invalid response from getOrderStatusList');
+
+        // Улучшенная проверка ответа
+        if (!isset($response['status'])) {
+            Log::error('getOrderStatusList invalid response format:', ['response' => $response]);
+            throw new \Exception('Invalid response format from getOrderStatusList');
         }
+
+        if ($response['status'] !== 'SUCCESS') {
+            Log::error('getOrderStatusList API error:', ['response' => $response]);
+
+            // Проверяем конкретные ошибки
+            if (isset($response['error_code'])) {
+                switch ($response['error_code']) {
+                    case 'ERROR_USER_ACCOUNT_BLOCKED':
+                        throw new \Exception('BaseLinker account is blocked. Please check your account status.');
+                    case 'ERROR_INVALID_TOKEN':
+                        throw new \Exception('Invalid BaseLinker token. Please update the token.');
+                    default:
+                        throw new \Exception('BaseLinker API error: ' . ($response['error_message'] ?? 'Unknown error'));
+                }
+            }
+
+            throw new \Exception('BaseLinker API returned error status');
+        }
+
         if (!isset($response['statuses'])) {
             Log::error('getOrderStatusList missing statuses key:', ['response' => $response]);
             throw new \Exception('Missing "statuses" key in getOrderStatusList response');
