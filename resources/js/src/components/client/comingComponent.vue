@@ -35,8 +35,8 @@
               ></v-btn>
             </v-row>
 
-            <v-row v-if="selectedItem.ID1 == null && $attrs.user.IDRoli != 4">
-              <v-col cols="12">
+            <v-row v-if="selectedItem.ID1 == null">
+              <v-col cols="12" v-if="$attrs.user.IDRoli != 4">
                 <v-btn @click="createPZ">create PZ</v-btn>
               </v-col>
               <v-col cols="12">
@@ -416,7 +416,7 @@ export default {
       { title: "KodKreskowy", key: "KodKreskowy" },
       { title: "SKU", key: "sku" },
       { title: "Ilosc", key: "Ilosc" },
-      { title: "LocationCode", key: "LocationCode" },
+
       {
         title: "W trakcie",
         key: "inLocation",
@@ -454,6 +454,12 @@ export default {
   },
   mounted() {
     this.getWarehouse();
+    if (this.$attrs.user.IDRoli != 4) {
+      this.headers_products.push({
+        title: "LocationCode",
+        key: "LocationCode",
+      });
+    }
   },
   methods: {
     handleClick(event, row) {
