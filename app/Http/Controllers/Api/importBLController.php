@@ -779,7 +779,7 @@ class importBLController extends Controller
 FROM
     settings
 WHERE
-    obj_name IN ('sklad_token', 'last_log_id', 'interval_minutes', 'last_executed_at')
+    obj_name IN ('sklad_token', 'last_log_id', 'interval_minutes', 'last_executed_at') AND interval_minutes > 0
 GROUP BY
     for_obj
 HAVING
