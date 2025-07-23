@@ -628,6 +628,8 @@ class CollectController extends Controller
                             ]);
 
                             if (!$inserted) {
+                                Log::error('Error inserting into collect table for order: ' . $order['IDOrder']);
+                                $messages[] = 'Error inserting into collect table for order: ' . $order['IDOrder'];
                                 throw new \Exception('Error inserting into collect table');
                             }
                             if (env('APP_ENV') != 'local') {

@@ -1170,6 +1170,12 @@ HAVING
                     ]
                 );
             } catch (\Exception $e) {
+                Log::error('CreateOrderLine failed', [
+                    'order_id' => $IDOrder,
+                    'product_name' => $product['name'],
+                    'ean' => $product['ean'],
+                    'error' => $e->getMessage(),
+                ]);
                 throw new \Exception("Error executing CreateOrderLine for product: {$product['name']}. Details: " . $e->getMessage());
             }
             // If the product is not recognized, we change the order status to not ship in both systems and comment in BC
@@ -1198,6 +1204,7 @@ HAVING
                         ]);
                     });
                 } catch (\Exception $e) {
+                    Log::error("Error setting order status to 'Nie wysyłać' for order ID: {$IDOrder}. Product EAN: {$product['ean']}. Error: " . $e->getMessage());
                     throw new \Exception("Error inserting product data: " . $e->getMessage());
                 }
             }
@@ -1224,6 +1231,7 @@ HAVING
                     'Remarks' => $uwagi
                 ]);
             } catch (\Exception $e) {
+                Log::error("Error inserting delivery data for order ID: {$IDOrder}. Error: " . $e->getMessage());
                 throw new \Exception("Error inserting delivery data: " . $e->getMessage());
             }
         }
@@ -1296,6 +1304,10 @@ HAVING
                 ->first();
             return $existingContractor->IDKontrahenta;
         } catch (\Exception $e) {
+            Log::error("Error inserting Kontrahent data", [
+                "error" => $e->getMessage(),
+                "orderData" => $orderData
+            ]);
             throw new \Exception("Error inserting Kontrahent data: " . $e->getMessage());
             throw $e;
         }

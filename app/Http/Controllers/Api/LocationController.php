@@ -229,8 +229,15 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
             $response = $this->doRelokacja($request);
             DB::commit();
         } catch (\Exception $e) {
+
             DB::rollBack();
             // Верните ошибку пользователю
+            Log::error("Error occurred during relocation process", [
+                'error' => $e->getMessage(),
+                'request_data' => $request->all()
+            ]);
+            $this->errorLocation($request->user, 'Error during relocation: ' . $e->getMessage(), $request->ip());
+            throw new \Exception('Błąd podczas relokacji: ' . $e->getMessage());
         }
         return  $response;
     }
