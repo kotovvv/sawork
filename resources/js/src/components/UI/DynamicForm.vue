@@ -142,6 +142,7 @@ const packageFieldsData = reactive({});
 const datePickers = reactive({});
 const valid = ref(true);
 const loading = ref(false);
+const isSaving = ref(false);
 
 // Инициализация значений из modelValue
 props.fields.forEach(
@@ -240,17 +241,26 @@ function validateRequiredFields() {
 
 // Сохранение формы
 function save() {
+  // Предотвращаем повторные вызовы
+  if (isSaving.value || loading.value) {
+    return;
+  }
+
+  // Устанавливаем флаг сохранения
+  isSaving.value = true;
   // Проверяем обязательные поля
   const validationErrors = validateRequiredFields();
   if (validationErrors.length > 0) {
     console.error("Błędy walidacji:", validationErrors);
     // Можно показать уведомление пользователю
     alert("Wypełnij wszystkie wymagane pola:\n" + validationErrors.join("\n"));
+    isSaving.value = false; // Сбрасываем флаг при ошибке
     return;
   }
 
   // Проверяем валидность формы
   if (!valid.value) {
+    isSaving.value = false; // Сбрасываем флаг при ошибке
     return;
   }
 
@@ -267,6 +277,7 @@ function save() {
     () => {
       // Callback для отключения загрузки
       loading.value = false;
+      isSaving.value = false; // Сбрасываем флаг после завершения
     }
   );
 }
