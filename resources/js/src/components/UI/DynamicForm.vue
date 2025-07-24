@@ -1,5 +1,10 @@
 <template>
   <v-form ref="form" v-model="valid" @submit.prevent="save">
+    <v-progress-linear
+      :active="loading"
+      indeterminate
+      color="purple"
+    ></v-progress-linear>
     <v-row>
       <v-col cols="12" md="6">
         <div
@@ -103,12 +108,20 @@
             :rules="getFieldRules(field, true)"
             :true-value="true"
             :false-value="false"
+            :class="field.id === 'size_custom' ? 'd-none' : ''"
             @keydown.enter.prevent="save"
           ></component>
         </div>
       </v-col>
     </v-row>
-    <v-btn color="primary" @click="save">odbiór konosamentu</v-btn>
+    <v-btn
+      color="primary"
+      @click.once="save"
+      :loading="loading"
+      :disabled="loading"
+    >
+      Utwórz etykietę
+    </v-btn>
   </v-form>
 </template>
 
@@ -128,6 +141,7 @@ const fieldsData = reactive({});
 const packageFieldsData = reactive({});
 const datePickers = reactive({});
 const valid = ref(true);
+const loading = ref(false);
 
 // Инициализация значений из modelValue
 props.fields.forEach(
@@ -240,18 +254,24 @@ function save() {
     return;
   }
 
-  emit("save", {
-    fields: { ...fieldsData },
-    packageFields: { ...packageFieldsData },
-  });
+  // Включаем загрузку
+  loading.value = true;
+
+  // Эмитим событие с данными и callback для отключения загрузки
+  emit(
+    "save",
+    {
+      fields: { ...fieldsData },
+      packageFields: { ...packageFieldsData },
+    },
+    () => {
+      // Callback для отключения загрузки
+      loading.value = false;
+    }
+  );
 }
 </script>
 
-<style>
-input[name="size_custom"] {
-  display: none;
-}
-</style>
 
 /*   <DynamicForm
 :fields="fields"
