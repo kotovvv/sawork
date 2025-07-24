@@ -248,7 +248,7 @@ function save() {
 </script>
 
 <style>
-#size_custom {
+input[name="size_custom"] {
   display: none;
 }
 </style>
