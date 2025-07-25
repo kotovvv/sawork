@@ -41,7 +41,7 @@
             multiple
             clearable
           ></v-select>
-          <!-- <v-btn size="x-large" @click="performanceUsers">Report</v-btn> -->
+          <v-btn size="x-large" @click="performanceUsers">Report</v-btn>
         </div>
       </v-col>
       <v-spacer></v-spacer>

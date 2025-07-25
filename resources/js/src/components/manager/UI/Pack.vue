@@ -254,13 +254,7 @@
               </v-btn>
             </h5>
             <h5 class="text-green" v-if="message">{{ message }}</h5>
-            <div
-              class="text-deep-orange-darken-4"
-              style="font-size: 3rem"
-              v-if="nofaktura"
-            >
-              {{ nofaktura }}
-            </div>
+
             <PackProductList
               :products="productsOrder[0]?.products || []"
               :ttn="productsOrder.ttn"
@@ -389,7 +383,7 @@ export default {
       courier_code: "",
       filepath: "",
       hidden: 1,
-      nofaktura: "",
+
       UwagiForAdmin: "",
     };
   },
@@ -449,7 +443,6 @@ export default {
         });
     },
     clearDialogOrders() {
-      this.nofaktura = "";
       this.imputCod = "";
       this.test = "";
       this.message = "";
@@ -459,7 +452,6 @@ export default {
       this.productsOrder = [];
     },
     getTTN() {
-      this.nofaktura = "";
       this.package_id = "";
       this.courier_inner_number = "";
       this.package_number = "";
@@ -524,8 +516,23 @@ export default {
           order: this.transOrders[this.indexTransOrders],
         })
         .then((response) => {
-          this.message_error = response.data.message;
-          this.nofaktura = response.data.nofaktura || "";
+          this.message = response.data.message;
+          if (response.data.nofaktura != "") {
+            // Play sound for successful invoice
+            if (typeof window !== "undefined" && window.AudioContext) {
+              const ctx = new (window.AudioContext ||
+                window.webkitAudioContext)();
+              const oscillator = ctx.createOscillator();
+              oscillator.type = "sine";
+              oscillator.frequency.setValueAtTime(1320, ctx.currentTime); // Higher pitch for success
+              oscillator.connect(ctx.destination);
+              oscillator.start();
+              setTimeout(() => {
+                oscillator.stop();
+                ctx.close();
+              }, 300); // Longer beep for success
+            }
+          }
           // handle success if needed
         })
         .catch((error) => {
@@ -544,12 +551,12 @@ export default {
           }
         });
     },
-
+    //TODO: goto BL get label and print
     printTTN(ttnNumber) {
       axios
         .post("/api/print", {
-          doc: "label",
-          path: this.filepath,
+          doc: ttnNumber.doc || "label",
+          path: ttnNumber.filepath ? ttnNumber.filepath : ttnNumber,
         })
         .then((response) => {
           // handle success if needed

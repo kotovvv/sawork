@@ -1431,7 +1431,7 @@ class CollectController extends Controller
                 if ($label['status'] == 'ERROR') {
                     return response()->json(['error_message' => $label['error_code'] . ' ' . $label['error_message']], 404);
                 }
-
+                //TODO: print label
                 // Save label to storage
                 $symbol = str_replace(' ', '_', DB::table('Magazyn')->where('IDMagazynu', $Order['IDWarehouse'])->value('Symbol'));
                 $fileName = "pdf/{$symbol}/{$package_number}.{$label['extension']}";
