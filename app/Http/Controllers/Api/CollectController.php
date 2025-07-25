@@ -1501,4 +1501,98 @@ class CollectController extends Controller
         DB::table('RodzajTransportu')->whereIn('IDRodzajuTransportu', $group)->update(['IDgroup' => $IDgroup]);
         return DB::table('RodzajTransportu')->select("IDRodzajuTransportu", "Nazwa", "IDgroup")->get();
     }
+
+    public function performanceUsers(Request $request)
+    {
+        $data = $request->all();
+        $dateMin = isset($data['dateMin']) ? Carbon::parse($data['dateMin'])->startOfDay() : Carbon::now()->startOfDay();
+        $dateMax = isset($data['dateMax']) ? Carbon::parse($data['dateMax'])->endOfDay() : Carbon::now()->endOfDay();
+        $userIds = $data['userId'] ?? null;
+
+        $data_from_collect = Collect::select(
+            'IDUzytkownika',
+            'IDOrder',
+            'Date',
+            DB::raw("
+                    CASE
+                        WHEN ttn IS NOT NULL THEN
+                            TIMESTAMPDIFF(MINUTE,
+                                Date,
+                                STR_TO_DATE(
+                                    SUBSTRING_INDEX(
+                                        SUBSTRING_INDEX(ttn, '\"lastUpdate\":\"', -1),
+                                        '\"',
+                                        1
+                                    ),
+                                    '%Y-%m-%d %H:%i:%s'
+                                )
+                            )
+                        ELSE NULL
+                    END as minutes_to_pack
+                "),
+            'Uwagi'
+
+        )
+            ->when($userIds, function ($query) use ($userIds) {
+                return $query->whereIn('IDUzytkownika', $userIds);
+            })
+            ->whereBetween('Date', [$dateMin, $dateMax])
+            ->get();
+
+        $orderIds = $data_from_collect->pluck('IDOrder')->unique()->toArray();
+        $userIds = $data_from_collect->pluck('IDUzytkownika')->unique()->toArray();
+        $users = DB::table('Uzytkownik')
+            ->whereIn('IDUzytkownika', $userIds)
+            ->pluck('Login', 'IDUzytkownika');
+
+        $order_data = DB::table('dbo.OrderLines as ol')
+            ->leftJoin('Towar as t', 't.IDTowaru', '=', 'ol.IDItem')
+            ->leftJoin('Orders as o', 'o.IDOrder', '=', 'ol.IDOrder')
+            ->select(
+                'o.IDOrder',
+                'o.IDWarehouse',
+                'o.Number',
+                DB::raw('CAST(o._OrdersTempDecimal2 AS INTEGER) as NumberBL'),
+                DB::raw('SUM(ol.Quantity) as TotalQuantity'),
+                DB::raw('COALESCE(SUM(t._TowarTempDecimal1 * ol.Quantity), 0) as TotalWeight'),
+                DB::raw('COALESCE(SUM(t._TowarTempDecimal2 * ol.Quantity), 0) as TotalM3')
+            )
+            ->where('t.Usluga', '!=', 1)
+            ->whereIn('ol.IDOrder', $orderIds)
+            ->groupBy('o.IDOrder', 'o._OrdersTempDecimal2', 'o.IDWarehouse', 'o.Number')
+            ->get();
+
+        // Create a lookup for order data
+        $orderDataLookup = $order_data->keyBy('IDOrder');
+
+        // Union the collections by merging order data into collect data
+        $unionData = $data_from_collect->map(function ($collectItem) use ($orderDataLookup) {
+            $orderData = $orderDataLookup->get($collectItem->IDOrder);
+
+            if ($orderData) {
+                // Merge order data into collect item
+                $collectItem->IDWarehouse = $orderData->IDWarehouse;
+                $collectItem->NumberBL = $orderData->NumberBL;
+                $collectItem->Number = $orderData->Number;
+                $collectItem->TotalQuantity = $orderData->TotalQuantity;
+                $collectItem->TotalWeight = $orderData->TotalWeight;
+                $collectItem->TotalM3 = $orderData->TotalM3;
+            } else {
+                // Set defaults if no order data found
+                $collectItem->IDWarehouse = null;
+                $collectItem->NumberBL = null;
+                $collectItem->Number = null;
+                $collectItem->TotalQuantity = 0;
+                $collectItem->TotalWeight = 0;
+                $collectItem->TotalM3 = 0;
+            }
+
+            return $collectItem;
+        });
+
+        return response()->json([
+            'data' => $unionData,
+            'users' => $users
+        ]);
+    }
 }

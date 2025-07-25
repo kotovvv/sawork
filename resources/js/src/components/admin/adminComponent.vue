@@ -79,6 +79,7 @@ export default {
       { text: "Zwroty", name: "zwroty", icon: "mdi-database-plus" },
       { text: "Zamówienia", name: "zo2wz", icon: "mdi-arrange-bring-forward" },
       { text: "Collect", name: "collect", icon: "mdi-package-variant-plus" },
+      { text: "Performance", name: "performance", icon: "mdi-chart-line" },
     ],
   }),
   computed: {
@@ -104,6 +105,10 @@ export default {
       if (this.theMenu == "collect")
         return defineAsyncComponent(() =>
           import("../manager/collectProducts.vue")
+        );
+      if (this.theMenu == "performance")
+        return defineAsyncComponent(() =>
+          import("../manager/PerformanceUser.vue")
         );
     },
   },
