@@ -46,7 +46,7 @@ class Kernel extends ConsoleKernel
             )->everyMinute();
 
             $schedule->call(function () {
-                $results = \DB::select("
+                $results = DB::select("
                     SELECT
                         (SELECT NrDokumentu
                          FROM dbo.RuchMagazynowy r
