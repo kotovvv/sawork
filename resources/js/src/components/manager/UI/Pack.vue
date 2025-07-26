@@ -555,8 +555,9 @@ export default {
     printTTN(ttnNumber) {
       axios
         .post("/api/print", {
-          doc: ttnNumber.doc || "label",
-          path: ttnNumber.filepath ? ttnNumber.filepath : ttnNumber,
+          doc: "label",
+          IDOrder: this.transOrders[this.indexTransOrders].IDOrder,
+          package_number: ttnNumber,
         })
         .then((response) => {
           // handle success if needed

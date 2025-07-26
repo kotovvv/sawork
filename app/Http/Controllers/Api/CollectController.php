@@ -1412,52 +1412,19 @@ class CollectController extends Controller
             if (Cache::get('order_all_done_' . $Order['IDOrder'])) {
                 $this->setStatus($Order, 'Do wysłania');
             }
+            $req = new Request([
+                'user' => $request->user,
+                'doc' => 'label',
+                'package_id' => $request->package_id,
 
-            if (env('APP_ENV') == 'production') {
-                // Initialize BaseLinker controller
-                $IDWarehouse = $Order['IDWarehouse'];
-                $token = $this->getToken($IDWarehouse);
-                if (!$token) {
-                    return response()->json(['error' => 'Token not found'], 404);
-                }
-                $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
+                'package_number' => $request->package_number,
+                'courier_code' => $request->courier_code,
+                'IDWarehouse' => $Order['IDWarehouse'],
+            ]);
+            $print = new \App\Http\Controllers\Api\PrintController();
+            $print->print($req);
 
-                //print ttn
-                $label = $BL->getLabel([
-                    'courier_code' => $courier_code,
-                    'package_id' => $package_id,
-                    'package_number' => $package_number
-                ]);
-                if ($label['status'] == 'ERROR') {
-                    return response()->json(['error_message' => $label['error_code'] . ' ' . $label['error_message']], 404);
-                }
-                //TODO: print label
-                // Save label to storage
-                $symbol = str_replace(' ', '_', DB::table('Magazyn')->where('IDMagazynu', $Order['IDWarehouse'])->value('Symbol'));
-                $fileName = "pdf/{$symbol}/{$package_number}.{$label['extension']}";
-                $filePath = storage_path('app/public/' . $fileName);
-                if (!file_exists(dirname($filePath))) {
-                    mkdir(dirname($filePath), 0755, true);
-                }
-                file_put_contents($filePath, base64_decode($label['label']));
-
-                $req = new Request(
-                    [
-                        'user' => $request->user,
-                        'doc' => 'label',
-                        'path' => $filePath,
-                        //'IDWarehouse' => $Order['IDWarehouse'],
-                        // 'order' => [
-                        //     'IDOrder' => $data['IDOrder'],
-                        //     'invoice_number' => $Order['invoice_number'],
-                        //     'invoice_id' => $createdTTN['package_id'],
-                        // ],
-                    ]
-                );
-                $print = new \App\Http\Controllers\Api\PrintController();
-                $print->print($req);
-            }
-            return response()->json(['status' => 'success', 'filePath' => $filePath]);
+            return response()->json(['status' => 'success']);
         }
 
         Log::error('Error writing TTN for order ID: ' . $Order['IDOrder']);

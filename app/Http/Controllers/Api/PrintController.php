@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Collect;
+use App\Models\ForTtn;
 
 class PrintController extends Controller
 {
@@ -79,11 +80,101 @@ class PrintController extends Controller
         if ($request->input('doc') == 'label') {
             $printer = $this->usersPrinters[$userId]['label'];
 
-            if (file_exists($request->path)) {
-                exec("lpr -P " . $printer . " " . $request->path);
-            } else {
-                Log::error("File not found: " . $request->path);
-                return response()->json(['status' => 'error', 'message' => 'File not found'], 404);
+
+            // Initialize BaseLinker controller
+            $labelData = null;
+            $IDWarehouse = null;
+
+            if ($request->input('IDWarehouse') !== null) {
+                $labelData = [
+                    'courier_code' => $request->input('courier_code'),
+                    'package_id' => $request->input('package_id'),
+                    'package_number' => $request->input('package_number')
+                ];
+                $IDWarehouse = $request->input('IDWarehouse');
+            } elseif ($request->input('IDOrder') !== null) {
+                $IDOrder = $request->input('IDOrder');
+                $IDWarehouse = DB::table('Orders')
+                    ->where('IDOrder', $IDOrder)
+                    ->value('IDWarehouse');
+                $delivery = DB::connection('second_mysql')->table('order_details')
+                    ->select('order_source', 'order_source_id', 'delivery_method')
+                    ->where('order_id', $IDOrder)
+                    ->where('IDWarehouse', $IDWarehouse)
+                    ->first();
+
+                if (!$delivery) {
+                    return ['error' => 'Delivery information not found'];
+                }
+
+                $forttn = ForTtn::where('id_warehouse', $IDWarehouse)
+                    ->where('order_source', $delivery->order_source)
+                    ->where('order_source_id', $delivery->order_source_id)
+                    ->where('delivery_method',  $delivery->delivery_method)
+                    ->where('courier_code', '!=', '')
+                    ->where('account_id', '>', 0)
+                    ->select('courier_code', 'account_id')
+                    ->first();
+
+                if (!$forttn) {
+                    return ['error' => 'Courier/account not found'];
+                }
+
+                $courier_code = $forttn->courier_code;
+
+                $json_ttn = Collect::where('IDOrder', $request->input('IDOrder'))->value('ttn');
+                if (!$json_ttn) {
+                    return response()->json(['error' => 'No label data found'], 404);
+                }
+
+                if (is_string($json_ttn)) {
+                    $json_ttn = json_decode($json_ttn, true);
+                }
+
+                $package_number = $request->input('package_number');
+                if (!$package_number || !isset($json_ttn[$package_number])) {
+                    return response()->json(['error' => 'Package number not found in label data'], 404);
+                }
+
+                $package_data = $json_ttn[$package_number];
+                $json_ttn = [
+                    'courier_code' => $courier_code,
+                    'package_id' => $package_data['package_id'] ?? null,
+                    'package_number' => $package_number
+                ];
+                if (!isset($json_ttn['courier_code'], $json_ttn['package_id'], $json_ttn['package_number'])) {
+                    return response()->json(['error' => 'Invalid label data'], 400);
+                }
+
+                $labelData = [
+                    'courier_code' => $json_ttn['courier_code'],
+                    'package_id' => $json_ttn['package_id'],
+                    'package_number' => $json_ttn['package_number']
+                ];
+            }
+
+            if ($labelData && $IDWarehouse) {
+                if (env('APP_ENV') == 'production') {
+                    $token = $this->getToken($IDWarehouse);
+                    if (!$token) {
+                        return response()->json(['error' => 'Token not found'], 404);
+                    }
+
+                    $BL = new \App\Http\Controllers\Api\BaseLinkerController($token);
+                    $label = $BL->getLabel($labelData);
+
+                    if ($label['status'] == 'ERROR') {
+                        return response()->json(['error_message' => $label['error_code'] . ' ' . $label['error_message']], 404);
+                    }
+
+                    $labelContent = base64_decode($label['label']);
+                    $extension = $label['extension'] ?? 'pdf';
+                    $tmpFile = tempnam(sys_get_temp_dir(), 'label_') . '.' . $extension;
+                    file_put_contents($tmpFile, $labelContent);
+
+                    exec("lpr -P " . escapeshellarg($printer) . " " . escapeshellarg($tmpFile));
+                    unlink($tmpFile);
+                }
             }
         }
 

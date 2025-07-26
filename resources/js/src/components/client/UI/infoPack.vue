@@ -56,7 +56,35 @@ export default {
   methods: {
     changeCounter(product) {},
     deleteTTN(ttnNumber) {},
-    printTTN(ttnNumber) {},
+    printTTN(ttnNumber) {
+      console.log("IDOrder", this.order.IDOrder);
+      console.log("TTN Number", ttnNumber);
+      axios
+        .post("/api/print", {
+          doc: "label",
+          IDOrder: this.order.IDOrder,
+          package_number: ttnNumber,
+        })
+        .then((response) => {
+          // handle success if needed
+          console.log("Print response:", response.data);
+        })
+        .catch((error) => {
+          if (
+            error.response &&
+            error.response.status === 400 &&
+            error.response.data &&
+            error.response.data.message === "Printer not ready"
+          ) {
+            this.message_error = error.response.data.message;
+            this.snackbar = true;
+          } else {
+            // handle other errors
+            this.message_error = error.message || "Printing error";
+            this.snackbar = true;
+          }
+        });
+    },
     getPack() {
       this.message = "";
       this.error = null;
