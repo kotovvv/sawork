@@ -84,8 +84,9 @@ class Kernel extends ConsoleKernel
                     });
                 }
             })->dailyAt('03:00');
+
+            $schedule->exec('find /var/www/fulstor/storage/app/public/pdf -type f -delete')->dailyAt('04:00');
         }
-        $schedule->exec('find /var/www/fulstor/storage/app/public/pdf -type f -delete')->dailyAt('04:00');
     }
 
     /**
