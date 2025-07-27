@@ -67,9 +67,7 @@
           <template v-slot:item.TotalM3="{ item }"
             >{{ parseFloat(item.TotalM3).toFixed(4) }} m³</template
           >
-          <template v-slot:item.avgTime="{ item }"
-            >{{ item.avgTime }} min</template
-          >
+          <template v-slot:item.avgTime="{ item }">{{ item.avgTime }}</template>
         </v-data-table>
         <v-dialog v-model="detailsDialog" max-width="1200px">
           <v-card>
@@ -95,7 +93,7 @@
                   {{ parseFloat(item.TotalM3).toFixed(4) }} m³
                 </template>
                 <template v-slot:item.minutes_to_pack="{ item }">
-                  {{ item.minutes_to_pack }} min
+                  {{ item.minutes_to_pack }}
                 </template>
               </v-data-table>
             </v-card-text>
@@ -180,7 +178,7 @@ export default {
             TotalQuantity: parseFloat(item.TotalQuantity),
             TotalWeight: parseFloat(item.TotalWeight),
             TotalM3: parseFloat(item.TotalM3),
-            avgTime: item.minutes_to_pack || 0,
+            avgTime: parseFloat(item.minutes_to_pack) || 0,
             OrderCount: 1,
           });
         }
