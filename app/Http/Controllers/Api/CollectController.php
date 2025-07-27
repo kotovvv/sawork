@@ -1484,7 +1484,7 @@ class CollectController extends Controller
                     CASE
                         WHEN ttn IS NOT NULL THEN
                             TIMESTAMPDIFF(MINUTE,
-                                Date,
+                                date_pack,
                                 STR_TO_DATE(
                                     SUBSTRING_INDEX(
                                         SUBSTRING_INDEX(ttn, '\"lastUpdate\":\"', -1),
