@@ -551,7 +551,6 @@ export default {
           }
         });
     },
-    //TODO: goto BL get label and print
     printTTN(ttnNumber) {
       axios
         .post("/api/print", {
