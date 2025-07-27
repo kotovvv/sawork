@@ -47,7 +47,7 @@ class PrintController extends Controller
             $order = $request->order;
 
             $OrdersTempString7 = DB::table('Orders')->where('IDOrder', $order['IDOrder'])->value('_OrdersTempString7');
-            $notprint = in_array($OrdersTempString7, ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka.']) || $order['IDWarehouse'] == 22;
+            $notprint = in_array($OrdersTempString7, ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka.']) || $order['IDWarehouse'] == '22';
             if ($notprint) {
                 Log::info("Order {$order['IDOrder']} not printed due to condition {$OrdersTempString7}");
                 return response()->json(['status' => 'ok', 'message' => 'NIE MA FAKTURY ' . $OrdersTempString7, 'nofaktura' => 'NIE MA FAKTURY ' . $OrdersTempString7], 200);

@@ -166,7 +166,13 @@ export default {
           existing.TotalQuantity += parseFloat(item.TotalQuantity);
           existing.TotalWeight += parseFloat(item.TotalWeight);
           existing.TotalM3 += parseFloat(item.TotalM3);
-          existing.avgTime += item.minutes_to_pack;
+          existing.totalMinutes =
+            (existing.totalMinutes || existing.avgTime || 0) +
+            (parseFloat(item.minutes_to_pack) || 0);
+          existing.avgTime = (
+            existing.totalMinutes /
+            (existing.OrderCount + 1)
+          ).toFixed(1);
           existing.OrderCount += 1;
         } else {
           result.push({
@@ -174,7 +180,7 @@ export default {
             TotalQuantity: parseFloat(item.TotalQuantity),
             TotalWeight: parseFloat(item.TotalWeight),
             TotalM3: parseFloat(item.TotalM3),
-            avgTime: item.minutes_to_pack,
+            avgTime: item.minutes_to_pack || 0,
             OrderCount: 1,
           });
         }

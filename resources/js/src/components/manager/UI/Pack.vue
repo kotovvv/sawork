@@ -517,7 +517,12 @@ export default {
         })
         .then((response) => {
           this.message = response.data.message;
-          if (response.data.nofaktura != "") {
+          console.log("Print response:", response.data);
+          if (
+            response.data.hasOwnProperty("nofaktura") &&
+            response.data.nofaktura !== null &&
+            response.data.nofaktura !== ""
+          ) {
             // Play custom sound file for successful invoice
             const audio = new Audio("/sound/nofaktur.m4a");
             audio.play().catch((error) => {
