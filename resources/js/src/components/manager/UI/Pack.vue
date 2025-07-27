@@ -518,20 +518,25 @@ export default {
         .then((response) => {
           this.message = response.data.message;
           if (response.data.nofaktura != "") {
-            // Play sound for successful invoice
-            if (typeof window !== "undefined" && window.AudioContext) {
-              const ctx = new (window.AudioContext ||
-                window.webkitAudioContext)();
-              const oscillator = ctx.createOscillator();
-              oscillator.type = "sine";
-              oscillator.frequency.setValueAtTime(1320, ctx.currentTime); // Higher pitch for success
-              oscillator.connect(ctx.destination);
-              oscillator.start();
-              setTimeout(() => {
-                oscillator.stop();
-                ctx.close();
-              }, 300); // Longer beep for success
-            }
+            // Play custom sound file for successful invoice
+            const audio = new Audio("/sound/nofaktur.m4a");
+            audio.play().catch((error) => {
+              console.log("Audio playback failed:", error);
+              // Fallback to beep sound if audio file fails to play
+              if (typeof window !== "undefined" && window.AudioContext) {
+                const ctx = new (window.AudioContext ||
+                  window.webkitAudioContext)();
+                const oscillator = ctx.createOscillator();
+                oscillator.type = "sine";
+                oscillator.frequency.setValueAtTime(1320, ctx.currentTime);
+                oscillator.connect(ctx.destination);
+                oscillator.start();
+                setTimeout(() => {
+                  oscillator.stop();
+                  ctx.close();
+                }, 300);
+              }
+            });
           }
           // handle success if needed
         })

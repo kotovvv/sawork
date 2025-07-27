@@ -50,7 +50,7 @@ class PrintController extends Controller
             $notprint = in_array($OrdersTempString7, ['personal_Product replacement', 'personal_Blogger', 'personal_Reklamacja, ponowna wysyłka.']) || $order['IDWarehouse'] == 22;
             if ($notprint) {
                 Log::info("Order {$order['IDOrder']} not printed due to condition {$OrdersTempString7}");
-                return response()->json(['status' => 'ok', 'message' => $OrdersTempString7 . ' nie ma faktury', 'nofaktura' => $OrdersTempString7 . ' nie ma faktury'], 200);
+                return response()->json(['status' => 'ok', 'message' => 'NIE MA FAKTURY ' . $OrdersTempString7, 'nofaktura' => 'NIE MA FAKTURY ' . $OrdersTempString7], 200);
             }
             if (empty($order['invoice_number'])) {
                 Log::info("Order {$order['IDOrder']} has no invoice number.");

@@ -1315,7 +1315,7 @@ class CollectController extends Controller
         if (!$showInOrder) {
             // If 'date_pack' is null, set it to the current date
             $collect = Collect::query()->where('IDOrder', $IDOrder)->first();
-            if ($collect && is_null($collect->date_pack)) {
+            if ($collect && is_null($collect->ttn)) {
                 $collect->date_pack = Carbon::now();
                 $collect->save();
             }
@@ -1489,16 +1489,18 @@ class CollectController extends Controller
             DB::raw("
                     CASE
                         WHEN ttn IS NOT NULL THEN
-                            TIMESTAMPDIFF(MINUTE,
-                                date_pack,
-                                STR_TO_DATE(
-                                    SUBSTRING_INDEX(
-                                        SUBSTRING_INDEX(ttn, '\"lastUpdate\":\"', -1),
-                                        '\"',
-                                        1
-                                    ),
-                                    '%Y-%m-%d %H:%i:%s'
-                                )
+                            ROUND(
+                                TIMESTAMPDIFF(MICROSECOND,
+                                    date_pack,
+                                    STR_TO_DATE(
+                                        SUBSTRING_INDEX(
+                                            SUBSTRING_INDEX(ttn, '\"lastUpdate\":\"', -1),
+                                            '\"',
+                                            1
+                                        ),
+                                        '%Y-%m-%d %H:%i:%s'
+                                    )
+                                ) / 60000000, 1
                             )
                         ELSE NULL
                     END as minutes_to_pack
