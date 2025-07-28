@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\PrintController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ForTTNController;
 use App\Http\Controllers\Api\BaseLinkerController;
+use App\Http\Controllers\Api\DMController;
 
 /*
 |--------------------------------------------------------------------------
@@ -124,4 +125,6 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('getTTN', [ForTTNController::class, 'getTTN']);
 
     Route::get('importSingleOrder/{warehouseId}/{orderId}', [\App\Http\Controllers\Api\importBLController::class, 'importSingleOrder']);
+    Route::post('checkDMProducts', [\App\Http\Controllers\Api\DMController::class, 'checkProducts']);
+    Route::post('createDMDocument', [\App\Http\Controllers\Api\DMController::class, 'createDocument']);
 });
