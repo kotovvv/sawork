@@ -45,7 +45,6 @@
           <p>Loaded {{ table.length }} rows</p>
           <p v-if="table.length > 0">Columns: {{ table[0].length }}</p>
           <div class="d-flex gap-2">
-            <v-btn color="primary" @click="makeJson"> Make JSON </v-btn>
             <v-btn
               color="orange"
               @click="validateProducts"
@@ -144,7 +143,11 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(item, ix) in table" :key="ix">
+              <tr
+                v-for="(item, ix) in table"
+                :key="ix"
+                :class="getRowClass(ix)"
+              >
                 <td v-for="(it, i) in item" :key="i">{{ it }}</td>
               </tr>
             </tbody>
@@ -181,6 +184,7 @@ export default {
 
     validationResults: null,
     documentCreated: null,
+    rowHighlights: [], // Array to store row highlighting info
   }),
 
   mounted() {
@@ -191,6 +195,7 @@ export default {
     IDWarehouse() {
       this.validationResults = null;
       this.documentCreated = null;
+      this.rowHighlights = []; // Clear highlights when warehouse changes
     },
   },
 
@@ -210,24 +215,6 @@ export default {
   },
 
   methods: {
-    makeJson() {
-      if (this.table.length) {
-        const result = [];
-        for (let i = 1; i < this.table.length; i++) {
-          const row = {};
-          for (let j = 0; j < this.header.length; j++) {
-            if (this.header[j]) {
-              row[this.header[j]] = this.table[i][j];
-            }
-          }
-          result.push(row);
-        }
-        console.log(result);
-        this.message = "JSON created in console";
-        this.snackbar = true;
-      }
-    },
-
     async validateProducts() {
       if (!this.canValidate) {
         this.message =
@@ -248,71 +235,17 @@ export default {
           return;
         }
 
-        // Use robust sanitization for JSON serialization
-        const cleanedProducts = products.map((product, index) => {
-          try {
-            return this.sanitizeForJson(product);
-          } catch (error) {
-            console.warn(`Error sanitizing product ${index}:`, error);
-            // Fallback to ultra cleaning
-            const fallbackProduct = {};
-            Object.keys(product).forEach((key) => {
-              fallbackProduct[key] = this.ultraCleanString(
-                String(product[key] || "")
-              );
-            });
-            return fallbackProduct;
-          }
-        });
-
-        console.log("Sending sanitized products to API:", cleanedProducts);
-
-        // Test JSON serialization before sending
-        let finalCleanedProducts = cleanedProducts;
-        try {
-          JSON.stringify(finalCleanedProducts);
-          console.log("JSON serialization test passed");
-        } catch (jsonError) {
-          console.error("JSON serialization failed:", jsonError);
-          console.warn("Applying emergency super cleaning to all data");
-
-          // Emergency fallback: apply super cleaning to everything
-          finalCleanedProducts = products.map((product, index) => {
-            const emergencyProduct = {};
-            Object.keys(product).forEach((key) => {
-              const cleanKey = this.superCleanString(key);
-              const cleanValue = this.superCleanString(
-                String(product[key] || "")
-              );
-              if (cleanKey) {
-                emergencyProduct[cleanKey] = cleanValue;
-              }
-            });
-            return emergencyProduct;
-          });
-
-          // Test emergency cleaned data
-          try {
-            JSON.stringify(finalCleanedProducts);
-            console.log(
-              "Emergency cleaning successful, using super cleaned data"
-            );
-          } catch (emergencyError) {
-            console.error("Even emergency cleaning failed:", emergencyError);
-            throw new Error(
-              "Data contains characters that cannot be serialized to JSON even after aggressive cleaning"
-            );
-          }
-        }
-
         const response = await axios.post("/api/checkDMProducts", {
           IDWarehouse: this.IDWarehouse,
-          products: finalCleanedProducts,
+          products: products,
         });
 
         if (response.data.status === "success") {
           this.validationResults = response.data;
           this.message = "Walidacja zakończona pomyślnie";
+
+          // Process validation results for row highlighting
+          this.processValidationResults();
         } else {
           this.message = response.data.message || "Błąd podczas walidacji";
         }
@@ -320,31 +253,16 @@ export default {
         this.snackbar = true;
       } catch (error) {
         console.error("Validation error:", error);
-        let errorMessage = "Błąd podczas walidacji produktów";
-
-        if (error.message && error.message.includes("cannot be serialized")) {
-          errorMessage =
-            "Dane zawierają nieprawidłowe znaki. Sprawdź czy plik Excel zawiera tylko prawidłowe znaki tekstowe.";
-        } else if (
+        this.message = "Błąd podczas walidacji produktów";
+        if (
           error.response &&
           error.response.data &&
           error.response.data.message
         ) {
-          errorMessage = error.response.data.message;
-
-          // Handle specific UTF-8 error
-          if (
-            errorMessage.includes("Malformed UTF-8") ||
-            errorMessage.includes("incorrectly encoded")
-          ) {
-            errorMessage =
-              "Błąd kodowania znaków. Spróbuj zapisać plik Excel ponownie lub usuń specjalne znaki.";
-          }
+          this.message = error.response.data.message;
         } else if (error.message) {
-          errorMessage += ": " + error.message;
+          this.message += ": " + error.message;
         }
-
-        this.message = errorMessage;
         this.snackbar = true;
       } finally {
         this.validating = false;
@@ -363,69 +281,11 @@ export default {
       try {
         const products = this.getProductsFromTable();
 
-        // Use robust sanitization for JSON serialization
-        const cleanedProducts = products.map((product, index) => {
-          try {
-            return this.sanitizeForJson(product);
-          } catch (error) {
-            console.warn(`Error sanitizing product ${index}:`, error);
-            // Fallback to ultra cleaning
-            const fallbackProduct = {};
-            Object.keys(product).forEach((key) => {
-              fallbackProduct[key] = this.ultraCleanString(
-                String(product[key] || "")
-              );
-            });
-            return fallbackProduct;
-          }
-        });
-
-        console.log(
-          "Sending sanitized products for document creation:",
-          cleanedProducts
-        );
-
-        // Test JSON serialization before sending
-        let finalCleanedProducts = cleanedProducts;
-        try {
-          JSON.stringify(finalCleanedProducts);
-          console.log("JSON serialization test passed");
-        } catch (jsonError) {
-          console.error("JSON serialization failed:", jsonError);
-          console.warn("Applying emergency super cleaning to all data");
-
-          // Emergency fallback: apply super cleaning to everything
-          finalCleanedProducts = products.map((product, index) => {
-            const emergencyProduct = {};
-            Object.keys(product).forEach((key) => {
-              const cleanKey = this.superCleanString(key);
-              const cleanValue = this.superCleanString(
-                String(product[key] || "")
-              );
-              if (cleanKey) {
-                emergencyProduct[cleanKey] = cleanValue;
-              }
-            });
-            return emergencyProduct;
-          });
-
-          // Test emergency cleaned data
-          try {
-            JSON.stringify(finalCleanedProducts);
-            console.log(
-              "Emergency cleaning successful, using super cleaned data"
-            );
-          } catch (emergencyError) {
-            console.error("Even emergency cleaning failed:", emergencyError);
-            throw new Error(
-              "Data contains characters that cannot be serialized to JSON even after aggressive cleaning"
-            );
-          }
-        }
+        console.log("Sending products for document creation:", products);
 
         const response = await axios.post("/api/createDMDocument", {
           IDWarehouse: this.IDWarehouse,
-          products: finalCleanedProducts,
+          products: products,
           existing_products: this.validationResults.existing_products,
           new_products: this.validationResults.new_products,
           missing_units: this.validationResults.missing_units,
@@ -462,13 +322,9 @@ export default {
           if (this.header[j]) {
             let cellValue = this.table[i][j];
 
-            // Ensure all values are properly cleaned and converted to strings
+            // Ensure all values are properly converted to strings
             if (cellValue !== null && cellValue !== undefined) {
-              // Convert to string and clean
               cellValue = String(cellValue).trim();
-
-              // Additional UTF-8 cleaning
-              cellValue = this.ultraCleanString(cellValue);
             } else {
               cellValue = "";
             }
@@ -479,143 +335,60 @@ export default {
         products.push(row);
       }
 
-      console.log("Products prepared for API:", products);
       return products;
     },
 
-    // Ultra-aggressive UTF-8 cleaning - fallback to ASCII only if needed
-    ultraCleanString(str) {
-      if (typeof str !== "string") {
-        str = String(str);
-      }
+    processValidationResults() {
+      // Initialize highlights array
+      this.rowHighlights = new Array(this.table.length).fill("");
 
-      try {
-        // First attempt: standard cleaning
-        let cleaned = this.cleanUtf8String(str);
+      if (!this.validationResults) return;
 
-        // Test if it can be JSON serialized
-        JSON.stringify(cleaned);
-        return cleaned;
-      } catch (e) {
-        console.warn(
-          "Standard UTF-8 cleaning failed, using ASCII-only fallback:",
-          e
-        );
-
-        // Fallback: Keep only basic ASCII characters and common symbols
-        // Allow letters, numbers, spaces, and basic punctuation
-        return str
-          .replace(/[^\x20-\x7E]/g, "")
-          .replace(/[^\w\s\-.,!?()]/g, "")
-          .trim();
-      }
-    },
-
-    // Most aggressive cleaning - removes everything except alphanumeric and spaces
-    superCleanString(str) {
-      if (typeof str !== "string") {
-        str = String(str);
-      }
-
-      // Keep only letters, numbers, spaces, and basic punctuation
-      return str
-        .replace(/[^a-zA-Z0-9\s\-.,]/g, "")
-        .replace(/\s+/g, " ")
-        .trim();
-    },
-
-    cleanUtf8String(str) {
-      if (typeof str !== "string") {
-        str = String(str);
-      }
-
-      try {
-        // First, try to encode and decode to catch encoding issues
-        str = decodeURIComponent(encodeURIComponent(str));
-      } catch (e) {
-        // If that fails, use more aggressive cleaning
-        console.warn(
-          "UTF-8 encoding issue detected, applying aggressive cleaning:",
-          e
-        );
-      }
-
-      return (
-        str
-          // Remove null bytes and control characters
-          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
-          // Remove invalid UTF-8 sequences (surrogate pairs)
-          .replace(/[\uD800-\uDFFF]/g, "")
-          // Remove zero-width characters
-          .replace(/[\u200B-\u200D\uFEFF]/g, "")
-          // Remove BOM characters
-          .replace(/[\uFEFF\uFFFE]/g, "")
-          // Replace any remaining problematic characters with empty string
-          .replace(/\uFFFD/g, "") // Replacement character
-          // Normalize whitespace
-          .replace(/\s+/g, " ")
-          .trim()
-      );
-    },
-
-    // Robust JSON-safe data cleaning
-    sanitizeForJson(obj) {
-      if (obj === null || obj === undefined) {
-        return "";
-      }
-
-      if (typeof obj === "string") {
-        try {
-          const cleaned = this.ultraCleanString(obj);
-          // Test JSON serialization
-          JSON.stringify(cleaned);
-          return cleaned;
-        } catch (e) {
-          console.warn("Ultra clean failed, using super clean:", e);
-          return this.superCleanString(obj);
-        }
-      }
-
-      if (typeof obj === "number") {
-        if (isNaN(obj) || !isFinite(obj)) {
-          return "";
-        }
-        try {
-          const cleaned = this.ultraCleanString(obj.toString());
-          JSON.stringify(cleaned);
-          return cleaned;
-        } catch (e) {
-          return this.superCleanString(obj.toString());
-        }
-      }
-
-      if (typeof obj === "boolean") {
-        return obj.toString();
-      }
-
-      if (Array.isArray(obj)) {
-        return obj.map((item) => this.sanitizeForJson(item));
-      }
-
-      if (typeof obj === "object") {
-        const cleaned = {};
-        Object.keys(obj).forEach((key) => {
-          const cleanKey = this.superCleanString(key); // Use super clean for keys
-          if (cleanKey) {
-            // Only include keys that aren't empty after cleaning
-            cleaned[cleanKey] = this.sanitizeForJson(obj[key]);
+      // Process existing products (green/salad color)
+      if (this.validationResults.existing_products) {
+        this.validationResults.existing_products.forEach((product) => {
+          const rowIndex = product.row_number; // row_number is 1-based, but we need 0-based for array
+          if (rowIndex && rowIndex < this.rowHighlights.length) {
+            this.rowHighlights[rowIndex] = "existing-product";
           }
         });
-        return cleaned;
       }
 
-      try {
-        const cleaned = this.ultraCleanString(String(obj));
-        JSON.stringify(cleaned);
-        return cleaned;
-      } catch (e) {
-        return this.superCleanString(String(obj));
+      // Process new products (pink color)
+      if (this.validationResults.new_products) {
+        this.validationResults.new_products.forEach((product) => {
+          const rowIndex = product.row_number;
+          if (rowIndex && rowIndex < this.rowHighlights.length) {
+            this.rowHighlights[rowIndex] = "new-product";
+          }
+        });
       }
+
+      // Process error products (yellow color)
+      // We need to determine which rows have errors by checking the error messages
+      if (
+        this.validationResults.errors &&
+        this.validationResults.errors.length > 0
+      ) {
+        this.validationResults.errors.forEach((error) => {
+          // Extract row number from error message (format: "Wiersz X: ...")
+          const match = error.match(/Wiersz (\d+):/);
+          if (match) {
+            const rowNumber = parseInt(match[1]);
+            if (rowNumber && rowNumber < this.rowHighlights.length) {
+              this.rowHighlights[rowNumber] = "error-product";
+            }
+          }
+        });
+      }
+    },
+
+    getRowClass(rowIndex) {
+      // Skip header row (index 0)
+      if (rowIndex === 0) return "";
+
+      const highlight = this.rowHighlights[rowIndex];
+      return highlight || "";
     },
 
     cleanTableData(data) {
@@ -639,8 +412,7 @@ export default {
       return data.map((row, rowIndex) => {
         return row.map((cell, cellIndex) => {
           if (typeof cell === "string") {
-            // Remove null bytes and other problematic characters
-            return this.ultraCleanString(cell);
+            return cell.trim();
           } else if (typeof cell === "number") {
             const cellStr = cell.toString();
 
@@ -681,13 +453,13 @@ export default {
                 );
 
                 // Ensure the result is a clean string
-                fullNumber = this.ultraCleanString(String(fullNumber));
+                fullNumber = String(fullNumber).trim();
               } catch (e) {
                 console.warn(
                   `Failed to convert scientific notation ${cellStr}:`,
                   e
                 );
-                fullNumber = this.ultraCleanString(cellStr);
+                fullNumber = cellStr.trim();
               }
 
               // Check if it looks like an EAN (8-14 digits) or if it's in an EAN column
@@ -709,14 +481,14 @@ export default {
               (cellStr.length >= 8 && /^\d+$/.test(cellStr)) ||
               eanColumnIndexes.includes(cellIndex)
             ) {
-              return this.ultraCleanString(cellStr);
+              return cellStr.trim();
             }
 
-            return this.ultraCleanString(cell.toString());
+            return cell.toString().trim();
           }
 
-          // For any other type, convert to string and clean
-          return this.ultraCleanString(String(cell || ""));
+          // For any other type, convert to string
+          return String(cell || "").trim();
         });
       });
     },
@@ -728,6 +500,7 @@ export default {
       this.headerSelection = [];
       this.validationResults = null;
       this.documentCreated = null;
+      this.rowHighlights = []; // Clear highlights
     },
 
     getWarehouse() {
@@ -818,6 +591,7 @@ export default {
               vm.table = vm.cleanTableData(vm.table);
 
               vm.headerSelection = new Array(vm.table[0]?.length || 0).fill("");
+              vm.rowHighlights = new Array(vm.table.length).fill(""); // Initialize highlights
               console.log("Loaded table data:", vm.table);
               console.log("Table length:", vm.table.length);
 
@@ -905,5 +679,18 @@ export default {
 }
 .gap-2 {
   gap: 8px;
+}
+
+/* Row highlighting styles */
+.existing-product {
+  background-color: #c8e6c9 !important; /* Light green/salad */
+}
+
+.new-product {
+  background-color: #f8bbd9 !important; /* Pink */
+}
+
+.error-product {
+  background-color: #fff9c4 !important; /* Yellow */
 }
 </style>

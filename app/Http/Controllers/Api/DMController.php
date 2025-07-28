@@ -28,15 +28,7 @@ class DMController extends Controller
                 'sample_product' => $products[0] ?? null
             ]);
 
-            // Check for encoding issues in raw data
-            $rawJson = $request->getContent();
-            if (!mb_check_encoding($rawJson, 'UTF-8')) {
-                Log::warning('Request content is not valid UTF-8');
-                throw new Exception('Request data contains invalid UTF-8 characters');
-            }
 
-            // Clean and validate UTF-8 encoding for all product data
-            $products = $this->cleanUtf8Data($products);
 
             $response = [
                 'status' => 'success',
@@ -85,9 +77,8 @@ class DMController extends Controller
                 }
             }
 
-            return response()->json($response, 200, [
-                'Content-Type' => 'application/json; charset=utf-8'
-            ]);
+
+            return response()->json($response);
         } catch (Exception $e) {
             Log::error('Error in checkProducts: ' . $e->getMessage(), [
                 'file' => $e->getFile(),
@@ -98,9 +89,7 @@ class DMController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Błąd podczas sprawdzania produktów: ' . $e->getMessage()
-            ], 500, [
-                'Content-Type' => 'application/json; charset=utf-8'
-            ]);
+            ], 500);
         }
     }
 
@@ -109,14 +98,12 @@ class DMController extends Controller
      */
     public function createDocument(Request $request)
     {
+        $userId = $request->user()->IDUzytkownika ?? 1; // Default to 1 if not authenticated
         try {
             $data = $request->all();
             $IDWarehouse = $data['IDWarehouse'];
             $products = $data['products'];
-            $userId = $data['user_id'] ?? 1;
 
-            // Clean and validate UTF-8 encoding for all product data
-            $products = $this->cleanUtf8Data($products);
 
             DB::beginTransaction();
 
@@ -136,7 +123,7 @@ class DMController extends Controller
             // Create DM document
             $documentNumber = $this->generateDocumentNumber($IDWarehouse);
 
-            $documentId = DB::table('RuchMagazynowy')->insertGetId([
+            DB::table('RuchMagazynowy')->insert([
                 'Data' => Carbon::now(),
                 'Uwagi' => 'Dostawa do magazynu - import z Excel',
                 'IDRodzajuRuchuMagazynowego' => 200, // DM document type
@@ -145,9 +132,16 @@ class DMController extends Controller
                 'IDUzytkownika' => $userId,
                 'Utworzono' => Carbon::now(),
                 'Zmodyfikowano' => Carbon::now(),
+                'IDCompany' => 1,
+                'IDRodzajuTransportu' => 0,
                 'Operator' => 0
             ]);
-
+            $documentId = DB::table('RuchMagazynowy')
+                ->where('NrDokumentu', $documentNumber)
+                ->value('IDRuchuMagazynowego');
+            if (!$documentId) {
+                throw new Exception("Nie udało się utworzyć dokumentu DM");
+            }
             // Add products to document
             foreach ($products as $index => $product) {
                 // Skip empty rows
@@ -196,8 +190,6 @@ class DMController extends Controller
                 'document_id' => $documentId,
                 'document_number' => $documentNumber,
                 'message' => 'Dokument DM został utworzony pomyślnie'
-            ], 200, [
-                'Content-Type' => 'application/json; charset=utf-8'
             ]);
         } catch (Exception $e) {
             DB::rollBack();
@@ -205,9 +197,7 @@ class DMController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Błąd podczas tworzenia dokumentu: ' . $e->getMessage()
-            ], 500, [
-                'Content-Type' => 'application/json; charset=utf-8'
-            ]);
+            ], 500);
         }
     }
 
@@ -235,7 +225,7 @@ class DMController extends Controller
             $result['errors'][] = "Wiersz {$rowNumber}: Brak EAN i SKU - wymagany przynajmniej jeden";
         }
 
-        if (empty($product['Ilość']) || !is_numeric($product['Ilość'])) {
+        if (empty($product['Ilość'])) {
             $result['errors'][] = "Wiersz {$rowNumber}: Nieprawidłowa ilość";
         }
 
@@ -260,6 +250,7 @@ class DMController extends Controller
     private function findProductByEanOrSku($product, $IDWarehouse)
     {
         $query = DB::table('Towar')
+            ->select('IDTowaru', 'Nazwa', 'KodKreskowy', '_TowarTempString1', '_TowarTempDecimal1', '_TowarTempDecimal3', '_TowarTempDecimal4', '_TowarTempDecimal5')
             ->where('IDMagazynu', $IDWarehouse);
 
         // Check by EAN first (primary key)
@@ -296,7 +287,7 @@ class DMController extends Controller
             }
         }
 
-        $productId = DB::table('Towar')->insertGetId([
+        DB::table('Towar')->insert([
             'Nazwa' => $product['Nazwa'],
             'KodKreskowy' => $product['EAN'] ?? '',
             'IDJednostkiMiary' => $unitId,
@@ -317,8 +308,14 @@ class DMController extends Controller
             '_TowarTempDecimal3' => floatval($product['Długość (cm)'] ?? 0), // Length
             '_TowarTempDecimal4' => floatval($product['Szerokość (cm)'] ?? 0), // Width
             '_TowarTempDecimal5' => floatval($product['Wysokość (cm)'] ?? 0), // Height
+            'Uwagi' => $product['Informacje dodatkowe'] ?? '',
         ]);
-
+        $productId = DB::table('Towar')
+            ->where('KodKreskowy', $product['EAN'])
+            ->value('IDTowaru');
+        if (!$productId) {
+            throw new Exception("Nie udało się utworzyć produktu: {$product['Nazwa']} (EAN: {$product['EAN']})");
+        }
         // Calculate volume (m3)
         $length = floatval($product['Długość (cm)'] ?? 0);
         $width = floatval($product['Szerokość (cm)'] ?? 0);
@@ -328,7 +325,7 @@ class DMController extends Controller
             $volume = ($length * $width * $height) / 1000000; // Convert cm³ to m³
             DB::table('Towar')
                 ->where('IDTowaru', $productId)
-                ->update(['_TowarTempDecimal2' => $volume]);
+                ->update(['_TowarTempDecimal2' => number_format($volume, 6, '.', '')]);
         }
 
         return [
@@ -348,12 +345,16 @@ class DMController extends Controller
             ->first();
 
         if (!$defaultGroup) {
-            $groupId = DB::table('GrupyTowarow')->insertGetId([
+            DB::table('GrupyTowarow')->insert([
                 'Nazwa' => 'default',
                 'IDMagazynu' => $IDWarehouse,
                 'Utworzono' => Carbon::now(),
                 'Zmodyfikowano' => Carbon::now()
             ]);
+            $groupId = DB::table('GrupyTowarow')
+                ->where('IDMagazynu', $IDWarehouse)
+                ->where('Nazwa', 'default')
+                ->value('IDGrupyTowarow');
             return $groupId;
         }
 
@@ -406,83 +407,5 @@ class DMController extends Controller
             return str_replace('%', '1', $pattern);
         }
         return str_replace('%', $res + 1, $pattern);
-    }
-
-    /**
-     * Clean UTF-8 data and handle encoding issues
-     */
-    private function cleanUtf8Data($data)
-    {
-        if (is_array($data)) {
-            $cleaned = [];
-            foreach ($data as $key => $value) {
-                $cleanedKey = $this->cleanUtf8String($key);
-                $cleanedValue = $this->cleanUtf8Data($value);
-                $cleaned[$cleanedKey] = $cleanedValue;
-            }
-            return $cleaned;
-        } elseif (is_string($data)) {
-            return $this->cleanUtf8String($data);
-        } else {
-            return $data;
-        }
-    }
-
-    /**
-     * Clean individual UTF-8 string
-     */
-    private function cleanUtf8String($string)
-    {
-        if (!is_string($string)) {
-            return $string;
-        }
-
-        // More aggressive UTF-8 cleaning to prevent malformed errors
-        try {
-            // First try to detect and fix encoding
-            if (!mb_check_encoding($string, 'UTF-8')) {
-                Log::warning('Non-UTF-8 string detected, attempting conversion', ['original' => $string]);
-
-                // Try to convert from common encodings
-                $encodings = ['Windows-1252', 'ISO-8859-1', 'CP1252', 'UTF-8'];
-                foreach ($encodings as $encoding) {
-                    $converted = @iconv($encoding, 'UTF-8//IGNORE', $string);
-                    if ($converted !== false && mb_check_encoding($converted, 'UTF-8')) {
-                        $string = $converted;
-                        break;
-                    }
-                }
-            }
-
-            // Remove or replace invalid UTF-8 sequences
-            $string = mb_convert_encoding($string, 'UTF-8', 'UTF-8');
-
-            // Remove null bytes and other problematic characters
-            $string = preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $string);
-
-            // Remove BOM and other problematic characters
-            $string = str_replace(["\0", "\x00", "\xEF\xBB\xBF"], '', $string);
-
-            // Trim whitespace
-            $string = trim($string);
-
-            // Final validation
-            if (!mb_check_encoding($string, 'UTF-8')) {
-                // Last resort: remove all non-printable characters
-                $string = preg_replace('/[^\x20-\x7E\x{00A0}-\x{FFFF}]/u', '', $string);
-
-                // If still invalid, return empty string
-                if (!mb_check_encoding($string, 'UTF-8')) {
-                    Log::warning('Could not fix UTF-8 string, returning empty', ['original' => $string]);
-                    return '';
-                }
-            }
-
-            return $string;
-        } catch (Exception $e) {
-            Log::warning('Exception during UTF-8 cleaning', ['error' => $e->getMessage(), 'string' => $string]);
-            // Return safe fallback
-            return preg_replace('/[^\x20-\x7E]/', '', $string);
-        }
     }
 }
