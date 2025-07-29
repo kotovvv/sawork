@@ -42,9 +42,18 @@ class DMController extends Controller
             // Get or create default product group for warehouse
             $defaultGroupId = $this->getOrCreateDefaultGroup($IDWarehouse);
 
+            // Check if first row contains headers or data
+            $hasHeaders = $this->checkIfFirstRowIsHeaders($products);
+            $startIndex = $hasHeaders ? 1 : 0; // Start from index 1 if headers present, 0 if not
+
             foreach ($products as $index => $product) {
+                // Skip header row if present
+                if ($index < $startIndex) {
+                    continue;
+                }
+
                 // Skip empty rows
-                if (empty($product['Nazwa']) && empty($product['EAN']) && empty($product['SKU'])) {
+                if (empty(trim($product['Nazwa'])) && empty(trim($product['EAN'])) && empty(trim($product['jednostka']))) {
                     continue;
                 }
 
@@ -142,8 +151,18 @@ class DMController extends Controller
             if (!$documentId) {
                 throw new Exception("Nie udało się utworzyć dokumentu DM");
             }
+
+            // Check if first row contains headers or data
+            $hasHeaders = $this->checkIfFirstRowIsHeaders($products);
+            $startIndex = $hasHeaders ? 1 : 0; // Start from index 1 if headers present, 0 if not
+
             // Add products to document
             foreach ($products as $index => $product) {
+                // Skip header row if present
+                if ($index < $startIndex) {
+                    continue;
+                }
+
                 // Skip empty rows
                 if (empty($product['Nazwa']) && empty($product['EAN']) && empty($product['SKU'])) {
                     continue;
@@ -221,8 +240,12 @@ class DMController extends Controller
             $result['errors'][] = "Wiersz {$rowNumber}: Brak nazwy produktu";
         }
 
-        if (empty($product['EAN']) && empty($product['SKU'])) {
-            $result['errors'][] = "Wiersz {$rowNumber}: Brak EAN i SKU - wymagany przynajmniej jeden";
+        if (empty($product['EAN'])) {
+            $result['errors'][] = "Wiersz {$rowNumber}: Brak EAN - pole obowiązkowe";
+        }
+
+        if (empty($product['jednostka'])) {
+            $result['errors'][] = "Wiersz {$rowNumber}: Brak jednostki miary - pole obowiązkowe";
         }
 
         if (empty($product['Ilość'])) {
@@ -285,11 +308,14 @@ class DMController extends Controller
             if ($unit) {
                 $unitId = $unit->IDJednostkiMiary;
             }
+        } else {
+            throw new Exception("Brak jednostki miary dla produktu: {$product['Nazwa']}");
         }
+
 
         DB::table('Towar')->insert([
             'Nazwa' => $product['Nazwa'],
-            'KodKreskowy' => $product['EAN'] ?? '',
+            'KodKreskowy' => trim($product['EAN']),
             'IDJednostkiMiary' => $unitId,
             'IDMagazynu' => $IDWarehouse,
             'IDGrupyTowarow' => $defaultGroupId,
@@ -316,16 +342,29 @@ class DMController extends Controller
         if (!$productId) {
             throw new Exception("Nie udało się utworzyć produktu: {$product['Nazwa']} (EAN: {$product['EAN']})");
         }
-        // Calculate volume (m3)
-        $length = floatval($product['Długość (cm)'] ?? 0);
-        $width = floatval($product['Szerokość (cm)'] ?? 0);
-        $height = floatval($product['Wysokość (cm)'] ?? 0);
 
-        if ($length > 0 && $width > 0 && $height > 0) {
-            $volume = ($length * $width * $height) / 1000000; // Convert cm³ to m³
+        // Handle volume (m3) - priority: direct m3 value, then calculated from dimensions
+        $volumeToSet = null;
+
+        // First check if m3 is directly provided
+        if (!empty($product['m3']) && is_numeric($product['m3'])) {
+            $volumeToSet = floatval($product['m3']);
+        } else {
+            // Calculate volume from dimensions if m3 is not provided
+            $length = floatval($product['Długość (cm)'] ?? 0);
+            $width = floatval($product['Szerokość (cm)'] ?? 0);
+            $height = floatval($product['Wysokość (cm)'] ?? 0);
+
+            if ($length > 0 && $width > 0 && $height > 0) {
+                $volumeToSet = ($length * $width * $height) / 1000000; // Convert cm³ to m³
+            }
+        }
+
+        // Update volume if we have a value to set
+        if ($volumeToSet !== null) {
             DB::table('Towar')
                 ->where('IDTowaru', $productId)
-                ->update(['_TowarTempDecimal2' => number_format($volume, 6, '.', '')]);
+                ->update(['_TowarTempDecimal2' => number_format($volumeToSet, 6, '.', '')]);
         }
 
         return [
@@ -407,5 +446,78 @@ class DMController extends Controller
             return str_replace('%', '1', $pattern);
         }
         return str_replace('%', $res + 1, $pattern);
+    }
+
+    /**
+     * Check if first row contains headers or actual data
+     */
+    private function checkIfFirstRowIsHeaders($products)
+    {
+        if (empty($products) || !isset($products[0])) {
+            return false;
+        }
+
+        $firstRow = $products[0];
+
+        // Common header indicators
+        $headerIndicators = [
+            'Nazwa',
+            'nazwa',
+            'NAZWA',
+            'EAN',
+            'ean',
+            'SKU',
+            'sku',
+            'Ilość',
+            'ilosc',
+            'ILOŚĆ',
+            'ILOSC',
+            'jednostka',
+            'Jednostka',
+            'JEDNOSTKA',
+            'Cena',
+            'cena',
+            'CENA',
+            'Waga',
+            'waga',
+            'WAGA',
+            'Długość',
+            'dlugosc',
+            'DŁUGOŚĆ',
+            'DLUGOSC',
+            'Szerokość',
+            'szerokosc',
+            'SZEROKOŚĆ',
+            'SZEROKOSC',
+            'Wysokość',
+            'wysokosc',
+            'WYSOKOŚĆ',
+            'WYSOKOSC',
+            'm3',
+            'M3',
+            'Informacje',
+            'informacje',
+            'INFORMACJE'
+        ];
+
+        // Check if any field in first row matches header indicators
+        $headerMatches = 0;
+        $totalFields = 0;
+
+        foreach ($firstRow as $field) {
+            $totalFields++;
+            if (is_string($field)) {
+                $field = trim($field);
+                foreach ($headerIndicators as $indicator) {
+                    if (stripos($field, $indicator) !== false) {
+                        $headerMatches++;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // If more than 50% of fields look like headers, consider it a header row
+        return ($totalFields > 0 && ($headerMatches / $totalFields) > 0.5);
     }
 }

@@ -13,7 +13,7 @@
 
     <v-container fluid>
       <v-row>
-        <v-col cols="2">
+        <v-col cols="2" v-if="!$props.IDWarehouse">
           <v-select
             label="Magazyn"
             v-model="IDWarehouse"
@@ -44,6 +44,10 @@
         <v-col cols="12">
           <p>Loaded {{ table.length }} rows</p>
           <p v-if="table.length > 0">Columns: {{ table[0].length }}</p>
+          <p class="text-info mb-2">
+            <strong>Obowiązkowe pola:</strong> Nazwa, EAN, jednostka (oznaczone
+            *)
+          </p>
           <div class="d-flex gap-2">
             <v-btn
               color="orange"
@@ -123,16 +127,17 @@
                     v-model="headerSelection[el - 1]"
                     :items="[
                       '',
-                      'Nazwa',
+                      'Nazwa *',
                       'SKU',
-                      'EAN',
+                      'EAN *',
                       'Ilość',
-                      'jednostka',
+                      'jednostka *',
                       'Cena',
                       'Waga (kg)',
                       'Długość (cm)',
                       'Szerokość (cm)',
                       'Wysokość (cm)',
+                      'm3',
                       'Informacje dodatkowe ',
                     ]"
                     outlined
@@ -165,27 +170,29 @@ import _ from "lodash";
 
 export default {
   name: "FulstorImportXLS",
-  props: ["user"],
-  data: () => ({
-    loading: false,
-    validating: false,
-    creating: false,
+  props: ["user", "IDWarehouse"],
+  data() {
+    return {
+      loading: false,
+      validating: false,
+      creating: false,
 
-    errorMessages: [],
-    message: "",
-    snackbar: false,
+      errorMessages: [],
+      message: "",
+      snackbar: false,
 
-    files: null,
-    table: [],
-    header: [],
-    headerSelection: [],
-    IDWarehouse: null,
-    warehouses: [],
+      files: null,
+      table: [],
+      header: [],
+      headerSelection: [],
+      IDWarehouse: this.IDWarehouse || null,
+      warehouses: [],
 
-    validationResults: null,
-    documentCreated: null,
-    rowHighlights: [], // Array to store row highlighting info
-  }),
+      validationResults: null,
+      documentCreated: null,
+      rowHighlights: [], // Array to store row highlighting info
+    };
+  },
 
   mounted() {
     this.getWarehouse();
@@ -209,7 +216,8 @@ export default {
       return (
         this.validationResults &&
         this.validationResults.errors.length === 0 &&
-        this.validationResults.status === "success"
+        this.validationResults.status === "success" &&
+        this.hasRequiredFields()
       );
     },
   },
@@ -220,6 +228,11 @@ export default {
         this.message =
           "Wybierz magazyn i wczytaj plik Excel z prawidłowymi nagłówkami";
         this.snackbar = true;
+        return;
+      }
+
+      // Check required fields first
+      if (!this.validateRequiredFields()) {
         return;
       }
 
@@ -276,6 +289,11 @@ export default {
         return;
       }
 
+      // Double check required fields
+      if (!this.validateRequiredFields()) {
+        return;
+      }
+
       this.creating = true;
 
       try {
@@ -299,6 +317,9 @@ export default {
           // Clear data after successful creation
           this.clear();
           this.validationResults = null;
+
+          // Emit success event for parent component
+          this.$emit("import-success", response.data);
         } else {
           this.message =
             response.data.message || "Błąd podczas tworzenia dokumentu";
@@ -336,6 +357,28 @@ export default {
       }
 
       return products;
+    },
+
+    hasRequiredFields() {
+      // Check if all required fields are selected in headers
+      const requiredFields = ["Nazwa", "EAN", "jednostka"];
+      return requiredFields.every((field) => this.header.includes(field));
+    },
+
+    validateRequiredFields() {
+      const requiredFields = ["Nazwa", "EAN", "jednostka"];
+      const missingFields = requiredFields.filter(
+        (field) => !this.header.includes(field)
+      );
+
+      if (missingFields.length > 0) {
+        this.message = `Brakujące obowiązkowe pola: ${missingFields.join(
+          ", "
+        )}. Wybierz te pola w nagłówkach tabeli.`;
+        this.snackbar = true;
+        return false;
+      }
+      return true;
     },
 
     processValidationResults() {
@@ -520,7 +563,13 @@ export default {
     },
 
     getheader() {
-      this.header = [...this.headerSelection];
+      // Remove asterisks from selected headers to get clean field names
+      this.header = [...this.headerSelection].map((header) => {
+        if (typeof header === "string" && header.endsWith(" *")) {
+          return header.slice(0, -2); // Remove ' *' from the end
+        }
+        return header;
+      });
       console.log("Header:", this.header);
     },
 
@@ -532,6 +581,10 @@ export default {
       const fileList = event && event.target ? event.target.files : null;
       let file = fileList && fileList.length ? fileList[0] : null;
       if (!file) return;
+
+      // Clear validation results when new file is selected
+      this.validationResults = null;
+      this.rowHighlights = [];
 
       // Check file extension
       const allowedExtensions = [".xlsx", ".xls"];
@@ -673,6 +726,9 @@ export default {
 }
 .text-orange {
   color: orange;
+}
+.text-info {
+  color: #1976d2;
 }
 .d-flex {
   display: flex;
