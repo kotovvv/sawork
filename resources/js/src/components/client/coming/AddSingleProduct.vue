@@ -20,7 +20,7 @@
     <v-form ref="form" v-model="valid">
       <v-container>
         <v-row>
-          <v-col cols="12" md="6">
+          <v-col cols="12" md="4">
             <v-text-field
               v-model="product.Nazwa"
               label="Nazwa towaru *"
@@ -30,12 +30,20 @@
               dense
             ></v-text-field>
           </v-col>
-          <v-col cols="12" md="6">
+          <v-col cols="12" md="4">
             <v-text-field
               v-model="product.EAN"
               label="Kod EAN *"
               required
               :rules="eanRules"
+              outlined
+              dense
+            ></v-text-field>
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-text-field
+              v-model="product.SKU"
+              label="SKU"
               outlined
               dense
             ></v-text-field>
@@ -110,6 +118,53 @@
         </v-row>
 
         <v-row>
+          <v-col cols="12" md="3">
+            <v-text-field
+              v-model="product.waga"
+              label="Waga (kg)"
+              type="number"
+              step="0.001"
+              min="0"
+              outlined
+              dense
+            ></v-text-field>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-text-field
+              v-model="product.dlugosc"
+              label="Długość (cm)"
+              type="number"
+              step="0.1"
+              min="0"
+              outlined
+              dense
+            ></v-text-field>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-text-field
+              v-model="product.szerokosc"
+              label="Szerokość (cm)"
+              type="number"
+              step="0.1"
+              min="0"
+              outlined
+              dense
+            ></v-text-field>
+          </v-col>
+          <v-col cols="12" md="3">
+            <v-text-field
+              v-model="product.wysokosc"
+              label="Wysokość (cm)"
+              type="number"
+              step="0.1"
+              min="0"
+              outlined
+              dense
+            ></v-text-field>
+          </v-col>
+        </v-row>
+
+        <v-row>
           <v-col cols="12">
             <v-textarea
               v-model="product.uwagi"
@@ -162,11 +217,16 @@ export default {
       product: {
         Nazwa: "",
         EAN: "",
+        SKU: "",
         IDGrupyTowarowej: null,
         jednostka: "",
         ilosc: "",
         m3: "",
         cena: "",
+        waga: "",
+        dlugosc: "",
+        szerokosc: "",
+        wysokosc: "",
         uwagi: "",
       },
 
@@ -200,7 +260,9 @@ export default {
   methods: {
     async loadProductGroups() {
       try {
-        const response = await axios.get("/api/getProductGroups");
+        const response = await axios.post("/api/getProductGroups", {
+          IDWarehouse: this.IDWarehouse,
+        });
         if (response.data.status === "success") {
           this.productGroups = response.data.groups;
         }
@@ -235,11 +297,22 @@ export default {
         const productData = {
           Nazwa: this.product.Nazwa.trim(),
           EAN: this.product.EAN.trim(),
+          SKU: this.product.SKU ? this.product.SKU.trim() : "",
           IDGrupyTowarowej: this.product.IDGrupyTowarowej,
           jednostka: this.product.jednostka,
           ilosc: parseFloat(this.product.ilosc),
           m3: this.product.m3 ? parseFloat(this.product.m3) : null,
           cena: this.product.cena ? parseFloat(this.product.cena) : null,
+          "Waga (kg)": this.product.waga ? parseFloat(this.product.waga) : null,
+          "Długość (cm)": this.product.dlugosc
+            ? parseFloat(this.product.dlugosc)
+            : null,
+          "Szerokość (cm)": this.product.szerokosc
+            ? parseFloat(this.product.szerokosc)
+            : null,
+          "Wysokość (cm)": this.product.wysokosc
+            ? parseFloat(this.product.wysokosc)
+            : null,
           uwagi: this.product.uwagi ? this.product.uwagi.trim() : "",
         };
 
@@ -275,11 +348,16 @@ export default {
       this.product = {
         Nazwa: "",
         EAN: "",
+        SKU: "",
         IDGrupyTowarowej: null,
         jednostka: "",
         ilosc: "",
         m3: "",
         cena: "",
+        waga: "",
+        dlugosc: "",
+        szerokosc: "",
+        wysokosc: "",
         uwagi: "",
       };
       this.$refs.form.resetValidation();

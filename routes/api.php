@@ -130,7 +130,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('validateSingleProduct', [\App\Http\Controllers\Api\DMController::class, 'validateSingleProduct']);
     Route::post('createSingleProductDM', [\App\Http\Controllers\Api\DMController::class, 'createSingleProductDM']);
     Route::post('addSingleProductToWarehouse', [\App\Http\Controllers\Api\DMController::class, 'addSingleProductToWarehouse']);
-    Route::get('getProductGroups', [\App\Http\Controllers\Api\DMController::class, 'getProductGroups']);
+    Route::post('getProductGroups', [\App\Http\Controllers\Api\DMController::class, 'getProductGroups']);
     Route::get('getUnits', [\App\Http\Controllers\Api\DMController::class, 'getUnits']);
     Route::post('addProductToDatabase', [\App\Http\Controllers\Api\DMController::class, 'addProductToDatabase']);
 });

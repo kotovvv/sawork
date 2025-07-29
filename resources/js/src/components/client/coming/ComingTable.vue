@@ -53,7 +53,7 @@
           ></v-btn>
           <v-btn
             @click="openAddProductDialog"
-            icon="mdi-plus"
+            icon="mdi-shape-plus"
             color="success"
             class="ml-2"
           ></v-btn>

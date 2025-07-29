@@ -793,9 +793,9 @@ class DMController extends Controller
     public function getProductGroups(Request $request)
     {
         try {
-            $groups = DB::table('GrupaTowarowa')
-                ->select('IDGrupyTowarowej', 'Nazwa')
-                ->where('Aktywny', 1)
+            $groups = DB::table('GrupyTowarow')
+                ->select('IDGrupyTowarow', 'Nazwa')
+                ->where('IDMagazynu', $request->input('IDWarehouse'))
                 ->orderBy('Nazwa')
                 ->get();
 
@@ -818,8 +818,8 @@ class DMController extends Controller
     public function getUnits(Request $request)
     {
         try {
-            $units = DB::table('JednostkaTowarowa')
-                ->select('Nazwa')
+            $units = DB::table('JednostkaMiary')
+                ->select('IDJednostkiMiary', 'Nazwa')
                 ->distinct()
                 ->orderBy('Nazwa')
                 ->get();
@@ -889,6 +889,11 @@ class DMController extends Controller
                         'IDGrupyTowarowej' => $product['IDGrupyTowarowej'],
                         'CenaZakupu' => $product['cena'] ?? 0,
                         'm3' => $product['m3'] ?? null,
+                        '_TowarTempString1' => $product['SKU'] ?? null,
+                        '_TowarTempDecimal1' => $product['waga'] ?? null,
+                        '_TowarTempDecimal3' => $product['dlugosc'] ?? null,
+                        '_TowarTempDecimal4' => $product['szerokosc'] ?? null,
+                        '_TowarTempDecimal5' => $product['wysokosc'] ?? null,
                         'Uwagi' => $product['uwagi'] ?? '',
                         'updated_at' => now()
                     ]);
@@ -900,14 +905,17 @@ class DMController extends Controller
                     'IDGrupyTowarowej' => $product['IDGrupyTowarowej'],
                     'CenaZakupu' => $product['cena'] ?? 0,
                     'm3' => $product['m3'] ?? null,
+                    '_TowarTempString1' => $product['SKU'] ?? null,
+                    '_TowarTempDecimal1' => $product['waga'] ?? null,
+                    '_TowarTempDecimal3' => $product['dlugosc'] ?? null,
+                    '_TowarTempDecimal4' => $product['szerokosc'] ?? null,
+                    '_TowarTempDecimal5' => $product['wysokosc'] ?? null,
                     'Uwagi' => $product['uwagi'] ?? '',
                     'Aktywny' => 1,
                     'created_at' => now(),
                     'updated_at' => now()
                 ]);
-            }
-
-            // Check if unit exists for this product
+            }            // Check if unit exists for this product
             $existingUnit = DB::table('JednostkaTowarowa')
                 ->where('IDTowaru', $IDTowaru)
                 ->where('Nazwa', $product['jednostka'])
