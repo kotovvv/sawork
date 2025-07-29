@@ -520,4 +520,431 @@ class DMController extends Controller
         // If more than 50% of fields look like headers, consider it a header row
         return ($totalFields > 0 && ($headerMatches / $totalFields) > 0.5);
     }
+
+    /**
+     * Validate single product for DM document
+     */
+    public function validateSingleProduct(Request $request)
+    {
+        try {
+            $data = $request->all();
+            $IDWarehouse = $data['IDWarehouse'];
+            $product = $data['product'];
+
+            Log::info('Validating single product', [
+                'IDWarehouse' => $IDWarehouse,
+                'product' => $product
+            ]);
+
+            $response = [
+                'status' => 'success',
+                'message' => 'Produkt jest gotowy do dodania',
+                'product_info' => [
+                    'exists' => false,
+                    'unit_missing' => false
+                ],
+                'validation_data' => []
+            ];
+
+            // Validate required fields
+            $requiredFields = ['Nazwa', 'EAN', 'jednostka', 'ilosc'];
+            foreach ($requiredFields as $field) {
+                if (empty($product[$field])) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Pole '{$field}' jest wymagane"
+                    ]);
+                }
+            }
+
+            // Validate quantity
+            if (!is_numeric($product['ilosc']) || floatval($product['ilosc']) <= 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Ilość musi być liczbą większą od 0'
+                ]);
+            }
+
+            // Get or create default product group for warehouse
+            $defaultGroupId = $this->getOrCreateDefaultGroup($IDWarehouse);
+
+            // Check if product exists
+            $existingProduct = $this->validateProduct($product, $IDWarehouse, 1);
+
+            if ($existingProduct['exists']) {
+                $response['product_info']['exists'] = true;
+                $response['message'] = 'Produkt istnieje w bazie danych i zostanie zaktualizowany';
+            } else {
+                $response['product_info']['exists'] = false;
+                $response['message'] = 'Nowy produkt zostanie utworzony';
+            }
+
+            // Check if unit needs to be created
+            if ($existingProduct['unit_missing']) {
+                $response['product_info']['unit_missing'] = true;
+                $response['message'] .= '. Nowa jednostka zostanie dodana';
+            }
+
+            $response['validation_data'] = $existingProduct;
+
+            return response()->json($response);
+        } catch (Exception $e) {
+            Log::error('Single product validation error: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Błąd podczas walidacji produktu: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Create DM document with single product
+     */
+    public function createSingleProductDM(Request $request)
+    {
+        try {
+            $data = $request->all();
+            $IDWarehouse = $data['IDWarehouse'];
+            $product = $data['product'];
+            $validationResult = $data['validation_result'];
+
+            Log::info('Creating DM document with single product', [
+                'IDWarehouse' => $IDWarehouse,
+                'product' => $product
+            ]);
+
+            DB::beginTransaction();
+
+            // Get or create default product group for warehouse
+            $defaultGroupId = $this->getOrCreateDefaultGroup($IDWarehouse);
+
+            // Create or update product
+            $productResult = $this->createProduct($product, $IDWarehouse, $defaultGroupId);
+
+            if (!$productResult['success']) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Błąd podczas tworzenia produktu: ' . $productResult['message']
+                ]);
+            }
+
+            $IDTowaru = $productResult['IDTowaru'];
+
+            // Create DM document
+            $documentNumber = 'DM-' . date('Y-m-d-H-i-s') . '-' . $IDWarehouse;
+
+            // Insert into RuchMagazynowy
+            $dmId = DB::table('RuchMagazynowy')->insertGetId([
+                'Data' => now(),
+                'IDMagazynu' => $IDWarehouse,
+                'IDRodzajuRuchuMagazynowego' => 1, // DM type
+                'NrDokumentu' => $documentNumber,
+                'WartoscDokumentu' => ($product['cena'] ?? 0) * $product['ilosc'],
+                'Uwagi' => $product['uwagi'] ?? '',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            // Insert into ElementRuchuMagazynowego
+            DB::table('ElementRuchuMagazynowego')->insert([
+                'IDRuchuMagazynowego' => $dmId,
+                'IDTowaru' => $IDTowaru,
+                'Ilosc' => $product['ilosc'],
+                'CenaJednostkowa' => $product['cena'] ?? 0,
+                'WartoscNetto' => ($product['cena'] ?? 0) * $product['ilosc'],
+                'VAT' => $product['VAT'] ?? 23,
+                'm3' => $product['m3'] ?? null,
+                'Uwagi' => $product['uwagi'] ?? '',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+
+            DB::commit();
+
+            Log::info('DM document created successfully', [
+                'document_id' => $dmId,
+                'document_number' => $documentNumber
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Dokument DM został utworzony pomyślnie',
+                'document_id' => $dmId,
+                'document_number' => $documentNumber,
+                'product_id' => $IDTowaru
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Single product DM creation error: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Błąd podczas tworzenia dokumentu DM: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Add single product to warehouse without creating DM document
+     */
+    public function addSingleProductToWarehouse(Request $request)
+    {
+        try {
+            $data = $request->all();
+            $IDWarehouse = $data['IDWarehouse'];
+            $product = $data['product'];
+
+            Log::info('Adding single product to warehouse', [
+                'IDWarehouse' => $IDWarehouse,
+                'product' => $product
+            ]);
+
+            // Validate required fields
+            $requiredFields = ['Nazwa', 'EAN', 'jednostka', 'ilosc'];
+            foreach ($requiredFields as $field) {
+                if (empty($product[$field])) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Pole '{$field}' jest wymagane"
+                    ]);
+                }
+            }
+
+            // Validate quantity
+            if (!is_numeric($product['ilosc']) || floatval($product['ilosc']) <= 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Ilość musi być liczbą większą od 0'
+                ]);
+            }
+
+            DB::beginTransaction();
+
+            // Get or create default product group for warehouse
+            $defaultGroupId = $this->getOrCreateDefaultGroup($IDWarehouse);
+
+            // Create or update product
+            $productResult = $this->createProduct($product, $IDWarehouse, $defaultGroupId);
+
+            if (!$productResult['success']) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Błąd podczas tworzenia produktu: ' . $productResult['message']
+                ]);
+            }
+
+            $IDTowaru = $productResult['IDTowaru'];
+
+            // Update or create product stock information
+            $existingStock = DB::table('StanMagazynowy')
+                ->where('IDMagazynu', $IDWarehouse)
+                ->where('IDTowaru', $IDTowaru)
+                ->first();
+
+            if ($existingStock) {
+                // Update existing stock
+                DB::table('StanMagazynowy')
+                    ->where('IDMagazynu', $IDWarehouse)
+                    ->where('IDTowaru', $IDTowaru)
+                    ->update([
+                        'Ilosc' => DB::raw('Ilosc + ' . $product['ilosc']),
+                        'updated_at' => now()
+                    ]);
+            } else {
+                // Create new stock record
+                DB::table('StanMagazynowy')->insert([
+                    'IDMagazynu' => $IDWarehouse,
+                    'IDTowaru' => $IDTowaru,
+                    'Ilosc' => $product['ilosc'],
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+
+            DB::commit();
+
+            Log::info('Product added to warehouse successfully', [
+                'product_id' => $IDTowaru,
+                'warehouse_id' => $IDWarehouse,
+                'quantity' => $product['ilosc']
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Towar został dodany do magazynu pomyślnie',
+                'product_id' => $IDTowaru,
+                'product_name' => $product['Nazwa'],
+                'quantity_added' => $product['ilosc']
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Single product addition error: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Błąd podczas dodawania towaru: ' . $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get product groups for warehouse
+     */
+    public function getProductGroups(Request $request)
+    {
+        try {
+            $groups = DB::table('GrupaTowarowa')
+                ->select('IDGrupyTowarowej', 'Nazwa')
+                ->where('Aktywny', 1)
+                ->orderBy('Nazwa')
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'groups' => $groups
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error loading product groups: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Błąd podczas ładowania grup towarowych'
+            ]);
+        }
+    }
+
+    /**
+     * Get units for products
+     */
+    public function getUnits(Request $request)
+    {
+        try {
+            $units = DB::table('JednostkaTowarowa')
+                ->select('Nazwa')
+                ->distinct()
+                ->orderBy('Nazwa')
+                ->get();
+
+            return response()->json([
+                'status' => 'success',
+                'units' => $units
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error loading units: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Błąd podczas ładowania jednostek'
+            ]);
+        }
+    }
+
+    /**
+     * Add product to database only (simplified version)
+     */
+    public function addProductToDatabase(Request $request)
+    {
+        try {
+            $data = $request->all();
+            $IDWarehouse = $data['IDWarehouse'];
+            $product = $data['product'];
+
+            Log::info('Adding product to database', [
+                'IDWarehouse' => $IDWarehouse,
+                'product' => $product
+            ]);
+
+            // Validate required fields
+            $requiredFields = ['Nazwa', 'EAN', 'IDGrupyTowarowej', 'jednostka', 'ilosc'];
+            foreach ($requiredFields as $field) {
+                if (empty($product[$field])) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Pole '{$field}' jest wymagane"
+                    ]);
+                }
+            }
+
+            // Validate quantity
+            if (!is_numeric($product['ilosc']) || floatval($product['ilosc']) <= 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Ilość musi być liczbą większą od 0'
+                ]);
+            }
+
+            DB::beginTransaction();
+
+            // Check if product with this EAN already exists
+            $existingProduct = DB::table('Towar')
+                ->where('EAN', $product['EAN'])
+                ->first();
+
+            if ($existingProduct) {
+                $IDTowaru = $existingProduct->IDTowaru;
+
+                // Update existing product
+                DB::table('Towar')
+                    ->where('IDTowaru', $IDTowaru)
+                    ->update([
+                        'Nazwa' => $product['Nazwa'],
+                        'IDGrupyTowarowej' => $product['IDGrupyTowarowej'],
+                        'CenaZakupu' => $product['cena'] ?? 0,
+                        'm3' => $product['m3'] ?? null,
+                        'Uwagi' => $product['uwagi'] ?? '',
+                        'updated_at' => now()
+                    ]);
+            } else {
+                // Create new product
+                $IDTowaru = DB::table('Towar')->insertGetId([
+                    'Nazwa' => $product['Nazwa'],
+                    'EAN' => $product['EAN'],
+                    'IDGrupyTowarowej' => $product['IDGrupyTowarowej'],
+                    'CenaZakupu' => $product['cena'] ?? 0,
+                    'm3' => $product['m3'] ?? null,
+                    'Uwagi' => $product['uwagi'] ?? '',
+                    'Aktywny' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+
+            // Check if unit exists for this product
+            $existingUnit = DB::table('JednostkaTowarowa')
+                ->where('IDTowaru', $IDTowaru)
+                ->where('Nazwa', $product['jednostka'])
+                ->first();
+
+            if (!$existingUnit) {
+                // Create unit for product
+                DB::table('JednostkaTowarowa')->insert([
+                    'IDTowaru' => $IDTowaru,
+                    'Nazwa' => $product['jednostka'],
+                    'Podstawowa' => 1,
+                    'Przelicznik' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now()
+                ]);
+            }
+
+            DB::commit();
+
+            Log::info('Product added to database successfully', [
+                'product_id' => $IDTowaru,
+                'product_name' => $product['Nazwa']
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Towar został dodany do bazy danych pomyślnie',
+                'product_id' => $IDTowaru,
+                'product_name' => $product['Nazwa']
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Product addition to database error: ' . $e->getMessage());
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Błąd podczas dodawania towaru: ' . $e->getMessage()
+            ]);
+        }
+    }
 }

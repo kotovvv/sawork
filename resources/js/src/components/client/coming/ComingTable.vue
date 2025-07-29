@@ -17,7 +17,7 @@
       fixed-header
       return-object
     >
-      <template v-slot:item.NrDokumentu="{ item }">
+      <template v-slot:[`item.NrDokumentu`]="{ item }">
         <v-icon
           size="small"
           icon="mdi-eye-check-outline"
@@ -34,7 +34,7 @@
         <span v-if="item.ready" class="percent">{{ item.ready }}%</span>
         {{ item.NrDokumentu }}
       </template>
-      <template v-slot:top="{}" v-if="docsDM.length">
+      <template v-slot:top v-if="docsDM.length">
         <v-row class="align-center">
           <v-col class="v-col-sm-6 v-col-md-2">
             <v-text-field
@@ -49,6 +49,12 @@
             @click="openImportDialog"
             icon="mdi-file-import"
             color="primary"
+            class="ml-2"
+          ></v-btn>
+          <v-btn
+            @click="openAddProductDialog"
+            icon="mdi-plus"
+            color="success"
             class="ml-2"
           ></v-btn>
         </v-row>
@@ -78,23 +84,53 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Dialog for adding single product -->
+    <v-dialog v-model="addProductDialog" max-width="800px">
+      <v-card>
+        <v-card-title>
+          <span class="text-h5">Dodaj towar do magazynu</span>
+          <v-btn
+            icon="mdi-close"
+            variant="text"
+            style="position: absolute; right: 8px; top: 8px"
+            @click="closeAddProductDialog"
+          ></v-btn>
+        </v-card-title>
+        <v-card-text>
+          <AddSingleProduct
+            :IDWarehouse="IDWarehouse"
+            @product-added="onProductAdded"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue darken-1" text @click="closeAddProductDialog">
+            Zamknij
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script>
 import axios from "axios";
-import DM from "../../admin/DM.vue";
+import DM from "./DM.vue";
+import AddSingleProduct from "./AddSingleProduct.vue";
 
 export default {
   name: "ComingTable",
   components: {
     DM,
+    AddSingleProduct,
   },
   props: ["IDWarehouse"],
   data: () => ({
     docsDM: [],
     selected: {},
     importDialog: false,
+    addProductDialog: false,
     headers: [
       { title: "Data", key: "Data" },
       { title: "Nr Dokumentu", key: "NrDokumentu", sortable: false },
@@ -165,6 +201,19 @@ export default {
     onImportSuccess() {
       this.closeImportDialog();
       this.getDM(); // Refresh the table after successful import
+    },
+
+    openAddProductDialog() {
+      this.addProductDialog = true;
+    },
+
+    closeAddProductDialog() {
+      this.addProductDialog = false;
+    },
+
+    onProductAdded() {
+      this.closeAddProductDialog();
+      this.getDM(); // Refresh the table after successful product addition
     },
   },
 };
