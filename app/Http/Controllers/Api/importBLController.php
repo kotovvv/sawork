@@ -482,7 +482,7 @@ class importBLController extends Controller
             ]);
             return;
         }
-        if ($returnPackage) {
+        if ($returnPackage && isset($returnPackage['returns']) && count($returnPackage['returns']) > 0) {
             foreach (collect($returnPackage['returns']) as $return) {
                 $this->executeWithRetry(function () use ($return, $o_order) {
                     $currentData = $o_order->first(['_OrdersTempString4', '_OrdersTempString10']);
@@ -501,14 +501,14 @@ class importBLController extends Controller
                         'Modified' => now()
                     ]);
                 });
+                LogOrder::create([
+                    'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                    'number' => $param['a_log']['order_id'],
+                    'type' => 9,
+                    'message' => 'Zmieniono numer paczki na: ' . $return['delivery_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
+                ]);
             }
 
-            LogOrder::create([
-                'IDWarehouse' => $param['a_warehouse']->warehouse_id,
-                'number' => $param['a_log']['order_id'],
-                'type' => 9,
-                'message' => 'Zmieniono numer paczki na: ' . $return['delivery_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
-            ]);
             return;
         } else {
             try {
@@ -532,7 +532,7 @@ class importBLController extends Controller
                 return;
             }
 
-            $package = collect($OrderPackages['packages'])->firstWhere('parcel_id', $createdParcelID);
+            $package = collect($OrderPackages['packages'])->firstWhere('package_id', $createdParcelID);
             if (!$package) {
                 LogOrder::create([
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
@@ -546,6 +546,12 @@ class importBLController extends Controller
             $this->executeWithRetry(function () use ($package, $o_order) {
                 $o_order->update(['_OrdersTempString2' => $package['courier_package_nr'], 'Modified' => now()]);
             });
+            LogOrder::create([
+                'IDWarehouse' => $param['a_warehouse']->warehouse_id,
+                'number' => $param['a_log']['order_id'],
+                'type' => 9,
+                'message' => 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
+            ]);
             return;
         }
     }
