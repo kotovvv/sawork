@@ -24,7 +24,7 @@
             hide-details="auto"
           ></v-select>
         </v-col>
-        <v-col cols="2" v-if="IDWarehouse">
+        <v-col cols="2" v-if="IDWarehouse && tranzit_warehouse != null">
           <v-file-input
             v-model="files"
             ref="fileupload"
@@ -456,7 +456,7 @@ export default {
         }
       });
 
-      return data.map((row, rowIndex) => {
+      const cleanedData = data.map((row, rowIndex) => {
         return row.map((cell, cellIndex) => {
           if (typeof cell === "string") {
             return cell.trim();
@@ -537,6 +537,32 @@ export default {
           // For any other type, convert to string
           return String(cell || "").trim();
         });
+      });
+
+      // Filter out rows with less than 3 filled columns (but keep header row)
+      return cleanedData.filter((row, rowIndex) => {
+        // Always keep the header row (index 0)
+        if (rowIndex === 0) return true;
+
+        // Count filled cells in this row
+        const filledCells = row.filter((cell) => {
+          if (cell === null || cell === undefined) return false;
+          const cellStr = String(cell).trim();
+          return cellStr !== "";
+        });
+
+        // Keep row only if it has at least 3 filled columns
+        const shouldKeep = filledCells.length >= 3;
+
+        if (!shouldKeep) {
+          console.log(
+            `Removing row ${rowIndex + 1} from table: only ${
+              filledCells.length
+            } filled columns`
+          );
+        }
+
+        return shouldKeep;
       });
     },
 
