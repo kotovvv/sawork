@@ -47,14 +47,8 @@
           <v-btn @click="getDM" icon="mdi-refresh"></v-btn>
           <v-btn
             @click="openImportDialog"
-            icon="mdi-file-import"
+            icon="mdi-plus"
             color="primary"
-            class="ml-2"
-          ></v-btn>
-          <v-btn
-            @click="openAddProductDialog"
-            icon="mdi-shape-plus"
-            color="success"
             class="ml-2"
           ></v-btn>
         </v-row>
@@ -66,6 +60,8 @@
       <v-card>
         <v-card-title>
           <span class="text-h5">Import DM</span>
+          <span v-if="handleTorW == 1"> do magazynu</span>
+          <span v-if="handleTorW == 0"> tranzytowy</span>
           <v-btn
             icon="mdi-close"
             variant="text"
@@ -74,38 +70,23 @@
           ></v-btn>
         </v-card-title>
         <v-card-text>
-          <DM :IDWarehouse="IDWarehouse" @import-success="onImportSuccess" />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" text @click="closeImportDialog">
-            Zamknij
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Dialog for adding single product -->
-    <v-dialog v-model="addProductDialog" max-width="800px">
-      <v-card>
-        <v-card-title>
-          <span class="text-h5">Dodaj towar do magazynu</span>
-          <v-btn
-            icon="mdi-close"
-            variant="text"
-            style="position: absolute; right: 8px; top: 8px"
-            @click="closeAddProductDialog"
-          ></v-btn>
-        </v-card-title>
-        <v-card-text>
-          <AddSingleProduct
+          <div class="mb-4" v-if="handleTorW == null">
+            <v-btn color="green" class="mr-2" @click="handleTranzitWarehous(1)">
+              Na skład
+            </v-btn>
+            <v-btn color="orange" @click="handleTranzitWarehous(0)">
+              Tranzyt
+            </v-btn>
+          </div>
+          <DM
             :IDWarehouse="IDWarehouse"
-            @product-added="onProductAdded"
+            :tranzit_warehouse="handleTorW"
+            @import-success="onImportSuccess"
           />
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" text @click="closeAddProductDialog">
+          <v-btn color="blue darken-1" text @click="closeImportDialog">
             Zamknij
           </v-btn>
         </v-card-actions>
@@ -117,13 +98,11 @@
 <script>
 import axios from "axios";
 import DM from "./DM.vue";
-import AddSingleProduct from "./AddSingleProduct.vue";
 
 export default {
   name: "ComingTable",
   components: {
     DM,
-    AddSingleProduct,
   },
   props: ["IDWarehouse"],
   data: () => ({
@@ -145,11 +124,16 @@ export default {
     ],
     searchInTable: "",
     loading: false,
+    handleTorW: null,
   }),
   mounted() {
     this.getDM();
   },
   methods: {
+    handleTranzitWarehous(handle) {
+      this.handleTorW = handle;
+      //this.$emit("handle-tranzit-warehouse", handle);
+    },
     handleClick(e, row) {
       this.selected = row.item;
       this.$emit("item-selected", this.selected); // Emit event with selected item
@@ -195,25 +179,13 @@ export default {
     },
 
     closeImportDialog() {
+      this.handleTorW = null; // Reset the handleTorW state
       this.importDialog = false;
     },
 
     onImportSuccess() {
       this.closeImportDialog();
       this.getDM(); // Refresh the table after successful import
-    },
-
-    openAddProductDialog() {
-      this.addProductDialog = true;
-    },
-
-    closeAddProductDialog() {
-      this.addProductDialog = false;
-    },
-
-    onProductAdded() {
-      this.closeAddProductDialog();
-      this.getDM(); // Refresh the table after successful product addition
     },
   },
 };

@@ -112,7 +112,7 @@ class DMController extends Controller
             $data = $request->all();
             $IDWarehouse = $data['IDWarehouse'];
             $products = $data['products'];
-
+            $tranzit_warehouse = $data['tranzit_warehouse'] ?? 0;
 
             DB::beginTransaction();
 
@@ -143,7 +143,8 @@ class DMController extends Controller
                 'Zmodyfikowano' => Carbon::now(),
                 'IDCompany' => 1,
                 'IDRodzajuTransportu' => 0,
-                'Operator' => 0
+                'Operator' => 0,
+                '_RuchMagazynowyTempBool1' => $tranzit_warehouse ? 1 : 0 // Set to 1 if tranzit warehouse, 0 otherwise
             ]);
             $documentId = DB::table('RuchMagazynowy')
                 ->where('NrDokumentu', $documentNumber)

@@ -139,6 +139,9 @@
                       'Wysokość (cm)',
                       'm3',
                       'Informacje dodatkowe ',
+                      ...(this.tranzit_warehouse == 1
+                        ? ['N box', 'N palete']
+                        : []),
                     ]"
                     outlined
                     @update:modelValue="makeHeader"
@@ -170,7 +173,7 @@ import _ from "lodash";
 
 export default {
   name: "FulstorImportXLS",
-  props: ["user", "IDWarehouse"],
+  props: ["user", "IDWarehouse", "tranzit_warehouse"],
   data() {
     return {
       loading: false,
@@ -308,6 +311,7 @@ export default {
           new_products: this.validationResults.new_products,
           missing_units: this.validationResults.missing_units,
           user_id: this.user?.id || 1,
+          tranzit_warehouse: this.tranzit_warehouse || 0, // Use prop or default to 0
         });
 
         if (response.data.status === "success") {
