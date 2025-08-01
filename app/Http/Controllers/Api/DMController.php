@@ -190,8 +190,8 @@ class DMController extends Controller
 
                     if ($tranzit_warehouse == 0) {
                         $insertData['NumerSerii'] = json_encode([
-                            'numer_kartonu' => $product['Numer kartonu'] ?? null,
-                            'numer_palety' => $product['Numer palety'] ?? null
+                            'k' => $product['Numer kartonu'] ?? '',
+                            'p' => $product['Numer palety'] ?? ''
                         ]);
                     }
 

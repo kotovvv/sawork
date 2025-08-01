@@ -34,6 +34,14 @@
             @change="onFileChange"
           ></v-file-input>
         </v-col>
+        <v-col v-if="table.length && files">
+          <p>Loaded {{ table.length }} rows</p>
+          <p v-if="table.length > 0">Columns: {{ table[0].length }}</p>
+          <p class="text-info mb-2">
+            <strong>Obowiązkowe pola:</strong> Nazwa, EAN, jednostka (towar,
+            karton, paleta) (oznaczone *)
+          </p>
+        </v-col>
       </v-row>
       <v-progress-linear
         :active="loading"
@@ -42,12 +50,6 @@
       ></v-progress-linear>
       <v-row v-if="table.length && files">
         <v-col cols="12">
-          <p>Loaded {{ table.length }} rows</p>
-          <p v-if="table.length > 0">Columns: {{ table[0].length }}</p>
-          <p class="text-info mb-2">
-            <strong>Obowiązkowe pola:</strong> Nazwa, EAN, jednostka (towar,
-            karton, paleta) (oznaczone *)
-          </p>
           <div class="d-flex gap-2">
             <v-btn
               color="orange"

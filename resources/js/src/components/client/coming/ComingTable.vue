@@ -38,7 +38,7 @@
         ></v-icon>
         <span v-if="item.ready" class="percent">{{ item.ready }}%</span>
         {{ item.NrDokumentu }}
-        <small v-if="item.External_id" color="grey"
+        <small v-if="item.External_id" class="text-grey"
           >({{ item.External_id }})</small
         >
       </template>
@@ -78,22 +78,32 @@
           ></v-btn>
         </v-card-title>
         <v-card-text>
-          <v-text-field
-            v-model="numerDokumentu"
-            label="Numer dokumentu"
-            outlined
-            dense
-            class="mb-4"
-            width="200px"
-          ></v-text-field>
-          <div class="mb-4" v-if="handleTorW == null">
-            <v-btn color="green" class="mr-2" @click="handleTranzitWarehous(1)">
-              Na skład
-            </v-btn>
-            <v-btn color="orange" @click="handleTranzitWarehous(0)">
-              Tranzyt
-              <v-icon icon="mdi-arrow-right"></v-icon>
-            </v-btn>
+          <div class="d-flex gap-3 align-center">
+            <v-text-field
+              v-model="numerDokumentu"
+              label="Numer dokumentu"
+              outlined
+              dense
+              class="mb-4"
+              width="200px"
+              max-width="200px"
+              hide-details="auto"
+              density="compact"
+            ></v-text-field>
+            <span class="mb-4" v-if="handleTorW == null">
+              <v-btn
+                color="green"
+                class="mr-2"
+                @click="handleTranzitWarehous(1)"
+              >
+                Na skład
+              </v-btn>
+              <v-btn color="orange" @click="handleTranzitWarehous(0)">
+                Tranzyt
+                <v-icon icon="mdi-arrow-right"></v-icon>
+              </v-btn>
+            </span>
+            <v-spacer></v-spacer>
           </div>
           <DM
             :IDWarehouse="IDWarehouse"
