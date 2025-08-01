@@ -13,17 +13,6 @@
 
     <v-container fluid>
       <v-row>
-        <v-col cols="2" v-if="!$props.IDWarehouse">
-          <v-select
-            label="Magazyn"
-            v-model="IDWarehouse"
-            :items="warehouses"
-            item-title="Nazwa"
-            item-value="IDMagazynu"
-            @update:modelValue="clear()"
-            hide-details="auto"
-          ></v-select>
-        </v-col>
         <v-col cols="2" v-if="IDWarehouse && tranzit_warehouse != null">
           <v-file-input
             v-model="files"
@@ -190,7 +179,7 @@ export default {
       table: [],
       header: [],
       headerSelection: [],
-      IDWarehouse: this.IDWarehouse || null,
+
       warehouses: [],
 
       validationResults: null,

@@ -68,8 +68,8 @@
       <v-card>
         <v-card-title>
           <span class="text-h5">Import DM</span>
-          <span v-if="handleTorW == 1"> do magazynu</span>
-          <span v-if="handleTorW == 0"> tranzytowy</span>
+          <span v-if="handleTorW == 0"> do magazynu</span>
+          <span v-if="handleTorW == 1"> tranzytowy</span>
           <v-btn
             icon="mdi-close"
             variant="text"
@@ -94,11 +94,11 @@
               <v-btn
                 color="green"
                 class="mr-2"
-                @click="handleTranzitWarehous(1)"
+                @click="handleTranzitWarehous(0)"
               >
                 Na skład
               </v-btn>
-              <v-btn color="orange" @click="handleTranzitWarehous(0)">
+              <v-btn color="orange" @click="handleTranzitWarehous(1)">
                 Tranzyt
                 <v-icon icon="mdi-arrow-right"></v-icon>
               </v-btn>

@@ -127,7 +127,7 @@ class DMController extends Controller
 
             DB::table('RuchMagazynowy')->insert([
                 'Data' => Carbon::now(),
-                'Uwagi' => 'Dostawa do magazynu - import z Excel',
+                'Uwagi' => $tranzit_warehouse == 1 ? 'tranzit ' . $numerDokumentu : 'Dostawa do magazynu - ' . $numerDokumentu,
                 'IDRodzajuRuchuMagazynowego' => 200, // DM document type
                 'IDMagazynu' => $IDWarehouse,
                 'NrDokumentu' => $documentNumber,
@@ -137,7 +137,7 @@ class DMController extends Controller
                 'IDCompany' => 1,
                 'IDRodzajuTransportu' => 0,
                 'Operator' => 0,
-                '_RuchMagazynowyTempBool1' => $tranzit_warehouse ? 0 : 1, // Set to 1 if tranzit warehouse, 0 otherwise
+                '_RuchMagazynowyTempBool1' => $tranzit_warehouse ? 1 : 0, // Set to 1 if tranzit warehouse, 0 otherwise
                 '_RuchMagazynowyTempString8' => $numerDokumentu
             ]);
             $documentId = DB::table('RuchMagazynowy')
@@ -192,7 +192,7 @@ class DMController extends Controller
                         $insertData['NumerSerii'] = json_encode([
                             'k' => $product['Numer kartonu'] ?? '',
                             'p' => $product['Numer palety'] ?? ''
-                        ]);
+                        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                     }
 
                     DB::table('ElementRuchuMagazynowego')->insert($insertData);

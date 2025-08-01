@@ -225,6 +225,7 @@ class ComingController extends Controller
                     'erm.IDElementuRuchuMagazynowego',
                     'erm.IDRuchuMagazynowego',
                     'erm.IDTowaru',
+                    'erm.NumerSerii',
                     DB::raw('CAST(erm.Ilosc as INT) as Ilosc'),
 
                     'erm.IDWarehouseLocation',
@@ -245,6 +246,7 @@ class ComingController extends Controller
                     'erm.IDElementuRuchuMagazynowego',
                     'erm.IDRuchuMagazynowego',
                     'erm.IDTowaru',
+                    'erm.NumerSerii',
                     DB::raw('CAST(erm.Ilosc as INT) as Ilosc'),
 
                     'erm.IDWarehouseLocation',
@@ -264,6 +266,7 @@ class ComingController extends Controller
                     'erm.IDElementuRuchuMagazynowego',
                     'erm.IDRuchuMagazynowego',
                     'erm.IDTowaru',
+                    'erm.NumerSerii',
                     DB::raw('CAST(erm.Ilosc as INT) as Ilosc'),
 
                     'erm.IDWarehouseLocation',

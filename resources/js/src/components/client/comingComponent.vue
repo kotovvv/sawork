@@ -65,6 +65,26 @@
                       <productHistory :product_id="selected[0]" />
                     </v-row>
                   </template>
+                  <template v-slot:item.LocationCode="{ item }">
+                    <div>
+                      {{ item.LocationCode }}
+                      <template v-if="item.NumerSerii">
+                        <span
+                          v-for="(value, key) in JSON.parse(item.NumerSerii)"
+                          :key="key"
+                          class="ml-2"
+                        >
+                          {{
+                            key === "k"
+                              ? "Karton"
+                              : key === "p"
+                              ? "Paleta"
+                              : key
+                          }}: {{ value }}
+                        </span>
+                      </template>
+                    </div>
+                  </template>
                 </v-data-table>
               </v-col>
             </v-row>
