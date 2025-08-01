@@ -45,8 +45,8 @@
           <p>Loaded {{ table.length }} rows</p>
           <p v-if="table.length > 0">Columns: {{ table[0].length }}</p>
           <p class="text-info mb-2">
-            <strong>Obowiązkowe pola:</strong> Nazwa, EAN, jednostka (oznaczone
-            *)
+            <strong>Obowiązkowe pola:</strong> Nazwa, EAN, jednostka (towar,
+            karton, paleta) (oznaczone *)
           </p>
           <div class="d-flex gap-2">
             <v-btn
@@ -140,7 +140,7 @@
                       'm3',
                       'Informacje dodatkowe ',
                       ...(this.tranzit_warehouse == 1
-                        ? ['N box', 'N palete']
+                        ? ['Numer kartonu', 'Numer palety']
                         : []),
                     ]"
                     outlined
@@ -173,7 +173,7 @@ import _ from "lodash";
 
 export default {
   name: "FulstorImportXLS",
-  props: ["user", "IDWarehouse", "tranzit_warehouse"],
+  props: ["user", "IDWarehouse", "tranzit_warehouse", "numerDokumentu"],
   data() {
     return {
       loading: false,
@@ -248,6 +248,7 @@ export default {
         if (products.length === 0) {
           this.message = "Brak danych do walidacji";
           this.snackbar = true;
+          this.validating = false;
           return;
         }
 
@@ -258,7 +259,12 @@ export default {
 
         if (response.data.status === "success") {
           this.validationResults = response.data;
-          this.message = "Walidacja zakończona pomyślnie";
+
+          if (response.data.errors.length > 0) {
+            this.message = `Walidacja zakończona z ${response.data.errors.length} błędami. Sprawdź podświetlone wiersze.`;
+          } else {
+            this.message = "Walidacja zakończona pomyślnie";
+          }
 
           // Process validation results for row highlighting
           this.processValidationResults();
@@ -312,6 +318,7 @@ export default {
           missing_units: this.validationResults.missing_units,
           user_id: this.user?.id || 1,
           tranzit_warehouse: this.tranzit_warehouse || 0, // Use prop or default to 0
+          numer_dokumentu: this.numerDokumentu || "", // Use prop or empty string
         });
 
         if (response.data.status === "success") {
@@ -382,6 +389,7 @@ export default {
         this.snackbar = true;
         return false;
       }
+
       return true;
     },
 

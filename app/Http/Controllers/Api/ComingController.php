@@ -28,6 +28,8 @@ class ComingController extends Controller
                 'rm1.Data',
                 'rm1.NrDokumentu',
                 'rm1.WartoscDokumentu',
+                'rm1._RuchMagazynowyTempBool1 as tranzit_warehouse',
+                'rm1._RuchMagazynowyTempString8 as External_id',
                 'DocumentRelations.ID1',
                 'rm2.Data as RelatedData',
                 'rm2.NrDokumentu as RelatedNrDokumentu',
@@ -60,7 +62,9 @@ class ComingController extends Controller
                 'InfoComming.doc',
                 'InfoComming.photo',
                 'InfoComming.brk',
-                'InfoComming.ready'
+                'InfoComming.ready',
+                'rm1._RuchMagazynowyTempBool1',
+                'rm1._RuchMagazynowyTempString8',
             )
             ->orderBy('rm1.Data', 'DESC')
             ->get();

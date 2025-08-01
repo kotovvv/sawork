@@ -70,6 +70,14 @@
           ></v-btn>
         </v-card-title>
         <v-card-text>
+          <v-text-field
+            v-model="numerDokumentu"
+            label="Numer dokumentu"
+            outlined
+            dense
+            class="mb-4"
+            width="200px"
+          ></v-text-field>
           <div class="mb-4" v-if="handleTorW == null">
             <v-btn color="green" class="mr-2" @click="handleTranzitWarehous(1)">
               Na skład
@@ -81,6 +89,7 @@
           <DM
             :IDWarehouse="IDWarehouse"
             :tranzit_warehouse="handleTorW"
+            :numerDokumentu="numerDokumentu"
             @import-success="onImportSuccess"
           />
         </v-card-text>
@@ -125,6 +134,7 @@ export default {
     searchInTable: "",
     loading: false,
     handleTorW: null,
+    numerDokumentu: "",
   }),
   mounted() {
     this.getDM();
@@ -179,6 +189,7 @@ export default {
     },
 
     closeImportDialog() {
+      this.numerDokumentu = "";
       this.handleTorW = null; // Reset the handleTorW state
       this.importDialog = false;
     },

@@ -74,16 +74,8 @@ class DMController extends Controller
                     $response['new_products'][] = $productCheck;
                 }
 
-                // Check if unit exists, if not add to missing units
-                if (!empty($product['jednostka'])) {
-                    $unitExists = DB::table('JednostkaMiary')
-                        ->where('Nazwa', $product['jednostka'])
-                        ->exists();
-
-                    if (!$unitExists && !in_array($product['jednostka'], $response['missing_units'])) {
-                        $response['missing_units'][] = $product['jednostka'];
-                    }
-                }
+                // Note: jednostka validation is now handled in validateProduct method
+                // Only towar, karton, paleta are allowed - no new units created
             }
 
 
@@ -113,6 +105,7 @@ class DMController extends Controller
             $IDWarehouse = $data['IDWarehouse'];
             $products = $data['products'];
             $tranzit_warehouse = $data['tranzit_warehouse'] ?? 0;
+            $numerDokumentu = $data['numer_dokumentu'] ?? '';
 
             DB::beginTransaction();
 
@@ -144,7 +137,8 @@ class DMController extends Controller
                 'IDCompany' => 1,
                 'IDRodzajuTransportu' => 0,
                 'Operator' => 0,
-                '_RuchMagazynowyTempBool1' => $tranzit_warehouse ? 1 : 0 // Set to 1 if tranzit warehouse, 0 otherwise
+                '_RuchMagazynowyTempBool1' => $tranzit_warehouse ? 1 : 0, // Set to 1 if tranzit warehouse, 0 otherwise
+                'External_id' => $numerDokumentu
             ]);
             $documentId = DB::table('RuchMagazynowy')
                 ->where('NrDokumentu', $documentNumber)
@@ -183,7 +177,7 @@ class DMController extends Controller
                 }
 
                 if ($productId) {
-                    DB::table('ElementRuchuMagazynowego')->insert([
+                    $insertData = [
                         'Ilosc' => floatval($product['Ilość'] ?? 0),
                         'Uwagi' => $product['Informacje dodatkowe'] ?? '',
                         'CenaJednostkowa' => floatval($product['Cena'] ?? 0),
@@ -191,7 +185,17 @@ class DMController extends Controller
                         'IDTowaru' => $productId,
                         'Utworzono' => Carbon::now(),
                         'Zmodyfikowano' => Carbon::now(),
-                        'Uzytkownik' => $userId
+                        'Uzytkownik' => $userId,
+                    ];
+
+                    if ($tranzit_warehouse == 1) {
+                        $insertData['NumerSerii'] = json_encode([
+                            'numer_kartonu' => $product['Numer kartonu'] ?? null,
+                            'numer_palety' => $product['Numer palety'] ?? null
+                        ]);
+                    }
+
+                    DB::table('RuchTowarowy')->insert($insertData
                     ]);
                 }
             }
@@ -247,6 +251,12 @@ class DMController extends Controller
 
         if (empty($product['jednostka'])) {
             $result['errors'][] = "Wiersz {$rowNumber}: Brak jednostki miary - pole obowiązkowe";
+        } else {
+            // Validate that jednostka is one of allowed values
+            $allowedUnits = ['towar', 'karton', 'paleta'];
+            if (!in_array(strtolower(trim($product['jednostka'])), $allowedUnits)) {
+                $result['errors'][] = "Wiersz {$rowNumber}: Nieprawidłowa jednostka '{$product['jednostka']}'. Dozwolone: towar, karton, paleta";
+            }
         }
 
         if (empty($product['Ilość'])) {
