@@ -31,8 +31,16 @@
           icon="mdi-alert"
           v-if="item.brk"
         ></v-icon>
+        <v-icon
+          size="small"
+          icon="mdi-arrow-right"
+          v-if="item.tranzit_warehouse === '1'"
+        ></v-icon>
         <span v-if="item.ready" class="percent">{{ item.ready }}%</span>
         {{ item.NrDokumentu }}
+        <small v-if="item.External_id" color="grey"
+          >({{ item.External_id }})</small
+        >
       </template>
       <template v-slot:top v-if="docsDM.length">
         <v-row class="align-center">
@@ -84,6 +92,7 @@
             </v-btn>
             <v-btn color="orange" @click="handleTranzitWarehous(0)">
               Tranzyt
+              <v-icon icon="mdi-arrow-right"></v-icon>
             </v-btn>
           </div>
           <DM

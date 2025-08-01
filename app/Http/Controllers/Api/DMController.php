@@ -104,7 +104,7 @@ class DMController extends Controller
             $data = $request->all();
             $IDWarehouse = $data['IDWarehouse'];
             $products = $data['products'];
-            $tranzit_warehouse = $data['tranzit_warehouse'] ?? 0;
+            $tranzit_warehouse = $data['tranzit_warehouse'] ?? 1;
             $numerDokumentu = $data['numer_dokumentu'] ?? '';
 
             DB::beginTransaction();
@@ -137,8 +137,8 @@ class DMController extends Controller
                 'IDCompany' => 1,
                 'IDRodzajuTransportu' => 0,
                 'Operator' => 0,
-                '_RuchMagazynowyTempBool1' => $tranzit_warehouse ? 1 : 0, // Set to 1 if tranzit warehouse, 0 otherwise
-                'External_id' => $numerDokumentu
+                '_RuchMagazynowyTempBool1' => $tranzit_warehouse ? 0 : 1, // Set to 1 if tranzit warehouse, 0 otherwise
+                '_RuchMagazynowyTempString8' => $numerDokumentu
             ]);
             $documentId = DB::table('RuchMagazynowy')
                 ->where('NrDokumentu', $documentNumber)
@@ -188,15 +188,14 @@ class DMController extends Controller
                         'Uzytkownik' => $userId,
                     ];
 
-                    if ($tranzit_warehouse == 1) {
+                    if ($tranzit_warehouse == 0) {
                         $insertData['NumerSerii'] = json_encode([
                             'numer_kartonu' => $product['Numer kartonu'] ?? null,
                             'numer_palety' => $product['Numer palety'] ?? null
                         ]);
                     }
 
-                    DB::table('RuchTowarowy')->insert($insertData
-                    ]);
+                    DB::table('ElementRuchuMagazynowego')->insert($insertData);
                 }
             }
 

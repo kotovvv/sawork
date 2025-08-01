@@ -118,7 +118,7 @@
           </v-card>
         </v-col>
 
-        <v-col cols="9">
+        <v-col cols="12">
           <v-table id="loadedTable">
             <thead>
               <tr>
@@ -139,7 +139,7 @@
                       'Wysokość (cm)',
                       'm3',
                       'Informacje dodatkowe ',
-                      ...(this.tranzit_warehouse == 1
+                      ...(this.tranzit_warehouse == 0
                         ? ['Numer kartonu', 'Numer palety']
                         : []),
                     ]"
@@ -317,7 +317,7 @@ export default {
           new_products: this.validationResults.new_products,
           missing_units: this.validationResults.missing_units,
           user_id: this.user?.id || 1,
-          tranzit_warehouse: this.tranzit_warehouse || 0, // Use prop or default to 0
+          tranzit_warehouse: this.tranzit_warehouse || 1, // Use prop or default to 0
           numer_dokumentu: this.numerDokumentu || "", // Use prop or empty string
         });
 
@@ -615,6 +615,126 @@ export default {
       this.getheader();
     },
 
+    autoMapHeaders() {
+      if (!this.table || this.table.length === 0 || !this.table[0]) return;
+
+      // Define mapping between Excel headers and our field options
+      const headerMappings = {
+        // Basic mappings (case insensitive)
+        nazwa: "Nazwa *",
+        name: "Nazwa *",
+        "product name": "Nazwa *",
+        product: "Nazwa *",
+
+        sku: "SKU",
+        kod: "SKU",
+        code: "SKU",
+
+        ean: "EAN *",
+        barcode: "EAN *",
+        "kod kreskowy": "EAN *",
+
+        ilość: "Ilość",
+        ilosc: "Ilość",
+        quantity: "Ilość",
+        qty: "Ilość",
+
+        jednostka: "jednostka *",
+        unit: "jednostka *",
+        "jednostka miary": "jednostka *",
+
+        cena: "Cena",
+        price: "Cena",
+        cost: "Cena",
+
+        waga: "Waga (kg)",
+        weight: "Waga (kg)",
+        masa: "Waga (kg)",
+
+        długość: "Długość (cm)",
+        dlugosc: "Długość (cm)",
+        length: "Długość (cm)",
+
+        szerokość: "Szerokość (cm)",
+        szerokosc: "Szerokość (cm)",
+        width: "Szerokość (cm)",
+
+        wysokość: "Wysokość (cm)",
+        wysokosc: "Wysokość (cm)",
+        height: "Wysokość (cm)",
+
+        m3: "m3",
+        volume: "m3",
+        objętość: "m3",
+        objetosc: "m3",
+
+        "informacje dodatkowe": "Informacje dodatkowe ",
+        uwagi: "Informacje dodatkowe ",
+        notes: "Informacje dodatkowe ",
+        comments: "Informacje dodatkowe ",
+
+        "numer kartonu": "Numer kartonu",
+        "n karton": "Numer kartonu",
+        "box number": "Numer kartonu",
+
+        "numer palety": "Numer palety",
+        "n paleta": "Numer palety",
+        "pallet number": "Numer palety",
+      };
+
+      // Get available items based on current tranzit_warehouse setting
+      const availableItems = [
+        "",
+        "Nazwa *",
+        "SKU",
+        "EAN *",
+        "Ilość",
+        "jednostka *",
+        "Cena",
+        "Waga (kg)",
+        "Długość (cm)",
+        "Szerokość (cm)",
+        "Wysokość (cm)",
+        "m3",
+        "Informacje dodatkowe ",
+        ...(this.tranzit_warehouse == 0
+          ? ["Numer kartonu", "Numer palety"]
+          : []),
+      ];
+
+      // Process each column header
+      this.table[0].forEach((header, index) => {
+        if (header && typeof header === "string") {
+          const normalizedHeader = header.toLowerCase().trim();
+
+          // Try to find exact match first
+          let mappedField = headerMappings[normalizedHeader];
+
+          // If no exact match, try partial matches
+          if (!mappedField) {
+            for (const [key, value] of Object.entries(headerMappings)) {
+              if (
+                normalizedHeader.includes(key) ||
+                key.includes(normalizedHeader)
+              ) {
+                mappedField = value;
+                break;
+              }
+            }
+          }
+
+          // Set the mapping if found and available
+          if (mappedField && availableItems.includes(mappedField)) {
+            this.headerSelection[index] = mappedField;
+            console.log(`Auto-mapped "${header}" to "${mappedField}"`);
+          }
+        }
+      });
+
+      // Update the header array after auto-mapping
+      this.getheader();
+    },
+
     onFileChange(event) {
       const fileList = event && event.target ? event.target.files : null;
       let file = fileList && fileList.length ? fileList[0] : null;
@@ -683,6 +803,10 @@ export default {
 
               vm.headerSelection = new Array(vm.table[0]?.length || 0).fill("");
               vm.rowHighlights = new Array(vm.table.length).fill(""); // Initialize highlights
+
+              // Auto-map headers if they match available options
+              vm.autoMapHeaders();
+
               console.log("Loaded table data:", vm.table);
               console.log("Table length:", vm.table.length);
 
