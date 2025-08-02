@@ -9,12 +9,13 @@
 
     <datepicker v-model="dateMax" format="yyyy-MM-dd" monday-first></datepicker>
     <v-data-table
-      :items="docsWZk"
+      :items="filteredDocsWZk"
       :headers="wzk_headers"
       item-value="IDRuchuMagazynowego"
       :search="searchInTable"
       @click:row="handleClick"
-      select-strategy="single"
+      v-model="selected"
+      show-select
       :row-props="colorRowItem"
       fixed-header
       return-object
@@ -33,10 +34,17 @@
               hide-details
             ></v-text-field>
           </v-col>
-          <v-btn @click="getDocsWZk" icon="mdi-refresh"></v-btn>
+          <v-btn
+            @click="getDocsWZk"
+            icon="mdi-refresh"
+            :loading="loading"
+            title="Odśwież dokumenty"
+          ></v-btn>
           <v-btn
             @click="refreshLocations"
             icon="mdi-redo-variant"
+            title="Odśwież lokalizacje"
+            :loading="loading"
             v-if="$props.user.IDRoli != 4"
           >
             <v-tooltip bottom>
@@ -48,7 +56,18 @@
               <span>Refresh Locations</span>
             </v-tooltip>
           </v-btn>
-
+          <v-btn icon @click="showFilterDialog = true">
+            <v-icon :color="isFilterActive ? 'warning' : ''">mdi-filter</v-icon>
+          </v-btn>
+          <v-btn
+            v-if="selected && selected.length > 0"
+            @click="confirmUpdateIsWartosc"
+            color="success"
+            variant="elevated"
+          >
+            <v-icon>mdi-cash-check</v-icon>
+            Oznacz jako zwrócone ({{ selected.length }})
+          </v-btn>
           <v-col>
             <div class="d-flex ga-5 flex-wrap">
               <v-btn
@@ -97,6 +116,42 @@
         <v-card-actions> </v-card-actions>
       </v-card>
     </v-dialog>
+    <v-dialog v-model="showFilterDialog" max-width="800" min-height="400">
+      <v-card min-height="600">
+        <v-btn
+          icon
+          class="ma-2"
+          style="position: absolute; top: 0; right: 0"
+          @click="showFilterDialog = false"
+        >
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+        <v-card-title>Ustawienie filtra</v-card-title>
+        <v-card-text>
+          <v-select
+            v-model="filter_isWartosc"
+            :items="[
+              { title: 'Wszystkie', value: null },
+              { title: 'Tak', value: 'Tak' },
+              { title: 'Nie', value: 'Nie' },
+            ]"
+            item-title="title"
+            item-value="value"
+            label="Pieniądze zwrócone"
+            clearable
+            outlined
+            dense
+          ></v-select>
+          <div class="d-flex ga-3 flex-wrap">
+            <v-btn icon @click="clearFilters">
+              <v-icon>mdi-filter-remove</v-icon>
+            </v-btn>
+          </div>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <ConfirmDlg ref="confirmDialog" />
   </div>
 </template>
 
@@ -106,17 +161,20 @@ import moment from "moment";
 import axios from "axios";
 
 import ProductsInLocation from "./ProductsInLocation.vue";
+import ConfirmDlg from "../../UI/ConfirmDlg.vue";
 
 export default {
   name: "WZkTable",
-  components: { Datepicker, ProductsInLocation },
+  components: { Datepicker, ProductsInLocation, ConfirmDlg },
   props: ["user", "warehouse"],
   data: () => ({
     dialogProductsInLocation: false,
     dateMin: moment().subtract(2, "months").format("YYYY-MM-DD"),
     dateMax: moment().format("YYYY-MM-DD"),
     docsWZk: [],
-    selected: {},
+
+    selected: null,
+    marked: {},
     wzk_headers: [
       { title: "NrDokumentu", key: "NrDokumentu", nowrap: true },
       { title: "Data", key: "Data" },
@@ -135,9 +193,27 @@ export default {
     },
 
     location: "",
+    showFilterDialog: false,
+    filter_isWartosc: null, // Filter for isWartosc
   }),
   mounted() {
     this.getDocsWZk();
+  },
+  computed: {
+    isFilterActive() {
+      return this.filter_isWartosc !== null;
+    },
+    filteredDocsWZk() {
+      if (!this.filter_isWartosc) return this.docsWZk;
+      return this.docsWZk.filter((doc) => {
+        if (this.filter_isWartosc === "Tak") {
+          return doc.isWartosc === "Tak";
+        } else if (this.filter_isWartosc === "Nie") {
+          return doc.isWartosc === "Nie";
+        }
+        return true; // For 'Wszystkie', return all documents
+      });
+    },
   },
   methods: {
     openDialog(location) {
@@ -162,14 +238,14 @@ export default {
         .catch((error) => console.log(error));
     },
     handleClick(e, row) {
-      this.selected = row.item;
-      this.$emit("item-selected", this.selected); // Emit event with selected item
+      this.marked = row.item;
+      this.$emit("item-marked", this.marked); // Emit event with marked item
     },
 
     colorRowItem(item) {
       if (
         item.item.IDRuchuMagazynowego != undefined &&
-        item.item.IDRuchuMagazynowego == this.selected.IDRuchuMagazynowego
+        item.item.IDRuchuMagazynowego == this.marked.IDRuchuMagazynowego
       ) {
         return { class: "bg-red-darken-4" };
       }
@@ -199,6 +275,70 @@ export default {
           vm.loading = false;
         })
         .catch((error) => console.log(error));
+    },
+
+    clearFilters() {
+      this.filter_isWartosc = null;
+    },
+
+    async confirmUpdateIsWartosc() {
+      if (!this.selected || this.selected.length === 0) {
+        return;
+      }
+
+      const title = "Potwierdzenie aktualizacji";
+      const message = `Czy na pewno chcesz oznaczyć ${this.selected.length} dokumentów jako "Pieniądze zwrócone: Tak"?`;
+
+      try {
+        const confirmed = await this.$refs.confirmDialog.open(title, message);
+        if (confirmed) {
+          await this.updateIsWartoscForSelected();
+        }
+      } catch (error) {
+        console.error("Error showing confirmation dialog:", error);
+      }
+    },
+
+    async updateIsWartoscForSelected() {
+      if (!this.selected || this.selected.length === 0) {
+        return;
+      }
+
+      this.loading = true;
+
+      try {
+        const documentIds = this.selected.map((doc) => doc.IDRuchuMagazynowego);
+
+        const response = await axios.post("/api/updateIsWartoscBulk", {
+          documentIds: documentIds,
+        });
+
+        if (response.status === 200 && response.data.success) {
+          // Update local data
+          this.selected.forEach((selectedDoc) => {
+            const docIndex = this.docsWZk.findIndex(
+              (doc) =>
+                doc.IDRuchuMagazynowego === selectedDoc.IDRuchuMagazynowego
+            );
+            if (docIndex !== -1) {
+              this.docsWZk[docIndex].isWartosc = "Tak";
+            }
+          });
+
+          // Clear selection
+          this.selected = [];
+
+          console.log(
+            `Successfully updated ${response.data.updatedCount} documents`
+          );
+        } else {
+          console.error("Failed to update documents:", response.data.message);
+        }
+      } catch (error) {
+        console.error("Error updating documents:", error);
+      } finally {
+        this.loading = false;
+      }
     },
   },
 };

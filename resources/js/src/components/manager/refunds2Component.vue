@@ -49,7 +49,8 @@
           <div class="ga-4 border-dotted">
             <p>Uwagi Sprzedawcy: {{ selectedItem.uwagiSprzedawcy }}</p>
             <p>
-              Pieniądze zwrócone - {{ selectedItem.isWartosc ? "Так" : "Nie" }}
+              Pieniądze zwrócone -
+              {{ selectedItem.isWartosc == "Tak" ? "Так" : "Nie" }}
               <v-btn
                 size="small"
                 icon="mdi-pencil"
