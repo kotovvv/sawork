@@ -17,6 +17,7 @@ class PrintController extends Controller
         '3' => ['invoice' => 'HP-LaserJet-Pro-Stan1', 'label' => 'XP-Stan1'],
         '1012' => ['invoice' => 'HP-LaserJet-Pro-Stan3', 'label' => 'XP-Stan3'],
         '1013' => ['invoice' => 'HP-LaserJet-Pro-Stan4', 'label' => 'XP-Stan4'],
+        '1015' => ['invoice' => 'HP-LaserJet-Pro-Stan3', 'label' => 'XP-Stan3'],
     ];
 
     public function print(Request $request)
