@@ -81,12 +81,12 @@
           <div class="d-flex gap-3 align-center">
             <v-text-field
               v-model="numerDokumentu"
-              label="Numer dokumentu"
+              label="Numer z twojego systemu"
               outlined
               dense
               class="mb-4"
-              width="200px"
-              max-width="200px"
+              width="250px"
+              max-width="250px"
               hide-details="auto"
               density="compact"
             ></v-text-field>

@@ -104,7 +104,7 @@ class DMController extends Controller
             $data = $request->all();
             $IDWarehouse = $data['IDWarehouse'];
             $products = $data['products'];
-            $tranzit_warehouse = $data['tranzit_warehouse'] ?? 1;
+            $tranzit_warehouse = $data['tranzit_warehouse'] ?? 0;
             $numerDokumentu = $data['numer_dokumentu'] ?? '';
 
             DB::beginTransaction();
@@ -137,7 +137,7 @@ class DMController extends Controller
                 'IDCompany' => 1,
                 'IDRodzajuTransportu' => 0,
                 'Operator' => 0,
-                '_RuchMagazynowyTempBool1' => $tranzit_warehouse ? 1 : 0, // Set to 1 if tranzit warehouse, 0 otherwise
+                '_RuchMagazynowyTempBool1' => $tranzit_warehouse == 1 ? 1 : 0, // Set to 1 if tranzit warehouse, 0 otherwise
                 '_RuchMagazynowyTempString8' => $numerDokumentu
             ]);
             $documentId = DB::table('RuchMagazynowy')
@@ -294,11 +294,6 @@ class DMController extends Controller
             }
         }
 
-        // Check by SKU
-        if (!empty($product['SKU'])) {
-            return $query->where('_TowarTempString1', $product['SKU'])->first();
-        }
-
         return null;
     }
 
@@ -308,6 +303,20 @@ class DMController extends Controller
     private function createProduct($productData, $IDWarehouse, $defaultGroupId)
     {
         $product = $productData['product_data'];
+
+        // Check if product with this EAN already exists
+        $existingProductByEan = DB::table('Towar')
+            ->where('KodKreskowy', trim($product['EAN']))
+            ->first();
+
+        if ($existingProductByEan) {
+            // Return existing product instead of throwing error
+            return [
+                'IDTowaru' => $existingProductByEan->IDTowaru,
+                'product_data' => $product,
+                'existing' => true
+            ];
+        }
 
         // Get unit ID
         $unitId = null;
@@ -620,47 +629,33 @@ class DMController extends Controller
 
             // Check if product with this EAN already exists
             $existingProduct = DB::table('Towar')
-                ->where('EAN', $product['EAN'])
+                ->where('KodKreskowy', trim($product['EAN']))
                 ->first();
 
             if ($existingProduct) {
-                $IDTowaru = $existingProduct->IDTowaru;
-
-                // Update existing product
-                DB::table('Towar')
-                    ->where('IDTowaru', $IDTowaru)
-                    ->update([
-                        'Nazwa' => $product['Nazwa'],
-                        'IDGrupyTowarowej' => $product['IDGrupyTowarowej'],
-                        'CenaZakupu' => $product['cena'] ?? 0,
-                        'm3' => $product['m3'] ?? null,
-                        '_TowarTempString1' => $product['SKU'] ?? null,
-                        '_TowarTempDecimal1' => $product['waga'] ?? null,
-                        '_TowarTempDecimal3' => $product['dlugosc'] ?? null,
-                        '_TowarTempDecimal4' => $product['szerokosc'] ?? null,
-                        '_TowarTempDecimal5' => $product['wysokosc'] ?? null,
-                        'Uwagi' => $product['uwagi'] ?? '',
-                        'updated_at' => now()
-                    ]);
-            } else {
-                // Create new product
-                $IDTowaru = DB::table('Towar')->insertGetId([
-                    'Nazwa' => $product['Nazwa'],
-                    'EAN' => $product['EAN'],
-                    'IDGrupyTowarowej' => $product['IDGrupyTowarowej'],
-                    'CenaZakupu' => $product['cena'] ?? 0,
-                    'm3' => $product['m3'] ?? null,
-                    '_TowarTempString1' => $product['SKU'] ?? null,
-                    '_TowarTempDecimal1' => $product['waga'] ?? null,
-                    '_TowarTempDecimal3' => $product['dlugosc'] ?? null,
-                    '_TowarTempDecimal4' => $product['szerokosc'] ?? null,
-                    '_TowarTempDecimal5' => $product['wysokosc'] ?? null,
-                    'Uwagi' => $product['uwagi'] ?? '',
-                    'Aktywny' => 1,
-                    'created_at' => now(),
-                    'updated_at' => now()
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Towar z kodem kreskowym (EAN) '{$product['EAN']}' już istnieje w bazie danych. Kod kreskowy musi być unikalny."
                 ]);
-            }            // Check if unit exists for this product
+            }
+
+            // Create new product
+            $IDTowaru = DB::table('Towar')->insertGetId([
+                'Nazwa' => $product['Nazwa'],
+                'KodKreskowy' => trim($product['EAN']),
+                'IDGrupyTowarowej' => $product['IDGrupyTowarowej'],
+                'CenaZakupu' => $product['cena'] ?? 0,
+                'm3' => $product['m3'] ?? null,
+                '_TowarTempString1' => $product['SKU'] ?? null,
+                '_TowarTempDecimal1' => $product['waga'] ?? null,
+                '_TowarTempDecimal3' => $product['dlugosc'] ?? null,
+                '_TowarTempDecimal4' => $product['szerokosc'] ?? null,
+                '_TowarTempDecimal5' => $product['wysokosc'] ?? null,
+                'Uwagi' => $product['uwagi'] ?? '',
+                'Aktywny' => 1,
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);            // Check if unit exists for this product
             $existingUnit = DB::table('JednostkaTowarowa')
                 ->where('IDTowaru', $IDTowaru)
                 ->where('Nazwa', $product['jednostka'])

@@ -1,6 +1,6 @@
 <template>
   <div id="importXLS">
-    <v-snackbar v-model="snackbar" top right timeout="-1">
+    <v-snackbar v-model="snackbar" location="top" timeout="6000" color="yellow">
       <v-card-text>
         {{ message }}
       </v-card-text>
@@ -49,6 +49,7 @@
               Sprawdź produkty
             </v-btn>
             <v-btn
+              v-if="canCreateDocument"
               color="green"
               @click="createDocument"
               :disabled="!canCreateDocument || creating"
@@ -308,7 +309,7 @@ export default {
           new_products: this.validationResults.new_products,
           missing_units: this.validationResults.missing_units,
           user_id: this.user?.id || 1,
-          tranzit_warehouse: this.tranzit_warehouse || 1, // Use prop or default to 0
+          tranzit_warehouse: this.tranzit_warehouse || 0, // Use prop or default to 0
           numer_dokumentu: this.numerDokumentu || "", // Use prop or empty string
         });
 

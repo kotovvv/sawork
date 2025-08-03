@@ -79,7 +79,7 @@ export default {
       { text: "Raporty", name: "report", icon: "mdi-file-chart" },
       { text: "logView", name: "logViewer", icon: "mdi-file-account" },
       { text: "Dostawa do magazynu", name: "coming", icon: "mdi-van-utility" },
-      { text: "Zwroty", name: "zwroty", icon: "mdi-database-plus" },
+      { text: "Zwroty", name: "zwroty", icon: "mdi-keyboard-return" },
       { text: "Zamówienia", name: "zo2wz", icon: "mdi-arrange-bring-forward" },
       { text: "Collect", name: "collect", icon: "mdi-package-variant-plus" },
     ],
