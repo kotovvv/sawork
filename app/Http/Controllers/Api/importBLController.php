@@ -106,6 +106,8 @@ class importBLController extends Controller
     {
         $last_log_id = $a_warehouse->last_log_id;
 
+        //if ($a_warehouse->warehouse_id == 10) return;
+
         $parameters = [
             /*
             Event type:
@@ -155,12 +157,43 @@ class importBLController extends Controller
             return;
         }
 
+        // Calculate max logs to process based on interval (50 logs per minute)
+        $max_logs_to_process = $a_warehouse->interval_minutes * 8;
+
+        // Limit the logs array to the calculated maximum
+        // Sort logs by log_id to process them chronologically
+        usort($response['logs'], function ($a, $b) {
+            return $a['log_id'] <=> $b['log_id'];
+        });
+
+        // Process logs starting from the last processed log_id
+        $logs_to_process = [];
+        $processed_count = 0;
+
         foreach ($response['logs'] as $log) {
+            if ($processed_count >= $max_logs_to_process) {
+                break;
+            }
+
+            // Skip logs that have already been processed
+            if ($log['log_id'] <= $last_log_id) {
+                continue;
+            }
+
+            $logs_to_process[] = $log;
+            $processed_count++;
+        }
+
+        foreach ($logs_to_process as $log) {
             // Log::info("Processing log_id: " . $log['log_id'] . " for order_id: " . $log['order_id'] . " in warehouse: " . $a_warehouse->warehouse_id);
             // Log:
             // info("Log details: " . $a_warehouse->last_log_id);
-            $last_log_id =  $log['log_id'];
             if ($a_warehouse->last_log_id == $log['log_id']) continue;
+            DB::table('settings')
+                ->updateOrInsert(
+                    ['obj_name' => 'last_log_id', 'for_obj' => $a_warehouse->warehouse_id, 'key' => $a_warehouse->warehouse_id],
+                    ['value' => $log['log_id']]
+                );
             switch ($log['log_type']) {
                 case 7:
                     $this->changeInvoiceOrder([
@@ -208,14 +241,6 @@ class importBLController extends Controller
             }
             /* { "log_id": 456269, "log_type": 13, "order_id": 6911942, "object_id": 0, "date": 1516369287 }, */
         }
-        $a_warehouse->last_log_id = $last_log_id;
-        // Log::info("Updating last_log_id for warehouse: " . $a_warehouse->warehouse_id . " to " . $last_log_id);
-        DB::table('settings')
-            ->updateOrInsert(
-                ['obj_name' => 'last_log_id', 'for_obj' => $a_warehouse->warehouse_id, 'key' => $a_warehouse->warehouse_id],
-                ['value' => $last_log_id]
-            );
-        /* { "status": "SUCCESS", "logs": [ { "log_id": 82280791, "log_type": 12, "order_id": 12017786, "object_id": 0, "date": 1745384688 }, { "log_id": 82280827, "log_type": 13, "order_id": 12017786, "object_id": 0, "date": 1745384739 } ] } */
     }
 
     private function writeLog($param)
@@ -240,7 +265,7 @@ class importBLController extends Controller
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
                     'type' => $param['a_log']['log_type'],
-                    'message' => "Log type: {$log_type_name},  Date: {$date}, Object ID: {$object_id}"
+                    'message' => "Log type: {$log_type_name},  Date: {$date}, Object ID: {$object_id}, Log ID: {$param['a_log']['log_id']}"
                 ]);
             }
         }
@@ -273,7 +298,7 @@ class importBLController extends Controller
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
                     'type' => 16,
-                    'message' => 'Nie znaleziono zamówienia o ID: ' . $param['a_log']['order_id']
+                    'message' => 'Nie znaleziono zamówienia o ID: ' . $param['a_log']['order_id'] . ', Log ID: ' . $param['a_log']['log_id']
                 ]);
                 return;
             }
@@ -377,7 +402,7 @@ class importBLController extends Controller
             'IDWarehouse' => $param['a_warehouse']->warehouse_id,
             'number' => $param['a_log']['order_id'],
             'type' => 16,
-            'message' => 'Zmieniono dane zamówienia: ' . $param['a_log']['order_id']
+            'message' => 'Zmieniono dane zamówienia: ' . $param['a_log']['order_id'] . ', Log ID: ' . $param['a_log']['log_id']
         ]);
     }
 
@@ -392,7 +417,7 @@ class importBLController extends Controller
             'IDWarehouse' => $param['a_warehouse']->warehouse_id,
             'number' => $param['a_log']['order_id'],
             'type' => 11,
-            'message' => 'Zmieniono dane dostawy dla zamówienia: ' . $param['a_log']['order_id']
+            'message' => 'Zmieniono dane dostawy dla zamówienia: ' . $param['a_log']['order_id'] . ', Log ID: ' . $param['a_log']['log_id']
         ]);
         $LM_order = DB::table('Orders')
             ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
@@ -469,7 +494,7 @@ class importBLController extends Controller
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
                     'type' => 9,
-                    'message' => 'Failed to get order returns for order: ' . $param['a_log']['order_id']
+                    'message' => 'Failed to get order returns for order: ' . $param['a_log']['order_id'] . ', Log ID: ' . $param['a_log']['log_id']
                 ]);
                 return;
             }
@@ -478,34 +503,27 @@ class importBLController extends Controller
                 'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                 'number' => $param['a_log']['order_id'],
                 'type' => 9,
-                'message' => 'API timeout getting order returns for order: ' . $param['a_log']['order_id'] . '. Error: ' . $e->getMessage()
+                'message' => 'API timeout getting order returns for order: ' . $param['a_log']['order_id'] . '. Error: ' . $e->getMessage() . ', Log ID: ' . $param['a_log']['log_id']
             ]);
             return;
         }
         if ($returnPackage && isset($returnPackage['returns']) && count($returnPackage['returns']) > 0) {
             foreach (collect($returnPackage['returns']) as $return) {
                 $this->executeWithRetry(function () use ($return, $o_order) {
-                    $currentData = $o_order->first(['_OrdersTempString4', '_OrdersTempString10']);
 
-                    $newString4 = $currentData->_OrdersTempString4
-                        ? $currentData->_OrdersTempString4 . ', ' . $return['delivery_package_nr']
-                        : $return['delivery_package_nr'];
-
-                    $newString10 = $currentData->_OrdersTempString10
-                        ? $currentData->_OrdersTempString10 . ', ' . $return['reference_number']
-                        : $return['reference_number'];
 
                     $o_order->update([
-                        '_OrdersTempString4' => $newString4,
-                        '_OrdersTempString10' => $newString10,
+                        '_OrdersTempString4' =>  $return['delivery_package_nr'],
+                        '_OrdersTempString10' => $return['reference_number'],
                         'Modified' => now()
                     ]);
                 });
+
                 LogOrder::create([
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
                     'type' => 9,
-                    'message' => 'Zmieniono numer paczki na: ' . $return['delivery_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
+                    'message' => 'Zmieniono numer paczki na: ' . $return['delivery_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id'] . ', Log ID: ' . $param['a_log']['log_id']
                 ]);
             }
 
@@ -518,7 +536,7 @@ class importBLController extends Controller
                         'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                         'number' => $param['a_log']['order_id'],
                         'type' => 9,
-                        'message' => 'Failed to get order packages for order: ' . $param['a_log']['order_id']
+                        'message' => 'Failed to get order packages for order: ' . $param['a_log']['order_id'] . ' Log ID: ' . $param['a_log']['log_id']
                     ]);
                     return;
                 }
@@ -527,7 +545,7 @@ class importBLController extends Controller
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
                     'type' => 9,
-                    'message' => 'API timeout getting order packages for order: ' . $param['a_log']['order_id'] . '. Error: ' . $e->getMessage()
+                    'message' => 'API timeout getting order packages for order: ' . $param['a_log']['order_id'] . '. Error: ' . $e->getMessage() . ', Log ID: ' . $param['a_log']['log_id']
                 ]);
                 return;
             }
@@ -538,7 +556,7 @@ class importBLController extends Controller
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
                     'type' => 9,
-                    'message' => 'Package not found with ID: ' . $createdParcelID . ' for order: ' . $param['a_log']['order_id']
+                    'message' => 'Package not found with ID: ' . $createdParcelID . ' for order: ' . $param['a_log']['order_id'] . ' Log ID: ' . $param['a_log']['log_id']
                 ]);
                 return;
             }
@@ -550,7 +568,7 @@ class importBLController extends Controller
                 'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                 'number' => $param['a_log']['order_id'],
                 'type' => 9,
-                'message' => 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id']
+                'message' => 'Zmieniono numer paczki na: ' . $package['courier_package_nr'] . ' dla zamówienia: ' . $param['a_log']['order_id'] . ' Log ID: ' . $param['a_log']['log_id']
             ]);
             return;
         }
@@ -584,7 +602,7 @@ class importBLController extends Controller
             'IDWarehouse' => $param['a_warehouse']->warehouse_id,
             'number' => $param['a_log']['order_id'],
             'type' => 7,
-            'message' => 'Zmieniono numer faktury na: ' . $invoice_number . ' dla zamówienia: ' . $param['a_log']['order_id']
+            'message' => 'Zmieniono numer faktury na: ' . $invoice_number . ' dla zamówienia: ' . $param['a_log']['order_id'] . ' Log ID: ' . $param['a_log']['log_id']
         ]);
     }
 
@@ -618,7 +636,7 @@ class importBLController extends Controller
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
                     'type' => 18,
-                    'message' => 'Status zmieniony na: ' . $newOrderStatusBLName . ' od statusu w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
+                    'message' => 'Status zmieniony na: ' . $newOrderStatusBLName . ' od statusu w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'] . ' Log ID: ' . $param['a_log']['log_id']
                 ]);
 
                 // Create a fresh query builder for the update to avoid deadlocks
@@ -635,7 +653,7 @@ class importBLController extends Controller
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
                     'type' => 91118,
-                    'message' => 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id']
+                    'message' => 'Status zamówienia w BaseLinker: ' . $newOrderStatusBLName . ' nie jest zgodny ze statusem zamówienia w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'] . ' Log ID: ' . $param['a_log']['log_id']
                 ]);
             }
         }
@@ -687,7 +705,7 @@ class importBLController extends Controller
                         'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                         'number' => $order['order_id'],
                         'type' => $param['a_log']['log_type'],
-                        'message' => "Change products: {$order['order_id']}"
+                        'message' => "Change products: {$order['order_id']}, Log ID: {$param['a_log']['log_id']}"
                     ]);
 
 
@@ -723,7 +741,7 @@ class importBLController extends Controller
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $order['order_id'],
                     'type' =>  (int)('911' . $param['a_log']['log_type']),
-                    'message' => "Change products Order: {$param['a_log']['order_id']}"
+                    'message' => "Change products Order: {$param['a_log']['order_id']} , Log ID: {$param['a_log']['log_id']}"
                 ]);
             }
         }
@@ -961,7 +979,7 @@ HAVING
                         'IDWarehouse' => $idMagazynu,
                         'number' => $orderData['order_id'],
                         'type' => 911,
-                        'message' => "Error executing CreateOrder: {$orderData['order_id']}. Details: " . $e->getMessage()
+                        'message' => "Error executing CreateOrder: {$orderData['order_id']}. Details: " . $e->getMessage() . " Log ID: {$orderData['log_id']} "
                     ]);
                 } else {
                     throw new \Exception("LogOrder model does not exist. Please ensure it is defined.");
