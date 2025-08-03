@@ -158,7 +158,7 @@ class importBLController extends Controller
         }
 
         // Calculate max logs to process based on interval (50 logs per minute)
-        $max_logs_to_process = $a_warehouse->interval_minutes * 8;
+        $max_logs_to_process = $a_warehouse->interval_minutes * 5;
 
         // Limit the logs array to the calculated maximum
         // Sort logs by log_id to process them chronologically
