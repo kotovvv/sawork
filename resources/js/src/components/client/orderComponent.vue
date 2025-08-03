@@ -143,6 +143,14 @@
                 >???? Więcej informacji o zamówieniu</v-btn
               >
             </div> -->
+                  <div class="mb-2" v-if="order._OrdersTempString10">
+                    <b>Numer Zwrotu:</b>
+                    {{ order._OrdersTempString10 }}
+                  </div>
+                  <div class="mb-2" v-if="order._OrdersTempString4">
+                    <b>Nr. Zwrotny BL:</b>
+                    {{ order._OrdersTempString4 }}
+                  </div>
                 </v-col>
               </v-row>
               <v-row v-else>
