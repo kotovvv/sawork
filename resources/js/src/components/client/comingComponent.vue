@@ -666,7 +666,8 @@ export default {
             vm.selectedItem.RelatedNrDokumentu = res.data.NrDokumentu;
             vm.snackbar = true;
             vm.message = res.data.message;
-            console.log(res.data);
+            vm.products = [];
+            vm.get_PZproducts();
           }
         })
         .catch((error) => console.log(error));
