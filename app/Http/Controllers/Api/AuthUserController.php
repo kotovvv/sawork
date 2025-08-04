@@ -24,7 +24,7 @@ class AuthUserController extends Controller
         $loginKey = 'login.attempts.' . $ipAddress;
 
         if (Cache::has($loginKey) && Cache::get($loginKey) >= $this->maxAttempts) {
-            $myLogInfo = date('Y-m-d H:i:s') . ', ' . $ipAddress . ', ' . $request->login . ', ' . $request->password;
+            $myLogInfo = date('Y-m-d H:i:s') . ', ' . $ipAddress . ', ' . $request->login . ', [BLOCKED]';
             file_put_contents(
                 storage_path() . '/logs/logins.log',
                 $myLogInfo . PHP_EOL,
@@ -57,12 +57,8 @@ class AuthUserController extends Controller
             ], 200);
         } else {
             // Увеличение количества попыток
-            Cache::increment($loginKey, 1);
-
-            // Установка времени жизни кеша при первой ошибочной попытке
-            if (Cache::get($loginKey) == 1) {
-                Cache::put($loginKey, 1, now()->addMinutes($this->decayMinutes));
-            }
+            $attempts = Cache::get($loginKey, 0) + 1;
+            Cache::put($loginKey, $attempts, now()->addMinutes($this->decayMinutes));
 
             return response()->json(['error' => 'Nieautoryzowany'], 401);
         }
