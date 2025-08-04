@@ -141,7 +141,7 @@ class ComingController extends Controller
         $IDWarehouseLocation = DB::table('dbo.WarehouseLocations')->where('LocationCode', $LocationCode)->where('IDMagazynu', $IDMagazynu)->first()->IDWarehouseLocation;
 
         // products
-        $products = DB::table('dbo.ElementRuchuMagazynowego')->select('Ilosc', 'Uwagi', 'CenaJednostkowa', 'IDTowaru', 'Uzytkownik')->where('IDRuchuMagazynowego', $data['IDRuchuMagazynowego'])->get();
+        $products = DB::table('dbo.ElementRuchuMagazynowego')->select('Ilosc', 'Uwagi', 'CenaJednostkowa', 'IDTowaru', 'Uzytkownik', 'NumerSerii')->where('IDRuchuMagazynowego', $data['IDRuchuMagazynowego'])->get();
         //$productsArray = [];
         foreach ($products as $product) {
             $productsArray = [
@@ -151,7 +151,8 @@ class ComingController extends Controller
                 'CenaJednostkowa' => $product->CenaJednostkowa,
                 'IDTowaru' => $product->IDTowaru,
                 'Uzytkownik' => $product->Uzytkownik,
-                'IDWarehouseLocation' => $IDWarehouseLocation
+                'IDWarehouseLocation' => $IDWarehouseLocation,
+                'NumerSerii' => $product->NumerSerii ? $product->NumerSerii : null
             ];
             DB::table('dbo.ElementRuchuMagazynowego')->insert($productsArray);
         }
@@ -194,7 +195,7 @@ class ComingController extends Controller
         if (isset($data['Uwagi'])) {
             DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->update(['Uwagi' => $data['Uwagi']]);
         }
-        $docPZ = DB::table('dbo.RuchMagazynowy')->select('IDRuchuMagazynowego', 'Data', 'Uwagi', 'IDMagazynu', 'NrDokumentu', 'WartoscDokumentu')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->first();
+        $docPZ = DB::table('dbo.RuchMagazynowy')->select('IDRuchuMagazynowego', 'Data', 'Uwagi', 'IDMagazynu', 'NrDokumentu', 'WartoscDokumentu', 'NumerSerii')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->first();
         return response()->json($docPZ, 200);
     }
 

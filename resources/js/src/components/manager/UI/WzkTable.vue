@@ -20,7 +20,7 @@
       fixed-header
       return-object
     >
-      <template v-slot:item.NrDokumentu="{ item }">
+      <template v-slot:[`item.NrDokumentu`]="{ item }">
         <span v-if="item.photo" class="photo">{{ item.photo }} </span>
         {{ item.NrDokumentu }}
       </template>
