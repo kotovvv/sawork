@@ -288,6 +288,7 @@ class ComingController extends Controller
             }
 
             $IDWarehouseLocation = $products[0]->IDWarehouseLocation;
+            //TODO: другая функция подсчёта.
             $inLocation = $this->getProductsInLocation($IDWarehouseLocation);
 
             $sum = 0;

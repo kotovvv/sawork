@@ -65,26 +65,6 @@
                       <productHistory :product_id="selected[0]" />
                     </v-row>
                   </template>
-                  <template v-slot:item.LocationCode="{ item }">
-                    <div>
-                      {{ item.LocationCode }}
-                      <template v-if="item.NumerSerii">
-                        <span
-                          v-for="(value, key) in JSON.parse(item.NumerSerii)"
-                          :key="key"
-                          class="ml-2"
-                        >
-                          {{
-                            key === "k"
-                              ? "Karton"
-                              : key === "p"
-                              ? "Paleta"
-                              : key
-                          }}: {{ value }}
-                        </span>
-                      </template>
-                    </div>
-                  </template>
                 </v-data-table>
               </v-col>
             </v-row>
@@ -437,6 +417,8 @@ export default {
       { title: "SKU", key: "sku" },
       { title: "Ilosc", key: "Ilosc" },
       { title: "LocationCode", key: "LocationCode" },
+      { title: "karton", key: "karton" },
+      { title: "paleta", key: "paleta" },
       {
         title: "W trakcie",
         key: "inLocation",
@@ -511,7 +493,6 @@ export default {
         .then((res) => {
           if (res.status == 200) {
             vm.products = res.data.products;
-            vm.productsDM = res.data.productsDM;
             if (vm.products.length > 0) {
               if (
                 vm.products.filter((p) => {
@@ -533,6 +514,13 @@ export default {
                 );
               }
             }
+            vm.productsDM = res.data.productsDM;
+            vm.productsDM.forEach((el) => {
+              const ns = el.NumerSerii ? JSON.parse(el.NumerSerii) : {};
+
+              el.karton = ns.k || "";
+              el.paleta = ns.p || "";
+            });
           }
         })
         .catch((error) => console.log(error));

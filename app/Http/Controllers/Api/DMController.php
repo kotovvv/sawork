@@ -106,7 +106,7 @@ class DMController extends Controller
             $products = $data['products'];
             $tranzit_warehouse = $data['tranzit_warehouse'] ?? 0;
             $numerDokumentu = $data['numer_dokumentu'] ?? '';
-
+            $uwagi_dokumentu = $data['uwagi_dokumentu'] ?? '';
             DB::beginTransaction();
 
             // Create missing units first
@@ -127,7 +127,7 @@ class DMController extends Controller
 
             DB::table('RuchMagazynowy')->insert([
                 'Data' => Carbon::now(),
-                'Uwagi' => $tranzit_warehouse == 1 ? 'tranzit ' . $numerDokumentu : 'Dostawa do magazynu - ' . $numerDokumentu,
+                'Uwagi' => $tranzit_warehouse == 1 ? 'tranzit ' . $numerDokumentu . ' Uwagi: ' . $uwagi_dokumentu : 'Dostawa do magazynu - ' . $numerDokumentu . ' Uwagi: ' . $uwagi_dokumentu,
                 'IDRodzajuRuchuMagazynowego' => 200, // DM document type
                 'IDMagazynu' => $IDWarehouse,
                 'NrDokumentu' => $documentNumber,
@@ -187,7 +187,7 @@ class DMController extends Controller
                         'Zmodyfikowano' => Carbon::now(),
                         'Uzytkownik' => $userId,
                     ];
-
+                    //TODO: поля показать везде
                     if ($tranzit_warehouse == 0) {
                         $insertData['NumerSerii'] = json_encode([
                             'k' => $product['Numer kartonu'] ?? '',
@@ -307,6 +307,7 @@ class DMController extends Controller
         // Check if product with this EAN already exists
         $existingProductByEan = DB::table('Towar')
             ->where('KodKreskowy', trim($product['EAN']))
+            ->where('IDMagazynu', $IDWarehouse)
             ->first();
 
         if ($existingProductByEan) {
@@ -357,6 +358,7 @@ class DMController extends Controller
         ]);
         $productId = DB::table('Towar')
             ->where('KodKreskowy', $product['EAN'])
+            ->where('IDMagazynu', $IDWarehouse)
             ->value('IDTowaru');
         if (!$productId) {
             throw new Exception("Nie udało się utworzyć produktu: {$product['Nazwa']} (EAN: {$product['EAN']})");
@@ -383,6 +385,7 @@ class DMController extends Controller
         if ($volumeToSet !== null) {
             DB::table('Towar')
                 ->where('IDTowaru', $productId)
+                ->where('IDMagazynu', $IDWarehouse)
                 ->update(['_TowarTempDecimal2' => number_format($volumeToSet, 6, '.', '')]);
         }
 
@@ -630,6 +633,7 @@ class DMController extends Controller
             // Check if product with this EAN already exists
             $existingProduct = DB::table('Towar')
                 ->where('KodKreskowy', trim($product['EAN']))
+                ->where('IDMagazynu', $IDWarehouse)
                 ->first();
 
             if ($existingProduct) {
@@ -640,11 +644,12 @@ class DMController extends Controller
             }
 
             // Create new product
-            $IDTowaru = DB::table('Towar')->insertGetId([
+            DB::table('Towar')->insert([
                 'Nazwa' => $product['Nazwa'],
                 'KodKreskowy' => trim($product['EAN']),
                 'IDGrupyTowarowej' => $product['IDGrupyTowarowej'],
                 'CenaZakupu' => $product['cena'] ?? 0,
+                'IDMagazynu' => $IDWarehouse,
                 'm3' => $product['m3'] ?? null,
                 '_TowarTempString1' => $product['SKU'] ?? null,
                 '_TowarTempDecimal1' => $product['waga'] ?? null,
@@ -656,20 +661,23 @@ class DMController extends Controller
                 'created_at' => now(),
                 'updated_at' => now()
             ]);            // Check if unit exists for this product
-            $existingUnit = DB::table('JednostkaTowarowa')
-                ->where('IDTowaru', $IDTowaru)
+            $IDTowaru = DB::table('Towar')
+                ->where('KodKreskowy', trim($product['EAN']))
+                ->where('IDMagazynu', $IDWarehouse)
+                ->value('IDTowaru');
+            $existingUnit = DB::table('JednostkaMiary')
+
                 ->where('Nazwa', $product['jednostka'])
                 ->first();
 
             if (!$existingUnit) {
                 // Create unit for product
-                DB::table('JednostkaTowarowa')->insert([
-                    'IDTowaru' => $IDTowaru,
+                DB::table('JednostkaMiary')->insert([
+
                     'Nazwa' => $product['jednostka'],
-                    'Podstawowa' => 1,
-                    'Przelicznik' => 1,
-                    'created_at' => now(),
-                    'updated_at' => now()
+
+                    'Utworzono' => now(),
+                    'Zmodyfikowano' => now()
                 ]);
             }
 

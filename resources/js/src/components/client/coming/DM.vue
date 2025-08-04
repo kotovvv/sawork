@@ -31,6 +31,16 @@
             karton, paleta) (oznaczone *)
           </p>
         </v-col>
+        <v-col>
+          <v-textarea
+            v-model="uwagi_dokumentu"
+            label="Uwagi"
+            rows="1"
+            auto-grow
+            outlined
+            class="mt-2"
+          ></v-textarea>
+        </v-col>
       </v-row>
       <v-progress-linear
         :active="loading"
@@ -186,6 +196,7 @@ export default {
       validationResults: null,
       documentCreated: null,
       rowHighlights: [], // Array to store row highlighting info
+      uwagi_dokumentu: "", // Field for document notes
     };
   },
 
@@ -311,6 +322,7 @@ export default {
           user_id: this.user?.id || 1,
           tranzit_warehouse: this.tranzit_warehouse || 0, // Use prop or default to 0
           numer_dokumentu: this.numerDokumentu || "", // Use prop or empty string
+          uwagi_dokumentu: this.uwagi_dokumentu || "", // Document notes
         });
 
         if (response.data.status === "success") {
