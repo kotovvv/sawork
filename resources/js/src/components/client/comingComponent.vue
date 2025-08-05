@@ -20,13 +20,14 @@
           >
             <v-row>
               <v-col>
-                <h3>
-                  {{ selectedItem.NrDokumentu }}
+                <p>
+                  Zastosowanie: {{ selectedItem.NrDokumentu }}
                   <small>{{ selectedItem.Data.substring(0, 10) }}</small>
-                  <span v-if="selectedItem.RelatedNrDokumentu">
-                    -> {{ selectedItem.RelatedNrDokumentu }}</span
-                  >
-                </h3>
+                </p>
+                <p v-if="selectedItem.RelatedData">
+                  Data wpłynięcia:
+                  {{ selectedItem.RelatedData.substring(0, 10) }}
+                </p>
               </v-col>
               <v-spacer></v-spacer>
               <v-btn
@@ -661,7 +662,7 @@ export default {
       let data = {};
       data.IDMagazynu = vm.IDWarehouse;
       data.IDRuchuMagazynowego = vm.selectedItem.IDRuchuMagazynowego;
-
+      data.Uwagi = vm.selectedItem.Uwagi || "";
       axios
         .post("/api/createPZ", data)
         .then((res) => {

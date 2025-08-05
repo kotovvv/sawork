@@ -38,9 +38,6 @@
         ></v-icon>
         <span v-if="item.ready" class="percent">{{ item.ready }}%</span>
         {{ item.NrDokumentu }}
-        <small v-if="item.External_id" class="text-grey"
-          >({{ item.External_id }})</small
-        >
       </template>
       <template v-slot:top v-if="docsDM.length">
         <v-row class="align-center">
@@ -141,6 +138,8 @@ export default {
     headers: [
       { title: "Data", key: "Data" },
       { title: "Nr Dokumentu", key: "NrDokumentu", sortable: false },
+      { title: "Data wpłynięcia", key: "RelatedData", sortable: false },
+
       {
         title: "Wartość Dokumentu",
         key: "WartoscDokumentu",
@@ -187,7 +186,13 @@ export default {
           if (res.status == 200) {
             vm.docsDM = res.data;
             vm.docsDM.forEach((el) => {
+              if (el.External_id) {
+                el.NrDokumentu = el.NrDokumentu + " (" + el.External_id + ")";
+              }
               el.Data = el.Data.substr(0, 16);
+              el.RelatedData = el.RelatedData
+                ? el.RelatedData.substr(0, 16)
+                : "";
               el.brk = el.brk == "1" ? true : false;
               el.WartoscDokumentu = parseFloat(el.WartoscDokumentu).toFixed(2);
               if (el.ID1) {

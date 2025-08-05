@@ -2,14 +2,13 @@
 
 ## Endpoint: Create DM Document
 
-**POST** `/api/dm/create`
+**POST** `https://panel.fulstor.pl/api/dm/create`
 
 ### Authentication
 
 API key required in one of the following ways:
 
 -   Header: `X-API-Key: your-api-key`
--   Body parameter: `api_key: your-api-key`
 
 **Important**: The warehouse is automatically determined by the API key. You don't need to specify `IDWarehouse` in the request.
 
@@ -27,10 +26,6 @@ API_KEY_2_WAREHOUSE=11
 API_KEY_3=test-warehouse-3-key
 API_KEY_3_WAREHOUSE=12
 ```
-
-#### Option 2: Database Table (api_keys)
-
-Run the SQL script from `database/sql/create_api_keys_table.sql`
 
 ### Request Body
 
@@ -64,17 +59,17 @@ Run the SQL script from `database/sql/create_api_keys_table.sql`
 
 -   `products` - Array of products
 -   For each product:
-    -   `Nazwa` - Product name
-    -   `EAN` - Barcode (unique)
+    -   `Nazwa` - Product name (string 255)
+    -   `EAN` - Barcode (string 100)
     -   `jednostka` - Unit (allowed: "towar", "karton", "paleta")
     -   `Ilość` - Quantity (number > 0)
     -   `Cena` - Price (number)
 
 ### Optional Fields
 
--   `tranzit_warehouse` - Transit warehouse flag (0 or 1, default: 0)
--   `numer_dokumentu` - Document number (string)
--   `uwagi_dokumentu` - Document comments (string)
+-   `tranzit_warehouse` - Transit warehouse flag (0 - warehouse or 1 - tranzit, default: 0)
+-   `numer_dokumentu` - Document number (string 50)
+-   `uwagi_dokumentu` - Document comments (string 1000)
 -   Product optional fields:
     -   `SKU` - Stock Keeping Unit
     -   `Waga (kg)` - Weight in kg
@@ -82,9 +77,9 @@ Run the SQL script from `database/sql/create_api_keys_table.sql`
     -   `Szerokość (cm)` - Width in cm
     -   `Wysokość (cm)` - Height in cm
     -   `m3` - Volume in cubic meters
-    -   `Informacje dodatkowe` - Additional information
+    -   `Informacje dodatkowe` - Additional information (dtrin 1000)
     -   `Numer kartonu` - Carton number (only for non-transit)
-    -   `Numer palety` - Pallet number (only for non-transit)
+    -   `Numer palety` - Pallet number (only for non-transit) ( `Numer kartonu` + `Numer palety` = string 40)
 
 ### Success Response
 
@@ -125,20 +120,10 @@ Run the SQL script from `database/sql/create_api_keys_table.sql`
 -   `422` - Validation Error (product validation failed)
 -   `500` - Internal Server Error
 
-### API Key to Warehouse Mapping
-
-Each API key is mapped to exactly one warehouse:
-
--   `API_KEY_1` → Warehouse 1
--   `API_KEY_2` → Warehouse 2
--   `API_KEY_3` → Warehouse 3
-
-The warehouse ID is automatically determined from the API key, so you don't need to specify it in the request.
-
 ### Example cURL Request
 
 ```bash
-curl -X POST "http://fulstor.test/api/dm/create" \
+curl -X POST "https://panel.fulstor.pl/api/dm/create" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: dm-warehouse-1-key-12345" \
   -d '{

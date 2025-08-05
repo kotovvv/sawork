@@ -100,7 +100,7 @@ class ComingController extends Controller
         $createPZ = [];
         $createPZ['IDMagazynu'] = $IDMagazynu;
         $createPZ['Data'] = date('Y/m/d H:i:s');
-
+        $createPZ['Uwagi'] = isset($data['Uwagi']) ? $data['Uwagi'] : '';
         $createPZ['IDRodzajuRuchuMagazynowego'] = 1;
         $createPZ['IDUzytkownika'] = 1;
         $createPZ['Operator'] = 1;

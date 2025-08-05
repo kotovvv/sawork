@@ -32,8 +32,7 @@ use App\Http\Controllers\Api\DMController;
 //     return $request->user();
 // });
 Route::post('login', [AuthUserController::class, 'login']);
-// API endpoint for creating DM documents with API key authentication
-Route::post('dm/create', [\App\Http\Controllers\Api\DMController::class, 'createDMApi']);
+
 Route::middleware(['jwt.verify'])->group(function () {
     Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
     Route::get('loadMagEmail', [MagazynController::class, 'loadMagEmail']);
