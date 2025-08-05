@@ -187,4 +187,22 @@ return [
         'PDF' => Barryvdh\DomPDF\Facade::class,
     ])->toArray(),
 
+    /*
+    |--------------------------------------------------------------------------
+    | API Keys
+    |--------------------------------------------------------------------------
+    |
+    | API keys with warehouse mapping configuration.
+    | Format: 'api_key' => warehouse_id
+    |
+    */
+
+    'api_keys' => [
+        env('API_KEY_1') => env('API_KEY_1_WAREHOUSE', 1), // Maps to warehouse 1
+        env('API_KEY_2') => env('API_KEY_2_WAREHOUSE', 2), // Maps to warehouse 2
+        env('API_KEY_3') => env('API_KEY_3_WAREHOUSE', 3), // Maps to warehouse 3
+        // Add more API keys as needed
+        // 'your-api-key-here' => 1, // Direct warehouse ID mapping
+    ],
+
 ];
