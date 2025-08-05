@@ -68,7 +68,7 @@ export default {
     theMenu: "refunds2",
 
     items: [
-      { text: "Zwroty", name: "refunds2", icon: "mdi-database-plus" },
+      { text: "Zwroty", name: "refunds2", icon: "mdi-keyboard-return" },
       { text: "sendPDF", name: "sendPDF", icon: "mdi-file-send" },
       { text: "Dostawa do magazynu", name: "coming", icon: "mdi-van-utility" },
       { text: "Lokalizacja", name: "locationComponent", icon: "mdi-forklift" },

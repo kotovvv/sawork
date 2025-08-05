@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\PrintController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ForTTNController;
 use App\Http\Controllers\Api\BaseLinkerController;
+use App\Http\Controllers\Api\DMController;
 
 /*
 |--------------------------------------------------------------------------
@@ -64,6 +65,8 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('sendEmail', [ReturnController::class, 'sendEmail']);
     Route::post('whenSendedEmail', [ReturnController::class, 'whenSendedEmail']);
     Route::get('getProductsInLocation/{IDWarehouse}/{location}', [ReturnController::class, 'getProductsInLocation']);
+    Route::post('updateIsWartoscBulk', [ReturnController::class, 'updateIsWartoscBulk']);
+
     Route::get('getProductsInLocationByUser', [ReturnController::class, 'getProductsInLocationByUser']);
     Route::get('sendPDF', [SendPDF::class, 'index']);
     Route::post('TowarLocationTipTab', [LocationController::class, 'TowarLocationTipTab']);
@@ -127,6 +130,14 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('getTTN', [ForTTNController::class, 'getTTN']);
 
     Route::get('importSingleOrder/{warehouseId}/{orderId}', [\App\Http\Controllers\Api\importBLController::class, 'importSingleOrder']);
+    Route::post('checkDMProducts', [\App\Http\Controllers\Api\DMController::class, 'checkProducts']);
+    Route::post('createDMDocument', [\App\Http\Controllers\Api\DMController::class, 'createDocument']);
+    Route::post('getProductGroups', [\App\Http\Controllers\Api\DMController::class, 'getProductGroups']);
+    Route::get('getUnits', [\App\Http\Controllers\Api\DMController::class, 'getUnits']);
+    Route::post('addProductToDatabase', [\App\Http\Controllers\Api\DMController::class, 'addProductToDatabase']);
 
     Route::post('downloadPdfs', [SendPDF::class, 'downloadPdfs']);
 });
+
+// Public API routes (no authentication required)
+Route::post('dm/create', [\App\Http\Controllers\Api\DMController::class, 'createDMApi']);

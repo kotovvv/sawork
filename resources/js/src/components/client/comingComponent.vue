@@ -20,13 +20,14 @@
           >
             <v-row>
               <v-col>
-                <h3>
-                  {{ selectedItem.NrDokumentu }}
+                <p>
+                  Zastosowanie: {{ selectedItem.NrDokumentu }}
                   <small>{{ selectedItem.Data.substring(0, 10) }}</small>
-                  <span v-if="selectedItem.RelatedNrDokumentu">
-                    -> {{ selectedItem.RelatedNrDokumentu }}</span
-                  >
-                </h3>
+                </p>
+                <p v-if="selectedItem.RelatedData">
+                  Data wpłynięcia:
+                  {{ selectedItem.RelatedData.substring(0, 10) }}
+                </p>
               </v-col>
               <v-spacer></v-spacer>
               <v-btn
@@ -416,7 +417,9 @@ export default {
       { title: "KodKreskowy", key: "KodKreskowy" },
       { title: "SKU", key: "sku" },
       { title: "Ilosc", key: "Ilosc" },
-
+      { title: "LocationCode", key: "LocationCode" },
+      { title: "karton", key: "karton" },
+      { title: "paleta", key: "paleta" },
       {
         title: "W trakcie",
         key: "inLocation",
@@ -497,7 +500,6 @@ export default {
         .then((res) => {
           if (res.status == 200) {
             vm.products = res.data.products;
-            vm.productsDM = res.data.productsDM;
             if (vm.products.length > 0) {
               if (
                 vm.products.filter((p) => {
@@ -519,6 +521,17 @@ export default {
                 );
               }
             }
+            vm.products.forEach((el) => {
+              const ns = el.NumerSerii ? JSON.parse(el.NumerSerii) : {};
+              el.karton = ns.k || "";
+              el.paleta = ns.p || "";
+            });
+            vm.productsDM = res.data.productsDM;
+            vm.productsDM.forEach((el) => {
+              const ns = el.NumerSerii ? JSON.parse(el.NumerSerii) : {};
+              el.karton = ns.k || "";
+              el.paleta = ns.p || "";
+            });
           }
         })
         .catch((error) => console.log(error));
@@ -655,7 +668,7 @@ export default {
       let data = {};
       data.IDMagazynu = vm.IDWarehouse;
       data.IDRuchuMagazynowego = vm.selectedItem.IDRuchuMagazynowego;
-
+      data.Uwagi = vm.selectedItem.Uwagi || "";
       axios
         .post("/api/createPZ", data)
         .then((res) => {
@@ -664,7 +677,8 @@ export default {
             vm.selectedItem.RelatedNrDokumentu = res.data.NrDokumentu;
             vm.snackbar = true;
             vm.message = res.data.message;
-            console.log(res.data);
+            vm.products = [];
+            vm.get_PZproducts();
           }
         })
         .catch((error) => console.log(error));

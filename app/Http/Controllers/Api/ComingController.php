@@ -28,6 +28,8 @@ class ComingController extends Controller
                 'rm1.Data',
                 'rm1.NrDokumentu',
                 'rm1.WartoscDokumentu',
+                'rm1._RuchMagazynowyTempBool1 as tranzit_warehouse',
+                'rm1._RuchMagazynowyTempString8 as External_id',
                 'DocumentRelations.ID1',
                 'rm2.Data as RelatedData',
                 'rm2.NrDokumentu as RelatedNrDokumentu',
@@ -60,7 +62,9 @@ class ComingController extends Controller
                 'InfoComming.doc',
                 'InfoComming.photo',
                 'InfoComming.brk',
-                'InfoComming.ready'
+                'InfoComming.ready',
+                'rm1._RuchMagazynowyTempBool1',
+                'rm1._RuchMagazynowyTempString8',
             )
             ->orderBy('rm1.Data', 'DESC')
             ->get();
@@ -96,7 +100,7 @@ class ComingController extends Controller
         $createPZ = [];
         $createPZ['IDMagazynu'] = $IDMagazynu;
         $createPZ['Data'] = date('Y/m/d H:i:s');
-
+        $createPZ['Uwagi'] = isset($data['Uwagi']) ? $data['Uwagi'] : '';
         $createPZ['IDRodzajuRuchuMagazynowego'] = 1;
         $createPZ['IDUzytkownika'] = 1;
         $createPZ['Operator'] = 1;
@@ -137,7 +141,7 @@ class ComingController extends Controller
         $IDWarehouseLocation = DB::table('dbo.WarehouseLocations')->where('LocationCode', $LocationCode)->where('IDMagazynu', $IDMagazynu)->first()->IDWarehouseLocation;
 
         // products
-        $products = DB::table('dbo.ElementRuchuMagazynowego')->select('Ilosc', 'Uwagi', 'CenaJednostkowa', 'IDTowaru', 'Uzytkownik')->where('IDRuchuMagazynowego', $data['IDRuchuMagazynowego'])->get();
+        $products = DB::table('dbo.ElementRuchuMagazynowego')->select('Ilosc', 'Uwagi', 'CenaJednostkowa', 'IDTowaru', 'Uzytkownik', 'NumerSerii')->where('IDRuchuMagazynowego', $data['IDRuchuMagazynowego'])->get();
         //$productsArray = [];
         foreach ($products as $product) {
             $productsArray = [
@@ -147,7 +151,8 @@ class ComingController extends Controller
                 'CenaJednostkowa' => $product->CenaJednostkowa,
                 'IDTowaru' => $product->IDTowaru,
                 'Uzytkownik' => $product->Uzytkownik,
-                'IDWarehouseLocation' => $IDWarehouseLocation
+                'IDWarehouseLocation' => $IDWarehouseLocation,
+                'NumerSerii' => $product->NumerSerii ? $product->NumerSerii : null
             ];
             DB::table('dbo.ElementRuchuMagazynowego')->insert($productsArray);
         }
@@ -190,7 +195,7 @@ class ComingController extends Controller
         if (isset($data['Uwagi'])) {
             DB::table('dbo.RuchMagazynowy')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->update(['Uwagi' => $data['Uwagi']]);
         }
-        $docPZ = DB::table('dbo.RuchMagazynowy')->select('IDRuchuMagazynowego', 'Data', 'Uwagi', 'IDMagazynu', 'NrDokumentu', 'WartoscDokumentu')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->first();
+        $docPZ = DB::table('dbo.RuchMagazynowy')->select('IDRuchuMagazynowego', 'Data', 'Uwagi', 'IDMagazynu', 'NrDokumentu', 'WartoscDokumentu', 'NumerSerii')->where('IDRuchuMagazynowego', $IDRuchuMagazynowego)->first();
         return response()->json($docPZ, 200);
     }
 
@@ -221,6 +226,7 @@ class ComingController extends Controller
                     'erm.IDElementuRuchuMagazynowego',
                     'erm.IDRuchuMagazynowego',
                     'erm.IDTowaru',
+                    'erm.NumerSerii',
                     DB::raw('CAST(erm.Ilosc as INT) as Ilosc'),
 
                     'erm.IDWarehouseLocation',
@@ -241,6 +247,7 @@ class ComingController extends Controller
                     'erm.IDElementuRuchuMagazynowego',
                     'erm.IDRuchuMagazynowego',
                     'erm.IDTowaru',
+                    'erm.NumerSerii',
                     DB::raw('CAST(erm.Ilosc as INT) as Ilosc'),
 
                     'erm.IDWarehouseLocation',
@@ -260,6 +267,7 @@ class ComingController extends Controller
                     'erm.IDElementuRuchuMagazynowego',
                     'erm.IDRuchuMagazynowego',
                     'erm.IDTowaru',
+                    'erm.NumerSerii',
                     DB::raw('CAST(erm.Ilosc as INT) as Ilosc'),
 
                     'erm.IDWarehouseLocation',
@@ -280,14 +288,12 @@ class ComingController extends Controller
                 $sumAllProducts += $product->Ilosc;
             }
 
-            $IDWarehouseLocation = $products[0]->IDWarehouseLocation;
-            $inLocation = $this->getProductsInLocation($IDWarehouseLocation);
-
             $sum = 0;
             foreach ($products as $key => $product) {
-                if (isset($inLocation[$product->KodKreskowy])) {
-                    $products[$key]->inLocation = $inLocation[$product->KodKreskowy];
-                    $sum += $inLocation[$product->KodKreskowy];
+                $ilosc = $this->getQuantityForId($product->IDElementuRuchuMagazynowego, $product->IDTowaru, $product->IDRuchuMagazynowego);
+                if ($ilosc) {
+                    $products[$key]->inLocation = (int)$ilosc->Ilosc ?? 0;
+                    $sum += $ilosc->Ilosc ?? 0;
                 } else {
                     $products[$key]->inLocation = 0;
                 }
@@ -299,6 +305,28 @@ class ComingController extends Controller
 
         return $res;
     }
+    private function getQuantityForId($id, $idTowaru, $idElementuRuchuMagazynowego)
+    {
+        $date = Carbon::now()->format('Y/m/d H:i:s');
+        return DB::selectOne("
+        SELECT SUM(X.ilosc) as Ilosc FROM (
+            SELECT IDElementuPZ as ID, ilosc
+            FROM StanySzczegolowo(?)
+            WHERE IDTowaru = ? AND IDElementuPZ = ?
+
+            UNION ALL
+
+            SELECT PZ.IDElementuRuchuMagazynowego as ID, PZWZ.ilosc
+            FROM ZaleznosciPZWZ PZWZ
+            INNER JOIN ElementRuchuMagazynowego AS WZ ON WZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuWZ
+            INNER JOIN ElementRuchuMagazynowego AS PZ ON PZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuPZ
+            INNER JOIN Towar t ON t.IDTowaru = WZ.IDTowaru
+            WHERE t.IdTowaru = ? AND WZ.IDElementuRuchuMagazynowego = ?
+                  AND PZ.IDElementuRuchuMagazynowego = ?
+        ) X
+    ", [$date, $idTowaru, $id, $idTowaru, $idElementuRuchuMagazynowego, $id]);
+    }
+
 
     private function getProductsInLocation($IDWarehouseLocation)
     {

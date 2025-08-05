@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Mail;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
+use Exception;
 
 class ReturnController extends Controller
 {
@@ -252,6 +253,7 @@ class ReturnController extends Controller
         $IDWarehouse = trim($data['IDWarehouse']);
         $dateMin = Carbon::parse($data['dateMin'])->setTime(00, 00, 00)->format('m.d.Y H:i:s');
         $dateMax = Carbon::parse($data['dateMax'])->setTime(23, 59, 59)->format('m.d.Y H:i:s');
+        $filter_isWartosc = isset($data['filter_isWartosc']) ? $data['filter_isWartosc'] : null;
 
         $res = [];
         $res['DocsWZk'] = DB::table('RuchMagazynowy as rm')
@@ -273,7 +275,7 @@ class ReturnController extends Controller
                 '_RuchMagazynowyTempString5',
                 '_RuchMagazynowyTempString6 as uwagiSprzedawcy',
                 '_RuchMagazynowyTempBool1',
-                '_RuchMagazynowyTempBool3 as isWartosc',
+                DB::raw("CASE WHEN _RuchMagazynowyTempBool3 IS NULL OR _RuchMagazynowyTempBool3 = 0 THEN 'Nie' ELSE 'Так' END as isWartosc"),
                 'kon.Nazwa as Kontrahent',
                 'ic.photo as photo',
                 'ic.locations as status',
@@ -595,5 +597,31 @@ WHERE NrDokumentu = '" .  $validatedData['NrDokumentu'] . "'");
             ->orderBy('Data', 'desc')
             ->get();
         return response($res);
+    }
+
+
+    /**
+     * Update the isWartosc field in bulk for multiple documents.
+     */
+    public function updateIsWartoscBulk(Request $request)
+    {
+        try {
+            $documentIds = $request->input('documentIds');
+
+
+            $updatedCount = DB::table('RuchMagazynowy')
+                ->whereIn('IDRuchuMagazynowego', $documentIds)
+                ->update(['_RuchMagazynowyTempBool3' => 1, 'Zmodyfikowano' => now()]);
+
+            return response()->json([
+                'success' => true,
+                'updatedCount' => $updatedCount
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }
