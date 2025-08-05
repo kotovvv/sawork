@@ -288,15 +288,12 @@ class ComingController extends Controller
                 $sumAllProducts += $product->Ilosc;
             }
 
-            $IDWarehouseLocation = $products[0]->IDWarehouseLocation;
-            //TODO: другая функция подсчёта.
-            $inLocation = $this->getProductsInLocation($IDWarehouseLocation);
-
             $sum = 0;
             foreach ($products as $key => $product) {
-                if (isset($inLocation[$product->KodKreskowy])) {
-                    $products[$key]->inLocation = $inLocation[$product->KodKreskowy];
-                    $sum += $inLocation[$product->KodKreskowy];
+                $ilosc = $this->getQuantityForId($product->IDElementuRuchuMagazynowego, $product->IDTowaru, $product->IDRuchuMagazynowego);
+                if ($ilosc) {
+                    $products[$key]->inLocation = (int)$ilosc->Ilosc ?? 0;
+                    $sum += $ilosc->Ilosc ?? 0;
                 } else {
                     $products[$key]->inLocation = 0;
                 }
@@ -308,6 +305,28 @@ class ComingController extends Controller
 
         return $res;
     }
+    private function getQuantityForId($id, $idTowaru, $idElementuRuchuMagazynowego)
+    {
+        $date = Carbon::now()->format('Y/m/d H:i:s');
+        return DB::selectOne("
+        SELECT SUM(X.ilosc) as Ilosc FROM (
+            SELECT IDElementuPZ as ID, ilosc
+            FROM StanySzczegolowo(?)
+            WHERE IDTowaru = ? AND IDElementuPZ = ?
+
+            UNION ALL
+
+            SELECT PZ.IDElementuRuchuMagazynowego as ID, PZWZ.ilosc
+            FROM ZaleznosciPZWZ PZWZ
+            INNER JOIN ElementRuchuMagazynowego AS WZ ON WZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuWZ
+            INNER JOIN ElementRuchuMagazynowego AS PZ ON PZ.IDElementuRuchuMagazynowego = PZWZ.IDElementuPZ
+            INNER JOIN Towar t ON t.IDTowaru = WZ.IDTowaru
+            WHERE t.IdTowaru = ? AND WZ.IDElementuRuchuMagazynowego = ?
+                  AND PZ.IDElementuRuchuMagazynowego = ?
+        ) X
+    ", [$date, $idTowaru, $id, $idTowaru, $idElementuRuchuMagazynowego, $id]);
+    }
+
 
     private function getProductsInLocation($IDWarehouseLocation)
     {

@@ -514,10 +514,14 @@ export default {
                 );
               }
             }
+            vm.products.forEach((el) => {
+              const ns = el.NumerSerii ? JSON.parse(el.NumerSerii) : {};
+              el.karton = ns.k || "";
+              el.paleta = ns.p || "";
+            });
             vm.productsDM = res.data.productsDM;
             vm.productsDM.forEach((el) => {
               const ns = el.NumerSerii ? JSON.parse(el.NumerSerii) : {};
-
               el.karton = ns.k || "";
               el.paleta = ns.p || "";
             });
