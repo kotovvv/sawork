@@ -703,4 +703,308 @@ class DMController extends Controller
             ]);
         }
     }
+
+    /**
+     * Create DM document from API data with validation
+     * Requires API key authentication, warehouse is determined by API key
+     */
+    public function createDMApi(Request $request)
+    {
+        try {
+            // Get warehouse ID by API key
+            $IDWarehouse = $this->getWarehouseByApiKey($request);
+
+            if (!$IDWarehouse) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Nieprawidłowy klucz API'
+                ], 401);
+            }
+
+            $data = $request->all();
+
+            // Validate required fields
+            $requiredFields = ['products'];
+            foreach ($requiredFields as $field) {
+                if (!isset($data[$field]) || empty($data[$field])) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Pole '{$field}' jest wymagane"
+                    ], 400);
+                }
+            }
+
+            $products = $data['products'];
+            $tranzit_warehouse = $data['tranzit_warehouse'] ?? 0;
+            $numerDokumentu = $data['numer_dokumentu'] ?? '';
+            $uwagi_dokumentu = $data['uwagi_dokumentu'] ?? '';
+
+            // Validate warehouse exists
+            $warehouse = DB::table('Magazyn')->where('IDMagazynu', $IDWarehouse)->first();
+            if (!$warehouse) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Magazyn o ID {$IDWarehouse} nie istnieje"
+                ], 400);
+            }
+
+            // First, validate all products
+            $validationResponse = [
+                'status' => 'validation',
+                'existing_products' => [],
+                'new_products' => [],
+                'errors' => [],
+                'warnings' => []
+            ];
+
+            // Get or create default product group for warehouse
+            $defaultGroupId = $this->getOrCreateDefaultGroup($IDWarehouse);
+
+            // Check if first row contains headers or data
+            $hasHeaders = $this->checkIfFirstRowIsHeaders($products);
+            $startIndex = $hasHeaders ? 1 : 0;
+
+            foreach ($products as $index => $product) {
+                // Skip header row if present
+                if ($index < $startIndex) {
+                    continue;
+                }
+
+                // Skip empty rows
+                if (empty(trim($product['Nazwa'] ?? '')) && empty(trim($product['EAN'] ?? '')) && empty(trim($product['jednostka'] ?? ''))) {
+                    continue;
+                }
+
+                $productCheck = $this->validateProduct($product, $IDWarehouse, $index + 1);
+
+                if (!empty($productCheck['errors'])) {
+                    $validationResponse['errors'] = array_merge($validationResponse['errors'], $productCheck['errors']);
+                }
+
+                if (!empty($productCheck['warnings'])) {
+                    $validationResponse['warnings'] = array_merge($validationResponse['warnings'], $productCheck['warnings']);
+                }
+
+                if ($productCheck['exists']) {
+                    $validationResponse['existing_products'][] = $productCheck;
+                } else {
+                    $productCheck['IDGrupyTowarow'] = $defaultGroupId;
+                    $validationResponse['new_products'][] = $productCheck;
+                }
+            }
+
+            // If there are validation errors, return them without creating document
+            if (!empty($validationResponse['errors'])) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Błędy walidacji danych',
+                    'errors' => $validationResponse['errors'],
+                    'warnings' => $validationResponse['warnings']
+                ], 422);
+            }
+
+            // No validation errors, proceed with document creation
+            $userId = 1; // Default user for API requests
+
+            DB::beginTransaction();
+
+            // Create new products
+            $createdProducts = [];
+            foreach ($validationResponse['new_products'] as $productData) {
+                $createdProduct = $this->createProduct($productData, $IDWarehouse, $defaultGroupId);
+                $createdProducts[$productData['original_index']] = $createdProduct;
+            }
+
+            // Create DM document
+            $documentNumber = $this->generateDocumentNumber($IDWarehouse);
+
+            DB::table('RuchMagazynowy')->insert([
+                'Data' => Carbon::now(),
+                'Uwagi' => $tranzit_warehouse == 1 ? 'tranzit ' . $numerDokumentu . ' Uwagi: ' . $uwagi_dokumentu : 'Dostawa do magazynu - ' . $numerDokumentu . ' Uwagi: ' . $uwagi_dokumentu,
+                'IDRodzajuRuchuMagazynowego' => 200, // DM document type
+                'IDMagazynu' => $IDWarehouse,
+                'NrDokumentu' => $documentNumber,
+                'IDUzytkownika' => $userId,
+                'Utworzono' => Carbon::now(),
+                'Zmodyfikowano' => Carbon::now(),
+                'IDCompany' => 1,
+                'IDRodzajuTransportu' => 0,
+                'Operator' => 0,
+                '_RuchMagazynowyTempBool1' => $tranzit_warehouse == 1 ? 1 : 0,
+                '_RuchMagazynowyTempString8' => $numerDokumentu
+            ]);
+
+            $documentId = DB::table('RuchMagazynowy')
+                ->where('NrDokumentu', $documentNumber)
+                ->value('IDRuchuMagazynowego');
+
+            if (!$documentId) {
+                throw new Exception("Nie udało się utworzyć dokumentu DM");
+            }
+
+            // Add products to document
+            foreach ($products as $index => $product) {
+                // Skip header row if present
+                if ($index < $startIndex) {
+                    continue;
+                }
+
+                // Skip empty rows
+                if (empty($product['Nazwa'] ?? '') && empty($product['EAN'] ?? '') && empty($product['SKU'] ?? '')) {
+                    continue;
+                }
+
+                $productId = null;
+
+                // Find product ID
+                if (isset($createdProducts[$index])) {
+                    $productId = $createdProducts[$index]['IDTowaru'];
+                } else {
+                    // Find existing product
+                    $existingProduct = $this->findProductByEanOrSku($product, $IDWarehouse);
+                    if ($existingProduct) {
+                        $productId = $existingProduct->IDTowaru;
+                    }
+                }
+
+                if ($productId) {
+                    $insertData = [
+                        'Ilosc' => floatval($product['Ilość'] ?? 0),
+                        'Uwagi' => $product['Informacje dodatkowe'] ?? '',
+                        'CenaJednostkowa' => floatval($product['Cena'] ?? 0),
+                        'IDRuchuMagazynowego' => $documentId,
+                        'IDTowaru' => $productId,
+                        'Utworzono' => Carbon::now(),
+                        'Zmodyfikowano' => Carbon::now(),
+                        'Uzytkownik' => $userId,
+                    ];
+
+                    if ($tranzit_warehouse == 0) {
+                        $insertData['NumerSerii'] = json_encode([
+                            'k' => $product['Numer kartonu'] ?? '',
+                            'p' => $product['Numer palety'] ?? ''
+                        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    }
+
+                    DB::table('ElementRuchuMagazynowego')->insert($insertData);
+                }
+            }
+
+            DB::commit();
+
+            Log::info('DM Document created successfully via API', [
+                'document_id' => $documentId,
+                'document_number' => $documentNumber,
+                'warehouse_id' => $IDWarehouse,
+                'products_count' => count($products),
+                'tranzit_warehouse' => $tranzit_warehouse,
+                'numer_dokumentu' => $numerDokumentu
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'document_id' => $documentId,
+                'document_number' => $documentNumber,
+                'warehouse_id' => $IDWarehouse,
+                'warehouse_name' => $warehouse->Nazwa ?? '',
+                'tranzit_warehouse' => $tranzit_warehouse,
+                'numer_dokumentu' => $numerDokumentu,
+                'created_products_count' => count($createdProducts),
+                'total_products_count' => count($products) - $startIndex,
+                'message' => 'Dokument DM został utworzony pomyślnie przez API',
+                'warnings' => $validationResponse['warnings'] ?? []
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            Log::error('Error in createDMApi: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Błąd podczas tworzenia dokumentu: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get warehouse ID by API key
+     */
+    private function getWarehouseByApiKey(Request $request)
+    {
+        $apiKey = $request->header('X-API-Key') ?? $request->input('api_key');
+
+        if (empty($apiKey)) {
+            return null;
+        }
+
+        // Check API key in config first
+        $apiKeysConfig = config('app.api_keys', []);
+
+        if (!empty($apiKeysConfig)) {
+            // Check if API key exists in config and return warehouse ID
+            if (array_key_exists($apiKey, $apiKeysConfig)) {
+                return intval($apiKeysConfig[$apiKey]);
+            }
+            return null;
+        }
+
+        // If no config keys, check database
+        $apiKeyRecord = DB::table('api_keys')
+            ->where('key', $apiKey)
+            ->where('active', 1)
+            ->first();
+
+        if ($apiKeyRecord) {
+            return intval($apiKeyRecord->warehouse_id);
+        }
+
+        return null;
+    }
+
+    /**
+     * Validate API key and warehouse access
+     */
+    private function validateApiKey(Request $request, $IDWarehouse = null)
+    {
+        $apiKey = $request->header('X-API-Key') ?? $request->input('api_key');
+
+        if (empty($apiKey)) {
+            return false;
+        }
+
+        // Check API key in config first
+        $apiKeysConfig = config('app.api_keys', []);
+
+        if (!empty($apiKeysConfig)) {
+            // Check if API key exists in config
+            if (!array_key_exists($apiKey, $apiKeysConfig)) {
+                return false;
+            }
+
+            // If warehouse ID is provided, check if it matches the key's warehouse
+            if ($IDWarehouse !== null) {
+                $keyWarehouse = intval($apiKeysConfig[$apiKey]);
+                return $keyWarehouse === intval($IDWarehouse);
+            }
+
+            return true; // Valid API key
+        }
+
+        // If no config keys, check database
+        $query = DB::table('api_keys')
+            ->where('key', $apiKey)
+            ->where('active', 1);
+
+        if ($IDWarehouse !== null) {
+            // Check if API key has access to specific warehouse
+            $validKey = $query->where('warehouse_id', $IDWarehouse)->first();
+            return !empty($validKey);
+        }
+
+        // Just check if API key exists and is active
+        return $query->exists();
+    }
 }
