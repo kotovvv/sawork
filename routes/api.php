@@ -32,7 +32,8 @@ use App\Http\Controllers\Api\DMController;
 //     return $request->user();
 // });
 Route::post('login', [AuthUserController::class, 'login']);
-
+// API endpoint for creating DM documents with API key authentication
+Route::post('dm/create', [\App\Http\Controllers\Api\DMController::class, 'createDMApi']);
 Route::middleware(['jwt.verify'])->group(function () {
     Route::get('getWarehouse', [ReturnController::class, 'getWarehouse']);
     Route::get('loadMagEmail', [MagazynController::class, 'loadMagEmail']);
@@ -132,7 +133,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('getProductGroups', [\App\Http\Controllers\Api\DMController::class, 'getProductGroups']);
     Route::get('getUnits', [\App\Http\Controllers\Api\DMController::class, 'getUnits']);
     Route::post('addProductToDatabase', [\App\Http\Controllers\Api\DMController::class, 'addProductToDatabase']);
-
-    // API endpoint for creating DM documents with API key authentication
-    Route::post('dm/create', [\App\Http\Controllers\Api\DMController::class, 'createDMApi']);
 });
+
+// Public API routes (no authentication required)
+Route::post('dm/create', [\App\Http\Controllers\Api\DMController::class, 'createDMApi']);

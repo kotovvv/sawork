@@ -18,14 +18,14 @@ API key required in one of the following ways:
 #### Option 1: Environment Variables (.env file)
 
 ```env
-API_KEY_1=dm-warehouse-1-key-12345
-API_KEY_1_WAREHOUSE=1
+API_KEY_1=12345
+API_KEY_1_WAREHOUSE=10
 
-API_KEY_2=dm-warehouse-2-key-67890
-API_KEY_2_WAREHOUSE=2
+API_KEY_2=test-warehouse-2-key
+API_KEY_2_WAREHOUSE=11
 
-API_KEY_3=dm-warehouse-3-key-abcde
-API_KEY_3_WAREHOUSE=3
+API_KEY_3=test-warehouse-3-key
+API_KEY_3_WAREHOUSE=12
 ```
 
 #### Option 2: Database Table (api_keys)

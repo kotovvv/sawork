@@ -715,10 +715,19 @@ class DMController extends Controller
             $IDWarehouse = $this->getWarehouseByApiKey($request);
 
             if (!$IDWarehouse) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Nieprawidłowy klucz API'
-                ], 401);
+                $apiKey = $request->header('X-API-Key') ?? $request->input('api_key');
+
+                if (empty($apiKey)) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Brak klucza API. Podaj klucz w nagłówku X-API-Key lub parametrze api_key'
+                    ], 401);
+                } else {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Nieprawidłowy klucz API lub brak dostępu do magazynu'
+                    ], 401);
+                }
             }
 
             $data = $request->all();
@@ -936,18 +945,51 @@ class DMController extends Controller
     {
         $apiKey = $request->header('X-API-Key') ?? $request->input('api_key');
 
+        Log::info('API Key validation attempt', [
+            'api_key_provided' => !empty($apiKey),
+            'api_key_length' => $apiKey ? strlen($apiKey) : 0,
+            'headers' => $request->headers->all(),
+            'request_params' => $request->all()
+        ]);
+
         if (empty($apiKey)) {
+            Log::warning('No API key provided in request');
             return null;
         }
 
         // Check API key in config first
         $apiKeysConfig = config('app.api_keys', []);
 
+        Log::info('Checking API keys config', [
+            'config_keys_count' => count($apiKeysConfig),
+            'config_keys' => array_keys($apiKeysConfig),
+            'provided_key' => $apiKey
+        ]);
+
         if (!empty($apiKeysConfig)) {
+            // Remove null keys from config (when env variables are not set)
+            $filteredConfig = array_filter($apiKeysConfig, function ($key) {
+                return !is_null($key);
+            }, ARRAY_FILTER_USE_KEY);
+
+            Log::info('Filtered API keys config', [
+                'filtered_keys' => array_keys($filteredConfig)
+            ]);
+
             // Check if API key exists in config and return warehouse ID
-            if (array_key_exists($apiKey, $apiKeysConfig)) {
-                return intval($apiKeysConfig[$apiKey]);
+            if (array_key_exists($apiKey, $filteredConfig)) {
+                $warehouseId = intval($filteredConfig[$apiKey]);
+                Log::info('API key found in config', [
+                    'api_key' => $apiKey,
+                    'warehouse_id' => $warehouseId
+                ]);
+                return $warehouseId;
             }
+
+            Log::warning('API key not found in config', [
+                'provided_key' => $apiKey,
+                'available_keys' => array_keys($filteredConfig)
+            ]);
             return null;
         }
 
@@ -958,9 +1000,16 @@ class DMController extends Controller
             ->first();
 
         if ($apiKeyRecord) {
+            Log::info('API key found in database', [
+                'api_key' => $apiKey,
+                'warehouse_id' => $apiKeyRecord->warehouse_id
+            ]);
             return intval($apiKeyRecord->warehouse_id);
         }
 
+        Log::warning('API key not found in database', [
+            'provided_key' => $apiKey
+        ]);
         return null;
     }
 
