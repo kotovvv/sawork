@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>DM API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+        }
+
+        .success {
+            color: green;
+        }
+
+        .error {
+            color: red;
+        }
+
+        .info {
+            color: blue;
+        }
+
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            overflow-x: auto;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #007cba;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #005a87;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>DM API Test Page</h1>
+
+    <div class="test-section">
+        <h2>Configuration Check</h2>
+        <?php
+        $envFile = '../.env';
+        if (file_exists($envFile)) {
+            $content = file_get_contents($envFile);
+            if (strpos($content, 'API_KEY_1=') !== false) {
+                echo '<p class="success">✅ API keys found in .env file</p>';
+
+                // Extract API keys
+                preg_match('/API_KEY_1=(.+)/', $content, $matches);
+                $apiKey1 = isset($matches[1]) ? trim($matches[1]) : '';
+
+                preg_match('/API_KEY_1_WAREHOUSE=(.+)/', $content, $matches);
+                $warehouse1 = isset($matches[1]) ? trim($matches[1]) : '';
+
+                echo "<p class=\"info\">API_KEY_1: <strong>{$apiKey1}</strong></p>";
+                echo "<p class=\"info\">Warehouse: <strong>{$warehouse1}</strong></p>";
+            } else {
+                echo '<p class="error">❌ API keys not found in .env file</p>';
+            }
+        } else {
+            echo '<p class="error">❌ .env file not found</p>';
+        }
+        ?>
+    </div>
+
+    <div class="test-section">
+        <h2>Test API Endpoint</h2>
+        <p>Click the button below to test the DM API:</p>
+        <button onclick="testAPI()">Test API</button>
+        <div id="api-result" style="margin-top: 20px;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>cURL Command</h2>
+        <p>Copy and paste this command in terminal:</p>
+        <pre>curl -X POST "http://fulstor.test/api/dm/create" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <?php echo $apiKey1 ?? 'your-api-key'; ?>" \
+  -d '{
+    "products": [
+      {
+        "Nazwa": "Test Product",
+        "EAN": "1234567890123",
+        "jednostka": "towar",
+        "Ilość": 1,
+        "Cena": 10.00
+      }
+    ]
+  }'</pre>
+    </div>
+
+    <script>
+        function testAPI() {
+            const resultDiv = document.getElementById('api-result');
+            resultDiv.innerHTML = '<p>Testing API...</p>';
+
+            const testData = {
+                products: [
+                    {
+                        "Nazwa": "Test Product",
+                        "EAN": "1234567890123",
+                        "jednostka": "towar",
+                        "Ilość": 1,
+                        "Cena": 10.00
+                    }
+                ]
+            };
+
+            fetch('/api/dm/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': '<?php echo $apiKey1 ?? 'your- api - key'; ?>'
+            },
+                body: JSON.stringify(testData)
+        })
+        .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    resultDiv.innerHTML = `
+                    <p class="success">✅ API Test Successful!</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                } else {
+                    resultDiv.innerHTML = `
+                    <p class="error">❌ API Test Failed</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                }
+            })
+            .catch(error => {
+                resultDiv.innerHTML = `
+                <p class="error">❌ API Test Error</p>
+                <pre>${error.message}</pre>
+            `;
+            });
+    }
+    </script>
+</body>
+
+</html>

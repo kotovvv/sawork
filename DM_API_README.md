@@ -18,13 +18,13 @@ API key required in one of the following ways:
 #### Option 1: Environment Variables (.env file)
 
 ```env
-API_KEY_1=your-first-api-key-here
+API_KEY_1=dm-warehouse-1-key-12345
 API_KEY_1_WAREHOUSE=1
 
-API_KEY_2=your-second-api-key-here
+API_KEY_2=dm-warehouse-2-key-67890
 API_KEY_2_WAREHOUSE=2
 
-API_KEY_3=your-third-api-key-here
+API_KEY_3=dm-warehouse-3-key-abcde
 API_KEY_3_WAREHOUSE=3
 ```
 
@@ -138,9 +138,9 @@ The warehouse ID is automatically determined from the API key, so you don't need
 ### Example cURL Request
 
 ```bash
-curl -X POST "https://your-domain.com/api/dm/create" \
+curl -X POST "http://fulstor.test/api/dm/create" \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-api-key-here" \
+  -H "X-API-Key: dm-warehouse-1-key-12345" \
   -d '{
     "tranzit_warehouse": 0,
     "numer_dokumentu": "DOC123456",
