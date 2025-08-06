@@ -50,7 +50,9 @@
             <p>Uwagi Sprzedawcy: {{ selectedItem.uwagiSprzedawcy }}</p>
             <p>
               Pieniądze zwrócone -
-              {{ selectedItem.isWartosc == "Tak" ? "Так" : "Nie" }}
+              {{
+                selectedItem.isWartosc == "Tak" ? selectedItem.isWartosc : "Nie"
+              }}
               <v-btn
                 size="small"
                 icon="mdi-pencil"
@@ -70,7 +72,7 @@
                   v-model="selectedItem.isWartosc"
                   :label="`Pieniądze zwrócone Wartość: ${selectedItem.isWartosc}`"
                   false-value="Nie"
-                  true-value="Так"
+                  true-value="Tak"
                   hide-details
                 ></v-switch>
                 <v-card-actions>
@@ -850,7 +852,7 @@ export default {
         .post("/api/saveUwagiSprz", {
           IDRuchuMagazynowego: vm.selectedItem.IDRuchuMagazynowego,
           uwagiSprzedawcy: vm.selectedItem.uwagiSprzedawcy,
-          isWartosc: vm.selectedItem.isWartosc == "Так" ? 1 : 0,
+          isWartosc: vm.selectedItem.isWartosc == "Tak" ? 1 : 0,
         })
         .then((res) => {
           if (res.status == 200) {

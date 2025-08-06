@@ -180,7 +180,7 @@ export default {
     dateMax: moment().format("YYYY-MM-DD"),
     docsWZk: [],
 
-    selected: null,
+    selected: [],
     marked: {},
     wzk_headers: [
       { title: "NrDokumentu", key: "NrDokumentu", nowrap: true },
@@ -274,7 +274,7 @@ export default {
     },
     handleClick(e, row) {
       this.marked = row.item;
-      this.$emit("item-marked", this.marked); // Emit event with marked item
+      this.$emit("item-selected", this.marked); // Emit event with marked item
     },
 
     colorRowItem(item) {

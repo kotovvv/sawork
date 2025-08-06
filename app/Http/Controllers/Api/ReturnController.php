@@ -275,7 +275,7 @@ class ReturnController extends Controller
                 '_RuchMagazynowyTempString5',
                 '_RuchMagazynowyTempString6 as uwagiSprzedawcy',
                 '_RuchMagazynowyTempBool1',
-                DB::raw("CASE WHEN _RuchMagazynowyTempBool3 IS NULL OR _RuchMagazynowyTempBool3 = 0 THEN 'Nie' ELSE 'Так' END as isWartosc"),
+                DB::raw("CASE WHEN _RuchMagazynowyTempBool3 = 1 THEN 'Tak' ELSE 'Nie' END as isWartosc"),
                 'kon.Nazwa as Kontrahent',
                 'ic.photo as photo',
                 'ic.locations as status',
