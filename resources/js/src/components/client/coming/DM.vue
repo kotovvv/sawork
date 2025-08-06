@@ -141,9 +141,8 @@
                       'Wysokość (cm)',
                       'm3',
                       'Informacje dodatkowe ',
-                      ...(this.tranzit_warehouse == 0
-                        ? ['Numer kartonu', 'Numer palety']
-                        : []),
+                      'Numer palety',
+                      'Numer kartonu',
                     ]"
                     outlined
                     @update:modelValue="makeHeader"
@@ -701,9 +700,8 @@ export default {
         "Wysokość (cm)",
         "m3",
         "Informacje dodatkowe ",
-        ...(this.tranzit_warehouse == 0
-          ? ["Numer kartonu", "Numer palety"]
-          : []),
+        "Numer kartonu",
+        "Numer palety",
       ];
 
       // Process each column header

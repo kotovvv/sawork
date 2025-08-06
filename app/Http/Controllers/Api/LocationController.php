@@ -213,7 +213,17 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
 
     public function errorLocation($user, $what, $ip = 0)
     {
-        $myLogInfo = date('Y-m-d H:i:s') . ', ' . $ip . ', ' . $user->NazwaUzytkownika . ', ' . $what;
+        // Fix: Check if $user is an object and get the username property correctly
+        $username = '';
+        if (is_object($user)) {
+            $username = $user->NazwaUzytkownika ?? $user->name ?? $user->username ?? 'Unknown';
+        } elseif (is_string($user)) {
+            $username = $user;
+        } else {
+            $username = 'Unknown';
+        }
+
+        $myLogInfo = date('Y-m-d H:i:s') . ', ' . $ip . ', ' . $username . ', ' . $what;
         file_put_contents(
             storage_path() . '/logs/errorLocation.log',
             $myLogInfo . PHP_EOL,
@@ -229,22 +239,21 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
             $response = $this->doRelokacja($request);
             DB::commit();
         } catch (\Exception $e) {
-
             DB::rollBack();
-            // Верните ошибку пользователю
+            // Fix: Pass the authenticated user correctly
             Log::error("Error occurred during relocation process", [
                 'error' => $e->getMessage(),
                 'request_data' => $request->all()
             ]);
-            $this->errorLocation($request->user, 'Error during relocation: ' . $e->getMessage(), $request->ip());
+            $this->errorLocation($request->user(), 'Error during relocation: ' . $e->getMessage(), $request->ip());
             throw new \Exception('Błąd podczas relokacji: ' . $e->getMessage());
         }
-        return  $response;
+        return $response;
     }
 
     public function doRelokacja(Request $request)
     {
-        $resnonse = [];
+        $response = []; // Fix typo: $resnonse -> $response
         $data = $request->all();
         $IDTowaru = $data['IDTowaru'];
         $qty = $data['qty'];
@@ -265,7 +274,6 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
         $pz = [];
 
         $symbol = DB::table('Magazyn')->where('IDMagazynu', $idWarehause)->value('Symbol');
-        // 1. chech if doc cteated
 
         // Функция для создания документа
         $createDocument = function () use ($symbol, $idWarehause, $Uwagi, $IDUzytkownika) {
@@ -295,7 +303,7 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
         };
 
         if ($createdDoc == null) {
-            $resnonse['createdDoc'] = $createDocument();
+            $response['createdDoc'] = $createDocument();
         } else {
             // Проверяем, что документ действительно существует
             $docExists = DB::table('dbo.RuchMagazynowy')
@@ -304,9 +312,9 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
 
             if (!$docExists) {
                 // Если документ не существует, создаем новый
-                $resnonse['createdDoc'] = $createDocument();
+                $response['createdDoc'] = $createDocument();
             } else {
-                $resnonse['createdDoc'] = $createdDoc;
+                $response['createdDoc'] = $createdDoc;
             }
         }
 
@@ -321,16 +329,21 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
         $qtyToMove = $qty;
 
         if (empty($pz)) {
-            $this->errorLocation($request->user, 'Document ' . $createdDoc . ' No towar ID:' . $IDTowaru . ' qty=' . $qty . ' found from location: ' . $fromLocation['LocationCode'] . ' to location: ' . $toLocation['LocationCode'], $request->ip());
-            throw new \Exception('Uwaga! Uwaga! Uwaga! Nie znaleziono identyfikatora towaru ID:' . $IDTowaru . '  z lokalizacji: ' . $fromLocation['LocationCode'] . ' do lokalizacji:' . $toLocation['LocationCode'] . ' qty' . $qty);
+            // Fix: Pass the user object correctly and handle fromLocation array properly
+            $fromLocationCode = is_array($fromLocation) ? ($fromLocation['LocationCode'] ?? 'Unknown') : $fromLocation;
+            $toLocationCode = is_array($toLocation) ? ($toLocation['LocationCode'] ?? 'Unknown') : $toLocation;
+
+            $this->errorLocation($request->user(), 'Document ' . json_encode($createdDoc) . ' No towar ID:' . $IDTowaru . ' qty=' . $qty . ' found from location: ' . $fromLocationCode . ' to location: ' . $toLocationCode, $request->ip());
+            throw new \Exception('Uwaga! Uwaga! Uwaga! Nie znaleziono identyfikatora towaru ID:' . $IDTowaru . '  z lokalizacji: ' . $fromLocationCode . ' do lokalizacji:' . $toLocationCode . ' qty' . $qty);
         }
+
         foreach ($pz as $key => $value) {
             $debt = $qtyToMove > $pz[$key]->qty ?  $pz[$key]->qty : $qtyToMove;
             $el['Ilosc'] = -$debt;
             $el['Uwagi'] =  $Uwagi;
             $el['IDRodzic'] = null;
             $el['IDWarehouseLocation'] = null;
-            $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idmin'];
+            $el['IDRuchuMagazynowego'] = $response['createdDoc']['idmin'];
             $el['CenaJednostkowa'] = $pz[$key]->Cena;
 
             // Ensure the IDRuchuMagazynowego exists in the RuchMagazynowy table
@@ -346,13 +359,13 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
             $el['Ilosc'] = $debt;
             $el['Uwagi'] =  $Uwagi;
             $el['IDRodzic'] = $ndocidmin;
-            $el['IDRuchuMagazynowego'] = $resnonse['createdDoc']['idpls'];
+            $el['IDRuchuMagazynowego'] = $response['createdDoc']['idpls'];
             $el['IDWarehouseLocation'] = $toLocation['IDWarehouseLocation'];
             DB::table('dbo.ElementRuchuMagazynowego')->insert($el);
             $ndocidpls = DB::table('dbo.ElementRuchuMagazynowego')->orderBy('IDElementuRuchuMagazynowego', 'desc')->take(1)->value('IDElementuRuchuMagazynowego');
 
-            $resnonse['IDsElementuRuchuMagazynowego']['min'][] = $ndocidmin;
-            $resnonse['IDsElementuRuchuMagazynowego']['pls'][] = $ndocidpls;
+            $response['IDsElementuRuchuMagazynowego']['min'][] = $ndocidmin;
+            $response['IDsElementuRuchuMagazynowego']['pls'][] = $ndocidpls;
             DB::statement('EXEC dbo.UtworzZaleznoscPZWZ @IDElementuPZ = ?, @IDElementuWZ = ?, @Ilosc = ?', [
                 $pz[$key]->ID,
                 $ndocidmin,
@@ -363,7 +376,7 @@ ORDER BY LocationPriority asc,''Data Dokumentu'', Edycja desc
             if ($qtyToMove <= 0) break;
         }
 
-        return $resnonse;
+        return $response;
     }
 
     public function updateOrInsertLocation($IDRuchuMagazynowego, $locations)

@@ -186,14 +186,12 @@ class DMController extends Controller
                         'Utworzono' => Carbon::now(),
                         'Zmodyfikowano' => Carbon::now(),
                         'Uzytkownik' => $userId,
-                    ];
-                    //TODO: поля показать везде
-                    if ($tranzit_warehouse == 0) {
-                        $insertData['NumerSerii'] = json_encode([
+                        'NumerSerii' => json_encode([
                             'k' => $product['Numer kartonu'] ?? '',
                             'p' => $product['Numer palety'] ?? ''
-                        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                    }
+                        ])
+                    ];
+
 
                     DB::table('ElementRuchuMagazynowego')->insert($insertData);
                 }
@@ -886,14 +884,12 @@ class DMController extends Controller
                         'Utworzono' => Carbon::now(),
                         'Zmodyfikowano' => Carbon::now(),
                         'Uzytkownik' => $userId,
-                    ];
-
-                    if ($tranzit_warehouse == 0) {
-                        $insertData['NumerSerii'] = json_encode([
+                        'NumerSerii' => json_encode([
                             'k' => $product['Numer kartonu'] ?? '',
                             'p' => $product['Numer palety'] ?? ''
-                        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-                    }
+                        ])
+                    ];
+
 
                     DB::table('ElementRuchuMagazynowego')->insert($insertData);
                 }
