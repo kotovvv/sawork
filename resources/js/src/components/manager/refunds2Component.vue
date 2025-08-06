@@ -201,7 +201,7 @@
                 <div v-if="results.length">
                   <h2>Results:</h2>
                   <div v-for="(result, index) in results" :key="index">
-                    <div v-if="result.type === 'photo'">
+                    <div v-if="result && result.type === 'photo'">
                       <img
                         :src="result.data"
                         alt="Captured Photo"
@@ -673,7 +673,9 @@ export default {
     };
 
     const handleResult = (data) => {
-      results.value.push(data);
+      if (data && data.type) {
+        results.value.push(data);
+      }
     };
 
     return {
@@ -864,7 +866,9 @@ export default {
         .catch((error) => console.log(error));
     },
     delPic(index) {
-      this.results.splice(index, 1);
+      if (index >= 0 && index < this.results.length) {
+        this.results.splice(index, 1);
+      }
     },
     uploadSnapshots(dir) {
       this.uploadFiles(dir, this.results);
@@ -1059,14 +1063,19 @@ export default {
         return e.IDMagazynu == vm.IDWarehouse;
       });
 
-      vm.locations = [
-        {
-          title: "Zwrot",
-          value: a_locations[0].Zwrot,
-        },
-        { title: "Zniszczony", value: a_locations[0].Zniszczony },
-        { title: "Naprawa", value: a_locations[0].Naprawa },
-      ];
+      // Add null check for a_locations
+      if (a_locations && a_locations.length > 0) {
+        vm.locations = [
+          {
+            title: "Zwrot",
+            value: a_locations[0].Zwrot,
+          },
+          { title: "Zniszczony", value: a_locations[0].Zniszczony },
+          { title: "Naprawa", value: a_locations[0].Naprawa },
+        ];
+      } else {
+        vm.locations = [];
+      }
       vm.getCurrentWarehouse();
     },
     getWarehouse() {
