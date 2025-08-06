@@ -417,7 +417,7 @@ export default {
       { title: "KodKreskowy", key: "KodKreskowy" },
       { title: "SKU", key: "sku" },
       { title: "Ilosc", key: "Ilosc" },
-      { title: "LocationCode", key: "LocationCode" },
+
       { title: "karton", key: "karton" },
       { title: "paleta", key: "paleta" },
       {
