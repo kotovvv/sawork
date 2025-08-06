@@ -84,35 +84,35 @@
           </div>
         </v-col>
         <v-col class="border">
-          <p>
+          <p v-if="client && client.Nazwa">
             <b>Kontrahent: </b>
             <span @click="copyToClipboard(client.Nazwa)">
               {{ client.Nazwa }}
               <v-icon>mdi-content-copy</v-icon>
             </span>
           </p>
-          <p>
+          <p v-if="client && client.Zrodlo">
             <b>Zrodlo: </b
             ><span @click="copyToClipboard(client.Zrodlo)">
               {{ client.Zrodlo }}
               <v-icon>mdi-content-copy</v-icon>
             </span>
           </p>
-          <p>
+          <p v-if="client && client.External_id">
             <b>External id: </b
             ><span @click="copyToClipboard(client.External_id)">
               {{ client.External_id }}
               <v-icon>mdi-content-copy</v-icon>
             </span>
           </p>
-          <p>
+          <p v-if="client && client.Login_klienta">
             <b>Login klienta: </b
             ><span @click="copyToClipboard(client.Login_klienta)">
               {{ client.Login_klienta }}
               <v-icon>mdi-content-copy</v-icon>
             </span>
           </p>
-          <p>
+          <p v-if="client && client.Telefon">
             <b>Telefon: </b
             ><span @click="copyToClipboard(client.Telefon)">
               {{ client.Telefon }}
@@ -148,11 +148,12 @@
                       :items="wzk_products"
                       :headers="headers_products"
                       item-value="IDElementuRuchuMagazynowego"
+                      v-model:selected="selectedRows"
                       @click:row="handleClick"
                       :row-props="colorRowItem"
                       select-strategy="single"
                     >
-                      <template v-slot:item.KodKreskowy="{ item }">
+                      <template v-slot:[`item.KodKreskowy`]="{ item }">
                         {{ item.KodKreskowy }}
                         <v-btn
                           size="x-small"
@@ -160,14 +161,19 @@
                           icon="mdi-barcode"
                         ></v-btn>
                       </template>
-                      <template v-slot:top="{}">
+                      <template v-slot:top>
                         <v-row class="align-center">
                           <productHistory
+                            v-if="selectedProduct && selectedProduct.IDTowaru"
                             :product_id="selectedProduct.IDTowaru"
                           />
                           <v-btn
                             size="x-small"
-                            :disabled="!selectedProduct.IDTowaru > 0"
+                            :disabled="
+                              !selectedProduct ||
+                              !selectedProduct.IDTowaru ||
+                              selectedProduct.IDTowaru <= 0
+                            "
                             @click="editProductUwagi"
                             icon="mdi-pencil"
                           ></v-btn>
@@ -267,10 +273,7 @@
           :items="warehouses"
           item-title="Nazwa"
           item-value="IDMagazynu"
-          @update:modelValue="
-            clear();
-            setLocations();
-          "
+          @update:modelValue="handleWarehouseChange"
           hide-details="auto"
         ></v-select>
       </v-col>
@@ -321,10 +324,10 @@
     <v-row>
       <v-col>
         <WzkTable
-          v-if="currentWarehause"
+          v-if="validWarehouse"
           :warehouse="currentWarehause"
           :user="$attrs.user"
-          :key="IDWarehouse"
+          :key="`wzk-table-${IDWarehouse}`"
           @item-selected="handleItemSelected"
         />
       </v-col>
@@ -380,7 +383,11 @@
             text="Ok"
             @click="
               dialog = false;
-              $refs.dProduct.focus;
+              $nextTick(() => {
+                if ($refs.dProduct) {
+                  $refs.dProduct.focus();
+                }
+              });
             "
           ></v-btn>
         </template>
@@ -646,6 +653,7 @@ export default {
       photoFiles: [],
       files: null,
       selectedProduct: {},
+      selectedRows: [],
       dialogEditUwagiDoc: false,
       dialogEditUwagiSprz: false,
       dialogEditUwagiProduct: false,
@@ -657,6 +665,18 @@ export default {
   created() {},
   mounted() {
     this.getWarehouse();
+  },
+  beforeUnmount() {
+    // Clean up to prevent reactive updates during destruction
+    this.loading = false;
+    this.selectedItem = null;
+    this.selectedProduct = {};
+    this.selectedRows = [];
+  },
+  errorCaptured(err, instance, info) {
+    console.error("Component error captured:", err, info);
+    // Return false to prevent the error from propagating further
+    return false;
   },
   setup() {
     const showModal = ref(false);
@@ -688,12 +708,60 @@ export default {
       // uploadFiles,
     };
   },
-  computed: {},
-  methods: {
-    getCurrentWarehouse() {
-      this.currentWarehause = this.warehouses.find(
-        (w) => w.IDMagazynu === this.IDWarehouse
+  computed: {
+    validWarehouse() {
+      return (
+        this.currentWarehause &&
+        this.IDWarehouse &&
+        this.warehouses.length > 0 &&
+        typeof this.currentWarehause === "object"
       );
+    },
+  },
+  watch: {
+    IDWarehouse(newVal, oldVal) {
+      if (newVal !== oldVal && this.$el) {
+        this.getCurrentWarehouse();
+        this.selectedItem = null;
+        this.selectedProduct = {};
+        this.selectedRows = [];
+        this.wzk_products = [];
+      }
+    },
+  },
+  methods: {
+    handleWarehouseChange() {
+      // Add a small delay to prevent issues during component destruction
+      this.$nextTick(() => {
+        if (this.$el && this.IDWarehouse) {
+          try {
+            this.clear();
+            this.setLocations();
+          } catch (error) {
+            console.error("Error in handleWarehouseChange:", error);
+          }
+        }
+      });
+    },
+    getCurrentWarehouse() {
+      if (this.warehouses && this.warehouses.length > 0 && this.IDWarehouse) {
+        this.currentWarehause = this.warehouses.find(
+          (w) => w.IDMagazynu === this.IDWarehouse
+        );
+
+        // Ensure the warehouse object has all required properties
+        if (this.currentWarehause) {
+          this.currentWarehause = {
+            ...this.currentWarehause,
+            // Ensure these properties exist as arrays or default values
+            Zwrot: this.currentWarehause.Zwrot || null,
+            Zniszczony: this.currentWarehause.Zniszczony || null,
+            Naprawa: this.currentWarehause.Naprawa || null,
+          };
+        }
+      } else {
+        this.currentWarehause = null;
+      }
     },
     copyToClipboard(text) {
       if (navigator.clipboard) {
@@ -839,15 +907,28 @@ export default {
     },
     colorRowItem(item) {
       if (
-        item.item.IDElementuRuchuMagazynowego != undefined &&
+        !item ||
+        !item.item ||
+        !this.selectedProduct ||
+        item.item.IDElementuRuchuMagazynowego == undefined ||
+        !this.selectedProduct.IDElementuRuchuMagazynowego
+      ) {
+        return {};
+      }
+
+      if (
         item.item.IDElementuRuchuMagazynowego ==
-          this.selectedProduct.IDElementuRuchuMagazynowego
+        this.selectedProduct.IDElementuRuchuMagazynowego
       ) {
         return { class: "bg-red-darken-4" };
       }
+
+      return {};
     },
     handleClick(event, row) {
-      this.selectedProduct = row.item;
+      if (row && row.item) {
+        this.selectedProduct = row.item;
+      }
     },
     downloadFile(url, name) {
       axios
@@ -944,6 +1025,8 @@ export default {
       }
     },
     handleItemSelected(item) {
+      if (!item) return;
+
       this.selectedItem = item;
       this.tab = "products";
       this.products = [];
@@ -958,6 +1041,8 @@ export default {
       vm.wzk_products = [];
       vm.photoFiles = [];
       vm.selectedProduct = {};
+      vm.selectedRows = [];
+      vm.client = {}; // Reset client object
       vm.loading = true;
       axios
         .post("/api/getWZkProducts", {
@@ -965,17 +1050,24 @@ export default {
         })
         .then((res) => {
           if (res.status == 200) {
-            vm.wzk_products = res.data.wzk_products;
-            vm.client = res.data.client;
-            vm.wzk_products.map((e) => {
-              e.Ilosc = parseInt(e.Ilosc);
-              e.inLocation = parseInt(e.inLocation);
-              e.KodKreskowy = parseInt(e.KodKreskowy);
-            });
+            vm.wzk_products = res.data.wzk_products || [];
+            vm.client = res.data.client || {};
+            if (vm.wzk_products.length > 0) {
+              vm.wzk_products.map((e) => {
+                e.Ilosc = parseInt(e.Ilosc) || 0;
+                e.inLocation = parseInt(e.inLocation) || 0;
+                e.KodKreskowy = parseInt(e.KodKreskowy) || 0;
+              });
+            }
           }
           vm.loading = false;
         })
-        .catch((error) => console.log(error));
+        .catch((error) => {
+          console.log(error);
+          vm.loading = false;
+          vm.client = {};
+          vm.wzk_products = [];
+        });
     },
     handleKeypress(event) {
       // Check if the Enter key was pressed
@@ -991,6 +1083,8 @@ export default {
     },
 
     clear() {
+      if (!this.$el) return; // Component is being destroyed
+
       this.order = {};
       this.wz = {};
       this.products = [];
@@ -1058,20 +1152,36 @@ export default {
         .catch((error) => console.log(error));
     },
     setLocations() {
+      if (!this.$el || !this.IDWarehouse) return; // Component is being destroyed or no warehouse selected
+
       const vm = this;
+
+      // Ensure warehouses is an array
+      if (!Array.isArray(vm.warehouses)) {
+        vm.locations = [];
+        return;
+      }
+
       const a_locations = vm.warehouses.filter((e) => {
-        return e.IDMagazynu == vm.IDWarehouse;
+        return e && e.IDMagazynu == vm.IDWarehouse;
       });
 
       // Add null check for a_locations
       if (a_locations && a_locations.length > 0) {
+        const warehouse = a_locations[0];
         vm.locations = [
           {
             title: "Zwrot",
-            value: a_locations[0].Zwrot,
+            value: warehouse.Zwrot || null,
           },
-          { title: "Zniszczony", value: a_locations[0].Zniszczony },
-          { title: "Naprawa", value: a_locations[0].Naprawa },
+          {
+            title: "Zniszczony",
+            value: warehouse.Zniszczony || null,
+          },
+          {
+            title: "Naprawa",
+            value: warehouse.Naprawa || null,
+          },
         ];
       } else {
         vm.locations = [];
@@ -1081,19 +1191,28 @@ export default {
     getWarehouse() {
       const vm = this;
       vm.locations = [];
+      vm.currentWarehause = null;
+
       axios
         .get("/api/getWarehouse")
         .then((res) => {
-          if (res.status == 200) {
+          if (res.status == 200 && Array.isArray(res.data)) {
             vm.warehouses = res.data;
             if (vm.warehouses.length > 0) {
               vm.IDWarehouse = vm.warehouses[0].IDMagazynu;
               vm.setLocations();
               vm.getCurrentWarehouse();
             }
+          } else {
+            vm.warehouses = [];
+            console.warn("Invalid warehouse data received");
           }
         })
-        .catch((error) => console.log(error));
+        .catch((error) => {
+          console.error("Error loading warehouses:", error);
+          vm.warehouses = [];
+          vm.currentWarehause = null;
+        });
     },
     getOrder() {
       const vm = this;
@@ -1118,7 +1237,8 @@ export default {
                 vm.products.map((e) => {
                   e.qty = 0;
                   e.Uwagi = "";
-                  e.IDWarehouseLocation = vm.locations[0].value;
+                  e.IDWarehouseLocation =
+                    vm.locations.length > 0 ? vm.locations[0].value : null;
                 });
                 vm.dialogProduct = true;
 
@@ -1162,7 +1282,11 @@ export default {
     changeCounter: function (item, num) {
       item.qty = parseInt(item.qty) + parseInt(+num);
       if (item.qty < 0) item.qty = 0;
-      this.$refs.dProduct.focus;
+      this.$nextTick(() => {
+        if (this.$refs.dProduct) {
+          this.$refs.dProduct.focus();
+        }
+      });
     },
     saveEdit() {
       const vm = this;
