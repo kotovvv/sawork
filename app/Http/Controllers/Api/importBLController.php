@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BaseLinkerController;
 use App\Models\LogOrder;
 use App\Models\ForTtn;
 use App\Models\Collect;
+use App\Models\OrderSource;
 use Illuminate\Support\Facades\DB;
 
 use Carbon\Carbon;
@@ -1005,6 +1006,13 @@ HAVING
             });
 
             DB::commit();
+
+            // Mark order as BaseLinker source
+            OrderSource::createForBaselinker(
+                $IDOrder,
+                $idMagazynu,
+                $orderData['order_id']
+            );
 
             LogOrder::create([
                 'IDWarehouse' => $idMagazynu,
