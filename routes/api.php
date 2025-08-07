@@ -77,6 +77,7 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('getOrder', [OrderController::class, 'getOrder']);
     Route::post('getOrderProducts', [OrderController::class, 'getOrderProducts']);
     Route::get('getOrderPack/{IDOrder}', [OrderController::class, 'getOrderPack']);
+    Route::post('saveDataOrder', [OrderController::class, 'saveDataOrder']);
 
     Route::get('/logs/useReport', [LogController::class, 'getUseReportLog']);
     Route::get('/logs/users', [LogController::class, 'getUsersLog']);

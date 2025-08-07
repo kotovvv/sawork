@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Collect;
 
 class OrderController extends Controller
@@ -179,5 +180,117 @@ class OrderController extends Controller
         $res['pack']->Uzytkownik = $Uzytkownik->first();
 
         return $res;
+    }
+
+    public function saveDataOrder(Request $request)
+    {
+        try {
+            $data = $request->all();
+
+            // Validate required parameters
+            if (!isset($data['IDOrder']) || !isset($data['IDWarehouse']) || !isset($data['section']) || !isset($data['data'])) {
+                return response()->json(['error' => 'Missing required parameters'], 400);
+            }
+
+            $orderId = $data['IDOrder'];
+            $warehouseId = $data['IDWarehouse'];
+            $section = $data['section'];
+            $updateData = $data['data'];
+
+            // Check if order exists
+            $order = DB::table('Orders')
+                ->where('IDOrder', $orderId)
+                ->where('IDWarehouse', $warehouseId)
+                ->first();
+
+            if (!$order) {
+                return response()->json(['error' => 'Order not found'], 404);
+            }
+
+            // Check if delivery record exists in second MySQL database
+            $existingDelivery = DB::connection('second_mysql')
+                ->table('order_details')
+                ->where('order_id', $orderId)
+                ->where('IDWarehouse', $warehouseId)
+                ->first();
+
+            if ($existingDelivery) {
+                // Update existing record
+                DB::connection('second_mysql')
+                    ->table('order_details')
+                    ->where('order_id', $orderId)
+                    ->where('IDWarehouse', $warehouseId)
+                    ->update(array_merge($updateData, ['updated_at' => now()]));
+            } else {
+                // Create new record with all required fields
+                $insertData = array_merge([
+                    'order_id' => $orderId,
+                    'IDWarehouse' => $warehouseId,
+                    'order_source' => '',
+                    'order_source_id' => '',
+                    'currency' => '',
+                    'payment_method' => '',
+                    'payment_method_cod' => '',
+                    'payment_done' => '',
+                    'delivery_method' => '',
+                    'delivery_price' => '',
+                    'delivery_package_module' => '',
+                    'delivery_package_nr' => '',
+                    'delivery_fullname' => '',
+                    'delivery_company' => '',
+                    'delivery_address' => '',
+                    'delivery_city' => '',
+                    'delivery_state' => '',
+                    'delivery_postcode' => '',
+                    'delivery_country_code' => '',
+                    'delivery_point_id' => '',
+                    'delivery_point_name' => '',
+                    'delivery_point_address' => '',
+                    'delivery_point_postcode' => '',
+                    'delivery_point_city' => '',
+                    'invoice_fullname' => '',
+                    'invoice_company' => '',
+                    'invoice_nip' => '',
+                    'invoice_address' => '',
+                    'invoice_city' => '',
+                    'invoice_state' => '',
+                    'invoice_postcode' => '',
+                    'invoice_country_code' => '',
+                    'delivery_country' => '',
+                    'invoice_country' => '',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ], $updateData);
+
+                DB::connection('second_mysql')
+                    ->table('order_details')
+                    ->insert($insertData);
+            }
+
+            // Log the update action (optional)
+            Log::info("Order data updated", [
+                'order_id' => $orderId,
+                'warehouse_id' => $warehouseId,
+                'section' => $section,
+                'updated_fields' => array_keys($updateData)
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order data updated successfully',
+                'section' => $section,
+                'updated_data' => $updateData
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Error updating order data", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to update order data: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

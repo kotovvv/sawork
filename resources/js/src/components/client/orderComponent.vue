@@ -53,12 +53,12 @@
                     <span class="me-2"
                       >z {{ sumDoc }} {{ delivery.currency || "" }}</span
                     >
-                    <v-btn icon size="small" class="me-2">
-                      <v-icon>mdi-cached</v-icon>
-                    </v-btn>
+                    <!-- <v-btn icon size="small" class="me-2">
+                            <v-icon>mdi-cached</v-icon>
+                            </v-btn> -->
                     <!-- <v-btn size="small" variant="outlined" prepend-icon="mdi-pencil"
-                >Edytuj wpłatę</v-btn
-              > -->
+                        >Edytuj wpłatę</v-btn
+                    > -->
                   </div>
                   <v-row>
                     <v-col cols="6">
@@ -119,11 +119,11 @@
                   <div class="mb-2">
                     <b>Faktura: {{ order._OrdersTempString1 || "" }}</b>
                     <!-- <v-btn size="small" class="ms-2" variant="outlined"
-                >WYSTAW FAKTURĘ</v-btn
-              > -->
+                            >WYSTAW FAKTURĘ</v-btn
+                        > -->
                     <!-- <v-btn size="small" class="ms-2" variant="outlined"
-                >PRO FORMA</v-btn
-              > -->
+                            >PRO FORMA</v-btn
+                        > -->
                   </div>
                   <div class="mb-2">
                     <b>Data złożenia:</b>
@@ -135,14 +135,14 @@
                     {{ wz.NrDokumentu || "" }}
                   </div>
                   <!-- <div class="mb-2">
-              <b>Stany magazynowe: ???</b>
-              <span class="text-success ms-2">✔ Zrealizowane (ściągnięte)</span>
-            </div> -->
+                        <b>Stany magazynowe: ???</b>
+                        <span class="text-success ms-2">✔ Zrealizowane (ściągnięte)</span>
+                        </div> -->
                   <!-- <div class="mb-2">
-              <v-btn variant="text" color="info" size="small"
-                >???? Więcej informacji o zamówieniu</v-btn
-              >
-            </div> -->
+                        <v-btn variant="text" color="info" size="small"
+                            >???? Więcej informacji o zamówieniu</v-btn
+                        >
+                        </div> -->
                   <div class="mb-2" v-if="order._OrdersTempString10">
                     <b>Numer Zwrotu:</b>
                     {{ order._OrdersTempString10 }}
@@ -164,82 +164,326 @@
                   <v-card class="pa-3" variant="outlined">
                     <div class="d-flex justify-space-between align-center mb-2">
                       <span class="text-subtitle-1">Adres dostawy</span>
-                      <v-btn icon size="small" variant="text"
-                        ><v-icon>mdi-pencil</v-icon></v-btn
+                      <v-btn
+                        v-if="!editingDelivery"
+                        icon
+                        size="small"
+                        variant="text"
+                        @click="startEdit('delivery')"
                       >
+                        <v-icon>mdi-pencil</v-icon>
+                      </v-btn>
                     </div>
-                    <div>
-                      <b>Imię i nazwisko:</b>
-                      {{ delivery.delivery_fullname || "..." }}
-                    </div>
-                    <div>
-                      <b>Firma:</b> {{ delivery.delivery_company || "..." }}
-                    </div>
-                    <div>
-                      <b>Adres:</b> {{ delivery.delivery_address || "..." }}
-                    </div>
-                    <div>
-                      <b>Kod i miasto:</b>
-                      {{ delivery.delivery_postcode || "..." }}
-                      {{ delivery.delivery_city || "..." }}
-                    </div>
-                    <div>
-                      <b>Województwo:</b> {{ delivery.delivery_state || "..." }}
-                    </div>
-                    <div>
-                      <b>Kraj:</b> {{ delivery.delivery_country || "..." }}
-                    </div>
+
+                    <!-- View mode -->
+                    <template v-if="!editingDelivery">
+                      <div>
+                        <b>Imię i nazwisko:</b>
+                        {{ delivery.delivery_fullname || "..." }}
+                      </div>
+                      <div>
+                        <b>Firma:</b> {{ delivery.delivery_company || "..." }}
+                      </div>
+                      <div>
+                        <b>Adres:</b> {{ delivery.delivery_address || "..." }}
+                      </div>
+                      <div>
+                        <b>Kod i miasto:</b>
+                        {{ delivery.delivery_postcode || "..." }}
+                        {{ delivery.delivery_city || "..." }}
+                      </div>
+                      <div>
+                        <b>Województwo:</b>
+                        {{ delivery.delivery_state || "..." }}
+                      </div>
+                      <div>
+                        <b>Kraj:</b> {{ delivery.delivery_country || "..." }}
+                      </div>
+                    </template>
+
+                    <!-- Edit mode -->
+                    <template v-else>
+                      <v-text-field
+                        v-model="editDeliveryData.delivery_fullname"
+                        label="Imię i nazwisko"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-2"
+                      />
+                      <v-text-field
+                        v-model="editDeliveryData.delivery_company"
+                        label="Firma"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-2"
+                      />
+                      <v-text-field
+                        v-model="editDeliveryData.delivery_address"
+                        label="Adres"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-2"
+                      />
+                      <v-row class="mb-2">
+                        <v-col cols="6">
+                          <v-text-field
+                            v-model="editDeliveryData.delivery_postcode"
+                            label="Kod pocztowy"
+                            density="compact"
+                            variant="outlined"
+                          />
+                        </v-col>
+                        <v-col cols="6">
+                          <v-text-field
+                            v-model="editDeliveryData.delivery_city"
+                            label="Miasto"
+                            density="compact"
+                            variant="outlined"
+                          />
+                        </v-col>
+                      </v-row>
+                      <v-text-field
+                        v-model="editDeliveryData.delivery_state"
+                        label="Województwo"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-2"
+                      />
+                      <v-text-field
+                        v-model="editDeliveryData.delivery_country"
+                        label="Kraj"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-3"
+                      />
+
+                      <div class="d-flex gap-2">
+                        <v-btn
+                          color="primary"
+                          size="small"
+                          @click="saveEdit('delivery')"
+                        >
+                          Zapisz
+                        </v-btn>
+                        <v-btn
+                          color="grey"
+                          size="small"
+                          variant="outlined"
+                          @click="cancelEdit('delivery')"
+                        >
+                          Anuluj
+                        </v-btn>
+                      </div>
+                    </template>
                   </v-card>
                 </v-col>
                 <v-col cols="12" md="4">
                   <v-card class="pa-3" variant="outlined">
                     <div class="d-flex justify-space-between align-center mb-2">
                       <span class="text-subtitle-1">Dane do faktury</span>
-                      <v-btn icon size="small" variant="text"
-                        ><v-icon>mdi-pencil</v-icon></v-btn
+                      <v-btn
+                        v-if="!editingInvoice"
+                        icon
+                        size="small"
+                        variant="text"
+                        @click="startEdit('invoice')"
                       >
+                        <v-icon>mdi-pencil</v-icon>
+                      </v-btn>
                     </div>
-                    <div>
-                      <b>Imię i nazwisko:</b>
-                      {{ delivery.invoice_fullname || "..." }}
-                    </div>
-                    <div>
-                      <b>Firma:</b> {{ delivery.invoice_company || "..." }}
-                    </div>
-                    <div>
-                      <b>Adres:</b> {{ delivery.invoice_address || "..." }}
-                    </div>
-                    <div>
-                      <b>Kod i miasto:</b>
-                      {{ delivery.invoice_postcode || "..." }}
-                      {{ delivery.invoice_city || "" }}
-                    </div>
-                    <div><b>NIP:</b> {{ delivery.invoice_nip || "" }}</div>
-                    <div>
-                      <b>Kraj:</b> {{ delivery.invoice_country || "..." }}
-                    </div>
+
+                    <!-- View mode -->
+                    <template v-if="!editingInvoice">
+                      <div>
+                        <b>Imię i nazwisko:</b>
+                        {{ delivery.invoice_fullname || "..." }}
+                      </div>
+                      <div>
+                        <b>Firma:</b> {{ delivery.invoice_company || "..." }}
+                      </div>
+                      <div>
+                        <b>Adres:</b> {{ delivery.invoice_address || "..." }}
+                      </div>
+                      <div>
+                        <b>Kod i miasto:</b>
+                        {{ delivery.invoice_postcode || "..." }}
+                        {{ delivery.invoice_city || "" }}
+                      </div>
+                      <div><b>NIP:</b> {{ delivery.invoice_nip || "" }}</div>
+                      <div>
+                        <b>Kraj:</b> {{ delivery.invoice_country || "..." }}
+                      </div>
+                    </template>
+
+                    <!-- Edit mode -->
+                    <template v-else>
+                      <v-text-field
+                        v-model="editInvoiceData.invoice_fullname"
+                        label="Imię i nazwisko"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-2"
+                      />
+                      <v-text-field
+                        v-model="editInvoiceData.invoice_company"
+                        label="Firma"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-2"
+                      />
+                      <v-text-field
+                        v-model="editInvoiceData.invoice_address"
+                        label="Adres"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-2"
+                      />
+                      <v-row class="mb-2">
+                        <v-col cols="6">
+                          <v-text-field
+                            v-model="editInvoiceData.invoice_postcode"
+                            label="Kod pocztowy"
+                            density="compact"
+                            variant="outlined"
+                          />
+                        </v-col>
+                        <v-col cols="6">
+                          <v-text-field
+                            v-model="editInvoiceData.invoice_city"
+                            label="Miasto"
+                            density="compact"
+                            variant="outlined"
+                          />
+                        </v-col>
+                      </v-row>
+                      <v-text-field
+                        v-model="editInvoiceData.invoice_nip"
+                        label="NIP"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-2"
+                      />
+                      <v-text-field
+                        v-model="editInvoiceData.invoice_country"
+                        label="Kraj"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-3"
+                      />
+
+                      <div class="d-flex gap-2">
+                        <v-btn
+                          color="primary"
+                          size="small"
+                          @click="saveEdit('invoice')"
+                        >
+                          Zapisz
+                        </v-btn>
+                        <v-btn
+                          color="grey"
+                          size="small"
+                          variant="outlined"
+                          @click="cancelEdit('invoice')"
+                        >
+                          Anuluj
+                        </v-btn>
+                      </div>
+                    </template>
                   </v-card>
                 </v-col>
                 <v-col cols="12" md="4">
                   <v-card class="pa-3" variant="outlined">
                     <div class="d-flex justify-space-between align-center mb-2">
                       <span class="text-subtitle-1">Odbiór w punkcie</span>
-                      <v-btn icon size="small" variant="text"
-                        ><v-icon>mdi-pencil</v-icon></v-btn
+                      <v-btn
+                        v-if="!editingPickup"
+                        icon
+                        size="small"
+                        variant="text"
+                        @click="startEdit('pickup')"
                       >
+                        <v-icon>mdi-pencil</v-icon>
+                      </v-btn>
                     </div>
-                    <div>
-                      <b>Nazwa:</b> {{ delivery.delivery_point_name || "..." }}
-                    </div>
-                    <div><b>ID:</b> {{ delivery.delivery_point_id }}</div>
-                    <div>
-                      <b>Adres:</b> {{ delivery.delivery_point_address || "" }}
-                    </div>
-                    <div>
-                      <b>Kod i miasto:</b>
-                      {{ delivery.delivery_point_postcode || "" }},
-                      {{ delivery.delivery_point_city || "" }}
-                    </div>
+
+                    <!-- View mode -->
+                    <template v-if="!editingPickup">
+                      <div>
+                        <b>Nazwa:</b>
+                        {{ delivery.delivery_point_name || "..." }}
+                      </div>
+                      <div><b>ID:</b> {{ delivery.delivery_point_id }}</div>
+                      <div>
+                        <b>Adres:</b>
+                        {{ delivery.delivery_point_address || "" }}
+                      </div>
+                      <div>
+                        <b>Kod i miasto:</b>
+                        {{ delivery.delivery_point_postcode || "" }},
+                        {{ delivery.delivery_point_city || "" }}
+                      </div>
+                    </template>
+
+                    <!-- Edit mode -->
+                    <template v-else>
+                      <v-text-field
+                        v-model="editPickupData.delivery_point_name"
+                        label="Nazwa"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-2"
+                      />
+                      <v-text-field
+                        v-model="editPickupData.delivery_point_id"
+                        label="ID"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-2"
+                      />
+                      <v-text-field
+                        v-model="editPickupData.delivery_point_address"
+                        label="Adres"
+                        density="compact"
+                        variant="outlined"
+                        class="mb-2"
+                      />
+                      <v-row class="mb-3">
+                        <v-col cols="6">
+                          <v-text-field
+                            v-model="editPickupData.delivery_point_postcode"
+                            label="Kod pocztowy"
+                            density="compact"
+                            variant="outlined"
+                          />
+                        </v-col>
+                        <v-col cols="6">
+                          <v-text-field
+                            v-model="editPickupData.delivery_point_city"
+                            label="Miasto"
+                            density="compact"
+                            variant="outlined"
+                          />
+                        </v-col>
+                      </v-row>
+
+                      <div class="d-flex gap-2">
+                        <v-btn
+                          color="primary"
+                          size="small"
+                          @click="saveEdit('pickup')"
+                        >
+                          Zapisz
+                        </v-btn>
+                        <v-btn
+                          color="grey"
+                          size="small"
+                          variant="outlined"
+                          @click="cancelEdit('pickup')"
+                        >
+                          Anuluj
+                        </v-btn>
+                      </div>
+                    </template>
                   </v-card>
                 </v-col>
               </v-row>
@@ -348,6 +592,14 @@ export default {
       tab: "order",
       sumDoc: 0,
       wz: { Data: "", NrDokumentu: "" },
+      // Edit states
+      editingDelivery: false,
+      editingInvoice: false,
+      editingPickup: false,
+      // Edit data copies
+      editDeliveryData: {},
+      editInvoiceData: {},
+      editPickupData: {},
     };
   },
   mounted() {
@@ -403,6 +655,12 @@ export default {
         this.sumDoc = this.products.reduce((acc, product) => {
           return acc + (product.PriceGross || 0) * (product.ilosc || 0);
         }, 0);
+
+        // Reset edit states
+        this.editingDelivery = false;
+        this.editingInvoice = false;
+        this.editingPickup = false;
+
         // if (!this.order || !this.delivery) {
         //   this.localDialog = false;
         // }
@@ -411,6 +669,96 @@ export default {
         this.error = "Błąd ładowania danych: " + (err.message || err);
       } finally {
         this.loading = false;
+      }
+    },
+
+    startEdit(section) {
+      if (section === "delivery") {
+        this.editingDelivery = true;
+        this.editDeliveryData = {
+          delivery_fullname: this.delivery.delivery_fullname || "",
+          delivery_company: this.delivery.delivery_company || "",
+          delivery_address: this.delivery.delivery_address || "",
+          delivery_postcode: this.delivery.delivery_postcode || "",
+          delivery_city: this.delivery.delivery_city || "",
+          delivery_state: this.delivery.delivery_state || "",
+          delivery_country: this.delivery.delivery_country || "",
+        };
+      } else if (section === "invoice") {
+        this.editingInvoice = true;
+        this.editInvoiceData = {
+          invoice_fullname: this.delivery.invoice_fullname || "",
+          invoice_company: this.delivery.invoice_company || "",
+          invoice_address: this.delivery.invoice_address || "",
+          invoice_postcode: this.delivery.invoice_postcode || "",
+          invoice_city: this.delivery.invoice_city || "",
+          invoice_nip: this.delivery.invoice_nip || "",
+          invoice_country: this.delivery.invoice_country || "",
+        };
+      } else if (section === "pickup") {
+        this.editingPickup = true;
+        this.editPickupData = {
+          delivery_point_name: this.delivery.delivery_point_name || "",
+          delivery_point_id: this.delivery.delivery_point_id || "",
+          delivery_point_address: this.delivery.delivery_point_address || "",
+          delivery_point_postcode: this.delivery.delivery_point_postcode || "",
+          delivery_point_city: this.delivery.delivery_point_city || "",
+        };
+      }
+    },
+
+    cancelEdit(section) {
+      if (section === "delivery") {
+        this.editingDelivery = false;
+        this.editDeliveryData = {};
+      } else if (section === "invoice") {
+        this.editingInvoice = false;
+        this.editInvoiceData = {};
+      } else if (section === "pickup") {
+        this.editingPickup = false;
+        this.editPickupData = {};
+      }
+    },
+
+    async saveEdit(section) {
+      try {
+        let dataToSave = {};
+
+        if (section === "delivery") {
+          dataToSave = this.editDeliveryData;
+        } else if (section === "invoice") {
+          dataToSave = this.editInvoiceData;
+        } else if (section === "pickup") {
+          dataToSave = this.editPickupData;
+        }
+
+        const params = {
+          IDOrder: this.orderId,
+          IDWarehouse: this.orderWarehouse,
+          section: section,
+          data: dataToSave,
+        };
+
+        // Call the API to save data
+        const response = await axios.post("/api/saveDataOrder", params);
+
+        if (response.data.success) {
+          // Update local data on successful save
+          Object.assign(this.delivery, dataToSave);
+
+          // Reset edit state
+          this.cancelEdit(section);
+
+          console.log(`Saved ${section} data:`, dataToSave);
+
+          // Optionally show success message
+          // this.$emit('show-message', 'Dane zostały zapisane pomyślnie');
+        } else {
+          throw new Error(response.data.error || "Unknown error occurred");
+        }
+      } catch (err) {
+        console.error("Błąd podczas zapisywania:", err);
+        this.error = "Błąd zapisywania danych: " + (err.message || err);
       }
     },
   },
