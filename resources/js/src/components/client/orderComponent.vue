@@ -60,62 +60,152 @@
                         >Edytuj wpłatę</v-btn
                     > -->
                   </div>
-                  <v-row>
-                    <v-col cols="6">
-                      <div>
-                        <b>client (login):</b>
-                        {{ order._OrdersTempString9 || client.Nazwa || "..." }}
+
+                  <!-- Main data edit/view -->
+                  <v-card class="pa-3 mb-3" variant="outlined">
+                    <div class="d-flex justify-space-between align-center mb-2">
+                      <span class="text-subtitle-1">Dane podstawowe</span>
+                      <v-btn
+                        v-if="!editingMainData"
+                        icon
+                        size="small"
+                        variant="text"
+                        @click="startEdit('maindata')"
+                      >
+                        <v-icon>mdi-pencil</v-icon>
+                      </v-btn>
+                    </div>
+
+                    <!-- View mode -->
+                    <template v-if="!editingMainData">
+                      <v-row>
+                        <v-col cols="6">
+                          <div>
+                            <b>client (login):</b>
+                            {{
+                              order._OrdersTempString9 || client.Nazwa || "..."
+                            }}
+                          </div>
+                          <div><b>E-mail:</b> {{ client.Email || "..." }}</div>
+                          <div>
+                            <b>Telefon:</b> {{ client.Telefon || "..." }}
+                          </div>
+                          <div>
+                            <b>Źródło:</b> {{ order._OrdersTempString7 || "" }}
+                          </div>
+                        </v-col>
+                        <v-col cols="6">
+                          <div>
+                            <b>Sposób wysyłki:</b>
+                            {{ delivery.delivery_method || "..." }}
+                          </div>
+                          <!-- <div><b>Koszt wysyłki:</b> ??? PLN</div> -->
+                          <div>
+                            <b>Sposób płatności:</b>
+                            {{ delivery.payment_method || "..." }}
+                          </div>
+                          <div>
+                            <b>Status:</b>
+                            {{
+                              statuses.find(
+                                (s) => s.value == order.IDOrderStatus
+                              )?.title || ""
+                            }}
+                          </div>
+                        </v-col>
+                      </v-row>
+                      <v-row>
+                        <v-col cols="12">
+                          <div><b>Uwagi:</b> {{ order.Remarks || "" }}</div>
+                        </v-col>
+                      </v-row>
+                    </template>
+
+                    <!-- Edit mode -->
+                    <template v-else>
+                      <v-row>
+                        <v-col cols="6">
+                          <v-text-field
+                            v-model="editMainData.email"
+                            label="E-mail"
+                            density="compact"
+                            variant="outlined"
+                            class="mb-2"
+                          />
+                          <v-text-field
+                            v-model="editMainData.telefon"
+                            label="Telefon"
+                            density="compact"
+                            variant="outlined"
+                            class="mb-2"
+                          />
+                          <v-text-field
+                            v-model="editMainData.zrodlo"
+                            label="Źródło"
+                            density="compact"
+                            variant="outlined"
+                            class="mb-2"
+                          />
+                        </v-col>
+                        <v-col cols="6">
+                          <v-text-field
+                            v-model="editMainData.delivery_method"
+                            label="Sposób wysyłki"
+                            density="compact"
+                            variant="outlined"
+                            class="mb-2"
+                          />
+                          <v-text-field
+                            v-model="editMainData.payment_method"
+                            label="Sposób płatności"
+                            density="compact"
+                            variant="outlined"
+                            class="mb-2"
+                          />
+                          <v-select
+                            v-model="editMainData.status"
+                            label="Status"
+                            :items="statuses"
+                            density="compact"
+                            variant="outlined"
+                            class="mb-2"
+                          />
+                        </v-col>
+                      </v-row>
+                      <v-row>
+                        <v-col cols="12">
+                          <v-textarea
+                            v-model="editMainData.remarks"
+                            label="Uwagi"
+                            density="compact"
+                            variant="outlined"
+                            rows="3"
+                            class="mb-3"
+                          />
+                        </v-col>
+                      </v-row>
+
+                      <div class="d-flex gap-2">
+                        <v-btn
+                          color="primary"
+                          size="small"
+                          @click="saveEdit('maindata')"
+                        >
+                          Zapisz
+                        </v-btn>
+                        <v-btn
+                          color="grey"
+                          size="small"
+                          variant="outlined"
+                          @click="cancelEdit('maindata')"
+                        >
+                          Anuluj
+                        </v-btn>
                       </div>
-                      <div><b>E-mail:</b> {{ client.Email || "..." }}</div>
-                      <div><b>Telefon:</b> {{ client.Telefon || "..." }}</div>
-                      <div>
-                        <b>Źródło:</b> {{ order._OrdersTempString7 || "" }}
-                      </div>
-                    </v-col>
-                    <v-col cols="6">
-                      <div>
-                        <b>Sposób wysyłki:</b>
-                        {{ delivery.delivery_method || "..." }}
-                      </div>
-                      <!-- <div><b>Koszt wysyłki:</b> ??? PLN</div> -->
-                      <div>
-                        <b>Sposób płatności:</b>
-                        {{ delivery.payment_method || "..." }}
-                      </div>
-                    </v-col>
-                  </v-row>
-                  <v-row>
-                    <v-col cols="4">
-                      <div><b>Pole dodatkowe 1</b><br />...</div>
-                      <div><b>Pole dodatkowe 2</b><br />...</div>
-                      <div><b>Stan</b><br />...</div>
-                    </v-col>
-                    <v-col cols="8"
-                      ><b>Uwagi</b><br />{{ order.Remarks || "" }}</v-col
-                    >
-                  </v-row>
+                    </template>
+                  </v-card>
                 </v-col>
                 <v-col cols="12" md="5">
-                  <div class="d-flex align-center mb-2">
-                    <b
-                      >Status:
-                      {{
-                        statuses.find((s) => s.value == order.IDOrderStatus)
-                          .title || ""
-                      }}</b
-                    >
-                    <v-select
-                      class="ms-2"
-                      density="compact"
-                      hide-details
-                      style="max-width: 180px"
-                      :items="statuses"
-                      v-model="status"
-                      variant="outlined"
-                      color="primary"
-                    />
-                  </div>
-
                   <div class="mb-2">
                     <b>Faktura: {{ order._OrdersTempString1 || "" }}</b>
                     <!-- <v-btn size="small" class="ms-2" variant="outlined"
@@ -596,10 +686,12 @@ export default {
       editingDelivery: false,
       editingInvoice: false,
       editingPickup: false,
+      editingMainData: false,
       // Edit data copies
       editDeliveryData: {},
       editInvoiceData: {},
       editPickupData: {},
+      editMainData: {},
     };
   },
   mounted() {
@@ -660,6 +752,7 @@ export default {
         this.editingDelivery = false;
         this.editingInvoice = false;
         this.editingPickup = false;
+        this.editingMainData = false;
 
         // if (!this.order || !this.delivery) {
         //   this.localDialog = false;
@@ -704,6 +797,17 @@ export default {
           delivery_point_postcode: this.delivery.delivery_point_postcode || "",
           delivery_point_city: this.delivery.delivery_point_city || "",
         };
+      } else if (section === "maindata") {
+        this.editingMainData = true;
+        this.editMainData = {
+          email: this.client.Email || "",
+          telefon: this.client.Telefon || "",
+          zrodlo: this.order._OrdersTempString7 || "",
+          delivery_method: this.delivery.delivery_method || "",
+          payment_method: this.delivery.payment_method || "",
+          remarks: this.order.Remarks || "",
+          status: this.order.IDOrderStatus || "",
+        };
       }
     },
 
@@ -717,6 +821,9 @@ export default {
       } else if (section === "pickup") {
         this.editingPickup = false;
         this.editPickupData = {};
+      } else if (section === "maindata") {
+        this.editingMainData = false;
+        this.editMainData = {};
       }
     },
 
@@ -730,6 +837,8 @@ export default {
           dataToSave = this.editInvoiceData;
         } else if (section === "pickup") {
           dataToSave = this.editPickupData;
+        } else if (section === "maindata") {
+          dataToSave = this.editMainData;
         }
 
         const params = {
@@ -744,7 +853,24 @@ export default {
 
         if (response.data.success) {
           // Update local data on successful save
-          Object.assign(this.delivery, dataToSave);
+          if (section === "maindata") {
+            // Update multiple objects for main data
+            if (this.client) {
+              this.client.Email = dataToSave.email;
+              this.client.Telefon = dataToSave.telefon;
+            }
+            if (this.order) {
+              this.order._OrdersTempString7 = dataToSave.zrodlo;
+              this.order.Remarks = dataToSave.remarks;
+              this.order.IDOrderStatus = dataToSave.status;
+            }
+            if (this.delivery) {
+              this.delivery.delivery_method = dataToSave.delivery_method;
+              this.delivery.payment_method = dataToSave.payment_method;
+            }
+          } else {
+            Object.assign(this.delivery, dataToSave);
+          }
 
           // Reset edit state
           this.cancelEdit(section);

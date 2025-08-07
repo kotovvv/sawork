@@ -207,64 +207,177 @@ class OrderController extends Controller
                 return response()->json(['error' => 'Order not found'], 404);
             }
 
-            // Check if delivery record exists in second MySQL database
-            $existingDelivery = DB::connection('second_mysql')
-                ->table('order_details')
-                ->where('order_id', $orderId)
-                ->where('IDWarehouse', $warehouseId)
-                ->first();
+            if ($section === 'maindata') {
+                // Handle main data updates - update multiple tables
 
-            if ($existingDelivery) {
-                // Update existing record
-                DB::connection('second_mysql')
+                // Update client data (Email, Telefon)
+                if (isset($updateData['email']) || isset($updateData['telefon'])) {
+                    $clientUpdateData = [];
+                    if (isset($updateData['email'])) {
+                        $clientUpdateData['Email'] = $updateData['email'];
+                    }
+                    if (isset($updateData['telefon'])) {
+                        $clientUpdateData['Telefon'] = $updateData['telefon'];
+                    }
+
+                    if (!empty($clientUpdateData)) {
+                        DB::table('Kontrahent')
+                            ->where('IDKontrahenta', $order->IDAccount)
+                            ->update($clientUpdateData);
+                    }
+                }
+
+                // Update order data (Źródło, Uwagi, Status)
+                $orderUpdateData = [];
+                if (isset($updateData['zrodlo'])) {
+                    $orderUpdateData['_OrdersTempString7'] = $updateData['zrodlo'];
+                }
+                if (isset($updateData['remarks'])) {
+                    $orderUpdateData['Remarks'] = $updateData['remarks'];
+                }
+                if (isset($updateData['status'])) {
+                    $orderUpdateData['IDOrderStatus'] = $updateData['status'];
+                }
+
+                if (!empty($orderUpdateData)) {
+                    DB::table('Orders')
+                        ->where('IDOrder', $orderId)
+                        ->where('IDWarehouse', $warehouseId)
+                        ->update($orderUpdateData);
+                }
+
+                // Update delivery data (delivery_method, payment_method)
+                $deliveryUpdateData = [];
+                if (isset($updateData['delivery_method'])) {
+                    $deliveryUpdateData['delivery_method'] = $updateData['delivery_method'];
+                }
+                if (isset($updateData['payment_method'])) {
+                    $deliveryUpdateData['payment_method'] = $updateData['payment_method'];
+                }
+
+                if (!empty($deliveryUpdateData)) {
+                    // Check if delivery record exists in second MySQL database
+                    $existingDelivery = DB::connection('second_mysql')
+                        ->table('order_details')
+                        ->where('order_id', $orderId)
+                        ->where('IDWarehouse', $warehouseId)
+                        ->first();
+
+                    if ($existingDelivery) {
+                        // Update existing record
+                        DB::connection('second_mysql')
+                            ->table('order_details')
+                            ->where('order_id', $orderId)
+                            ->where('IDWarehouse', $warehouseId)
+                            ->update(array_merge($deliveryUpdateData, ['updated_at' => now()]));
+                    } else {
+                        // Create new record with all required fields
+                        $insertData = array_merge([
+                            'order_id' => $orderId,
+                            'IDWarehouse' => $warehouseId,
+                            'order_source' => '',
+                            'order_source_id' => '',
+                            'currency' => '',
+                            'payment_method' => '',
+                            'payment_method_cod' => '',
+                            'payment_done' => '',
+                            'delivery_method' => '',
+                            'delivery_price' => '',
+                            'delivery_package_module' => '',
+                            'delivery_package_nr' => '',
+                            'delivery_fullname' => '',
+                            'delivery_company' => '',
+                            'delivery_address' => '',
+                            'delivery_city' => '',
+                            'delivery_state' => '',
+                            'delivery_postcode' => '',
+                            'delivery_country_code' => '',
+                            'delivery_point_id' => '',
+                            'delivery_point_name' => '',
+                            'delivery_point_address' => '',
+                            'delivery_point_postcode' => '',
+                            'delivery_point_city' => '',
+                            'invoice_fullname' => '',
+                            'invoice_company' => '',
+                            'invoice_nip' => '',
+                            'invoice_address' => '',
+                            'invoice_city' => '',
+                            'invoice_state' => '',
+                            'invoice_postcode' => '',
+                            'invoice_country_code' => '',
+                            'delivery_country' => '',
+                            'invoice_country' => '',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ], $deliveryUpdateData);
+
+                        DB::connection('second_mysql')
+                            ->table('order_details')
+                            ->insert($insertData);
+                    }
+                }
+            } else {
+                // Handle delivery, invoice, pickup sections - update only order_details table
+
+                // Check if delivery record exists in second MySQL database
+                $existingDelivery = DB::connection('second_mysql')
                     ->table('order_details')
                     ->where('order_id', $orderId)
                     ->where('IDWarehouse', $warehouseId)
-                    ->update(array_merge($updateData, ['updated_at' => now()]));
-            } else {
-                // Create new record with all required fields
-                $insertData = array_merge([
-                    'order_id' => $orderId,
-                    'IDWarehouse' => $warehouseId,
-                    'order_source' => '',
-                    'order_source_id' => '',
-                    'currency' => '',
-                    'payment_method' => '',
-                    'payment_method_cod' => '',
-                    'payment_done' => '',
-                    'delivery_method' => '',
-                    'delivery_price' => '',
-                    'delivery_package_module' => '',
-                    'delivery_package_nr' => '',
-                    'delivery_fullname' => '',
-                    'delivery_company' => '',
-                    'delivery_address' => '',
-                    'delivery_city' => '',
-                    'delivery_state' => '',
-                    'delivery_postcode' => '',
-                    'delivery_country_code' => '',
-                    'delivery_point_id' => '',
-                    'delivery_point_name' => '',
-                    'delivery_point_address' => '',
-                    'delivery_point_postcode' => '',
-                    'delivery_point_city' => '',
-                    'invoice_fullname' => '',
-                    'invoice_company' => '',
-                    'invoice_nip' => '',
-                    'invoice_address' => '',
-                    'invoice_city' => '',
-                    'invoice_state' => '',
-                    'invoice_postcode' => '',
-                    'invoice_country_code' => '',
-                    'delivery_country' => '',
-                    'invoice_country' => '',
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ], $updateData);
+                    ->first();
 
-                DB::connection('second_mysql')
-                    ->table('order_details')
-                    ->insert($insertData);
+                if ($existingDelivery) {
+                    // Update existing record
+                    DB::connection('second_mysql')
+                        ->table('order_details')
+                        ->where('order_id', $orderId)
+                        ->where('IDWarehouse', $warehouseId)
+                        ->update(array_merge($updateData, ['updated_at' => now()]));
+                } else {
+                    // Create new record with all required fields
+                    $insertData = array_merge([
+                        'order_id' => $orderId,
+                        'IDWarehouse' => $warehouseId,
+                        'order_source' => '',
+                        'order_source_id' => '',
+                        'currency' => '',
+                        'payment_method' => '',
+                        'payment_method_cod' => '',
+                        'payment_done' => '',
+                        'delivery_method' => '',
+                        'delivery_price' => '',
+                        'delivery_package_module' => '',
+                        'delivery_package_nr' => '',
+                        'delivery_fullname' => '',
+                        'delivery_company' => '',
+                        'delivery_address' => '',
+                        'delivery_city' => '',
+                        'delivery_state' => '',
+                        'delivery_postcode' => '',
+                        'delivery_country_code' => '',
+                        'delivery_point_id' => '',
+                        'delivery_point_name' => '',
+                        'delivery_point_address' => '',
+                        'delivery_point_postcode' => '',
+                        'delivery_point_city' => '',
+                        'invoice_fullname' => '',
+                        'invoice_company' => '',
+                        'invoice_nip' => '',
+                        'invoice_address' => '',
+                        'invoice_city' => '',
+                        'invoice_state' => '',
+                        'invoice_postcode' => '',
+                        'invoice_country_code' => '',
+                        'delivery_country' => '',
+                        'invoice_country' => '',
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ], $updateData);
+
+                    DB::connection('second_mysql')
+                        ->table('order_details')
+                        ->insert($insertData);
+                }
             }
 
             // Log the update action (optional)
