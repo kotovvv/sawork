@@ -160,7 +160,7 @@
                     </v-row>
                   </v-tabs-window-item>
                   <v-tabs-window-item value="doc">
-                    <v-row v-if="$attrs.user.IDRoli != 4">
+                    <v-row>
                       <v-col cols="12" md="3" lg="2">
                         <v-file-input
                           clearable
