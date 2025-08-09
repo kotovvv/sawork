@@ -21,6 +21,7 @@
               v-model="fieldsData[field.id]"
               :name="field.id"
               :rules="getFieldRules(field)"
+              :disabled="loading || isSaving"
               @keydown.enter.prevent="save"
             >
               <v-radio
@@ -28,6 +29,7 @@
                 :key="opt.value"
                 :label="opt.title"
                 :value="opt.value"
+                :disabled="loading || isSaving"
               />
             </v-radio-group>
           </template>
@@ -42,6 +44,7 @@
                 :value="opt.value"
                 :name="`${field.id}_${opt.value}`"
                 :rules="getFieldRules(field)"
+                :disabled="loading || isSaving"
                 multiple
                 hide-details="auto"
                 @keydown.enter.prevent="save"
@@ -64,6 +67,7 @@
                   readonly
                   :name="field.id"
                   :rules="getFieldRules(field)"
+                  :disabled="loading || isSaving"
                   @keydown.enter.prevent="save"
                 />
               </template>
@@ -88,6 +92,7 @@
               :rules="getFieldRules(field)"
               :true-value="true"
               :false-value="false"
+              :disabled="loading || isSaving"
               @keydown.enter.prevent="save"
             ></component>
           </template>
@@ -109,6 +114,7 @@
             :true-value="true"
             :false-value="false"
             :class="field.id === 'size_custom' ? 'd-none' : ''"
+            :disabled="loading || isSaving"
             @keydown.enter.prevent="save"
           ></component>
         </div>
