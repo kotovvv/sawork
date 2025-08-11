@@ -17,7 +17,6 @@ use App\Http\Controllers\Api\ForTTNController;
 use App\Http\Controllers\Api\BaseLinkerController;
 use App\Http\Controllers\Api\DMController;
 use App\Http\Controllers\Api\ClientApiController;
-use App\Http\Controllers\Api\ApiClientManagementController;
 
 /*
 |--------------------------------------------------------------------------
@@ -142,20 +141,14 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('downloadPdfs', [SendPDF::class, 'downloadPdfs']);
 
     // API Client Management (Admin only)
-    Route::prefix('admin')->group(function () {
-        Route::apiResource('api-clients', ApiClientManagementController::class);
-        Route::post('api-clients/{id}/regenerate', [ApiClientManagementController::class, 'regenerateCredentials']);
-        Route::get('api-clients/{id}/usage', [ApiClientManagementController::class, 'getUsageStats']);
-        Route::get('api-usage', [ApiClientManagementController::class, 'getUsageStats']);
-    });
+    Route::prefix('admin')->group(function () {});
 });
 
 // Client API routes (with API authentication)
 Route::prefix('client/v1')->middleware(['api.auth'])->group(function () {
-    // Orders API
+    // Order management
     Route::get('orders', [ClientApiController::class, 'getOrders'])->middleware('api.auth:orders.read');
-    Route::post('orders', [ClientApiController::class, 'createOrder'])->middleware('api.auth:orders.create');
-    Route::patch('orders/{orderId}/status', [ClientApiController::class, 'updateOrderStatus'])->middleware('api.auth:orders.update');
+    Route::post('order', [ClientApiController::class, 'upsertOrder'])->middleware('api.auth:orders.create');
 
     // Returns/Refunds API
     Route::get('returns', [ClientApiController::class, 'getOrderReturns'])->middleware('api.auth:returns.read');

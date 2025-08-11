@@ -20,16 +20,7 @@
 Для работы с JSON в MSSQL созданы аксессоры и мутаторы в моделях:
 
 ```php
-// ApiClient модель
-public function getWarehouseIdsAttribute($value)
-{
-    return $value ? json_decode($value, true) : [];
-}
 
-public function setWarehouseIdsAttribute($value)
-{
-    $this->attributes['warehouse_ids'] = json_encode($value);
-}
 ```
 
 ## Структура базы данных
@@ -46,7 +37,6 @@ public function setWarehouseIdsAttribute($value)
 
 -   **Новые API таблицы**:
 
-    -   `api_clients` - API клиенты
     -   `order_sources` - источники заказов
 
 -   **MySQL таблицы** (остаются в second_mysql):
@@ -93,8 +83,8 @@ try {
     $apiClients = DB::table('api_clients')->count();
     echo "✓ api_clients table exists - {$apiClients} records\n";
 
-    $orderSources = DB::table('order_sources')->count();
-    echo "✓ order_sources table exists - {$orderSources} records\n";
+    $apiClients = DB::table('api_clients')->count();
+    echo "✓ api_clients table exists - {$apiClients} records\n";
 
     // Проверка связи с Orders
     $ordersCount = DB::table('Orders')->count();

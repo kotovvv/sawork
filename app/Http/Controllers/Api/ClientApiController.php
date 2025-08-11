@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ApiClient;
-use App\Models\OrderSource;
 use App\Models\LogOrder;
 use App\Http\Controllers\Api\importBLController;
 use Illuminate\Http\Request;
@@ -33,8 +32,10 @@ class ClientApiController extends Controller
    */
   public function getOrders(Request $request)
   {
+    $client = $request->attributes->get('api_client');
+    $warehouseId = $client['warehouse_id'];
+
     $validator = Validator::make($request->all(), [
-      'warehouse_id' => 'required|integer',
       'date_from' => 'nullable|date',
       'date_to' => 'nullable|date',
       'status' => 'nullable|string',
@@ -50,25 +51,10 @@ class ClientApiController extends Controller
       ], 400);
     }
 
-    $client = $request->api_client;
-    $warehouseId = $request->warehouse_id;
-
-    // Check warehouse access
-    if (!$client->canAccessWarehouse($warehouseId)) {
-      return response()->json([
-        'error' => 'Access denied to warehouse',
-        'warehouse_id' => $warehouseId
-      ], 403);
-    }
-
     try {
       $query = DB::table('Orders')
         ->leftJoin('OrderStatus', 'Orders.IDOrderStatus', '=', 'OrderStatus.IDOrderStatus')
         ->leftJoin('Kontrahent', 'Orders.IDAccount', '=', 'Kontrahent.IDKontrahenta')
-        ->leftJoin('order_sources', function ($join) use ($warehouseId) {
-          $join->on('Orders.IDOrder', '=', 'order_sources.order_id')
-            ->where('order_sources.warehouse_id', '=', $warehouseId);
-        })
         ->where('Orders.IDWarehouse', $warehouseId)
         ->select([
           'Orders.IDOrder',
@@ -83,13 +69,8 @@ class ClientApiController extends Controller
           'Orders._OrdersTempString9 as user_login',
           'OrderStatus.Name as status',
           'Kontrahent.Nazwa as customer_name',
-          'Kontrahent.Email as customer_email',
-          'order_sources.source_type',
-          'order_sources.api_client_id',
-          'order_sources.external_order_id as source_external_id'
-        ]);
-
-      // Apply filters
+          'Kontrahent.Email as customer_email'
+        ]);      // Apply filters
       if ($request->date_from) {
         $query->where('Orders.Created', '>=', $request->date_from);
       }
@@ -163,13 +144,13 @@ class ClientApiController extends Controller
   }
 
   /**
-   * Create new order via API
+   * Create or update order via API (upsert by external_order_id)
    */
-  public function createOrder(Request $request)
+  public function upsertOrder(Request $request)
   {
     $validator = Validator::make($request->all(), [
       'warehouse_id' => 'required|integer',
-      'external_order_id' => 'nullable|string',
+      'external_order_id' => 'required|string',
       'customer' => 'required|array',
       'customer.name' => 'required|string',
       'customer.email' => 'required|email',
@@ -200,11 +181,11 @@ class ClientApiController extends Controller
       ], 400);
     }
 
-    $client = $request->api_client;
+    $client = $request->attributes->get('api_client');
     $warehouseId = $request->warehouse_id;
 
     // Check warehouse access
-    if (!$client->canAccessWarehouse($warehouseId)) {
+    if ($warehouseId != $client['warehouse_id']) {
       return response()->json([
         'error' => 'Access denied to warehouse',
         'warehouse_id' => $warehouseId
@@ -214,20 +195,18 @@ class ClientApiController extends Controller
     try {
       DB::beginTransaction();
 
-      // Transform API request to BaseLinker format
+      // Check if order exists by external_order_id and warehouse
+      $existingOrder = DB::table('Orders')
+        ->where('IDWarehouse', $warehouseId)
+        ->where('_OrdersTempString8', $request->external_order_id)
+        ->first();
+
       $orderData = $this->transformApiOrderToBaseLinkerFormat($request->all());
-
-      // Use the existing import logic but mark as API source
       $customerId = $this->importBLController->findOrCreateKontrahent($orderData, $warehouseId);
-
-      $uwagi = 'API Order - External ID: ' . ($request->external_order_id ?? 'none') . ' ' .
-        ($request->user_comments ?: $request->admin_comments ?: '');
-
+      $uwagi = 'API Order - External ID: ' . $request->external_order_id . ' ' . ($request->user_comments ?: $request->admin_comments ?: '');
       $orderDate = now()->format('Y-m-d H:i:s');
-      $orderStatus = 'W realizacji'; // Default status for API orders
+      $orderStatus = 'W realizacji';
       $paymentType = DB::table('PaymentTypes')->where('Name', $request->payment_method ?? 'Przelew')->value('IDPaymentType');
-
-      // Handle delivery method
       $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $request->delivery['method'])->value('IDRodzajuTransportu');
       if (!$idTransport) {
         DB::table('RodzajTransportu')->insert([
@@ -238,194 +217,97 @@ class ClientApiController extends Controller
         $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $request->delivery['method'])->value('IDRodzajuTransportu');
       }
 
-      $Number = $this->importBLController->lastNumber('ZO', $warehouseId);
-
-      // Create order using stored procedure
-      DB::statement(
-        "EXEC CreateOrder
-                @CustomerId = ?,
-                @IdZamowiena = ?,
-                @IdMagazynu = ?,
-                @Uwagi = ?,
-                @OrderDate = ?,
-                @OrdertStatus = ?,
-                @PaymentType = ?,
-                @IDTransport = ?",
-        [
-          $customerId,
-          $Number,
-          $warehouseId,
-          $uwagi,
-          $orderDate,
-          $orderStatus,
-          $paymentType,
-          $idTransport
-        ]
-      );
-
-      $IDOrder = DB::table('Orders')->where('Number', $Number)->value('IDOrder');
-
-      // Save order details
-      $this->importBLController->saveOrderDetails($orderData, $IDOrder, $warehouseId);
-
-      // Save products
-      $this->importBLController->writeProductsOrder($orderData, $IDOrder, $warehouseId, $uwagi);
-
-      // Mark order as API source
-      OrderSource::createForApi(
-        $IDOrder,
-        $warehouseId,
-        $client->id,
-        $request->external_order_id,
-        [
-          'api_version' => 'v1',
-          'created_via' => 'client_api',
-          'original_data' => $request->all()
-        ]
-      );
-
-      // Update order with API-specific fields
-      DB::table('Orders')->where('IDOrder', $IDOrder)->update([
-        '_OrdersTempString7' => 'API_' . $client->name,
-        '_OrdersTempString8' => $request->external_order_id,
-        '_OrdersTempString9' => 'API_CLIENT_' . $client->id
-      ]);
-
-      DB::commit();
-
-      LogOrder::create([
-        'IDWarehouse' => $warehouseId,
-        'number' => $request->external_order_id ?? $IDOrder,
-        'type' => 3,
-        'message' => "API Order created by client: {$client->name}"
-      ]);
-
-      return response()->json([
-        'success' => true,
-        'data' => [
-          'order_id' => $IDOrder,
-          'order_number' => $Number,
-          'external_order_id' => $request->external_order_id,
-          'status' => $orderStatus
-        ]
-      ], 201);
+      if ($existingOrder) {
+        // Update existing order
+        DB::table('Orders')->where('IDOrder', $existingOrder->IDOrder)->update([
+          'IDAccount' => $customerId,
+          'Modified' => $orderDate,
+          'IDOrderStatus' => DB::table('OrderStatus')->where('Name', $orderStatus)->value('IDOrderStatus'),
+          '_OrdersTempString7' => 'API_' . $client['key_index'],
+          '_OrdersTempString8' => $request->external_order_id,
+          '_OrdersTempString9' => 'API_CLIENT_' . $client['key_index']
+        ]);
+        // Update order details and products
+        $this->importBLController->saveOrderDetails($orderData, $existingOrder->IDOrder, $warehouseId);
+        $this->importBLController->writeProductsOrder($orderData, $existingOrder->IDOrder, $warehouseId, $uwagi);
+        DB::commit();
+        LogOrder::create([
+          'IDWarehouse' => $warehouseId,
+          'number' => $request->external_order_id,
+          'type' => 4,
+          'message' => "API Order updated by client: {$client['key_index']}"
+        ]);
+        return response()->json([
+          'success' => true,
+          'data' => [
+            'order_id' => $existingOrder->IDOrder,
+            'order_number' => $existingOrder->Number,
+            'external_order_id' => $request->external_order_id,
+            'status' => $orderStatus,
+            'updated' => true
+          ]
+        ], 200);
+      } else {
+        // Create new order
+        $Number = $this->importBLController->lastNumber('ZO', $warehouseId);
+        DB::statement(
+          "EXEC CreateOrder
+                  @CustomerId = ?,
+                  @IdZamowiena = ?,
+                  @IdMagazynu = ?,
+                  @Uwagi = ?,
+                  @OrderDate = ?,
+                  @OrdertStatus = ?,
+                  @PaymentType = ?,
+                  @IDTransport = ?",
+          [
+            $customerId,
+            $Number,
+            $warehouseId,
+            $uwagi,
+            $orderDate,
+            $orderStatus,
+            $paymentType,
+            $idTransport
+          ]
+        );
+        $IDOrder = DB::table('Orders')->where('Number', $Number)->value('IDOrder');
+        $this->importBLController->saveOrderDetails($orderData, $IDOrder, $warehouseId);
+        $this->importBLController->writeProductsOrder($orderData, $IDOrder, $warehouseId, $uwagi);
+        DB::table('Orders')->where('IDOrder', $IDOrder)->update([
+          '_OrdersTempString7' => 'API_' . $client['key_index'],
+          '_OrdersTempString8' => $request->external_order_id,
+          '_OrdersTempString9' => 'API_CLIENT_' . $client['key_index']
+        ]);
+        DB::commit();
+        LogOrder::create([
+          'IDWarehouse' => $warehouseId,
+          'number' => $request->external_order_id ?? $IDOrder,
+          'type' => 3,
+          'message' => "API Order created by client: {$client['key_index']}"
+        ]);
+        return response()->json([
+          'success' => true,
+          'data' => [
+            'order_id' => $IDOrder,
+            'order_number' => $Number,
+            'external_order_id' => $request->external_order_id,
+            'status' => $orderStatus,
+            'created' => true
+          ]
+        ], 201);
+      }
     } catch (\Exception $e) {
       DB::rollBack();
-
-      Log::error('API createOrder failed', [
-        'client_id' => $client->id,
+      Log::error('API upsertOrder failed', [
+        'client_id' => $client['key_index'],
         'warehouse_id' => $warehouseId,
         'error' => $e->getMessage(),
         'trace' => $e->getTraceAsString()
       ]);
-
       return response()->json([
         'error' => 'Internal server error',
-        'message' => 'Failed to create order: ' . $e->getMessage()
-      ], 500);
-    }
-  }
-
-  /**
-   * Update order status
-   */
-  public function updateOrderStatus(Request $request, $orderId)
-  {
-    $validator = Validator::make($request->all(), [
-      'warehouse_id' => 'required|integer',
-      'status' => 'required|string'
-    ]);
-
-    if ($validator->fails()) {
-      return response()->json([
-        'error' => 'Validation failed',
-        'details' => $validator->errors()
-      ], 400);
-    }
-
-    $client = $request->api_client;
-    $warehouseId = $request->warehouse_id;
-
-    if (!$client->canAccessWarehouse($warehouseId)) {
-      return response()->json([
-        'error' => 'Access denied to warehouse',
-        'warehouse_id' => $warehouseId
-      ], 403);
-    }
-
-    try {
-      // Find order
-      $order = DB::table('Orders')
-        ->where('IDWarehouse', $warehouseId)
-        ->where(function ($query) use ($orderId) {
-          $query->where('IDOrder', $orderId)
-            ->orWhere('Number', $orderId)
-            ->orWhere('_OrdersTempString8', $orderId); // external_order_id
-        })
-        ->first();
-
-      if (!$order) {
-        return response()->json([
-          'error' => 'Order not found',
-          'order_id' => $orderId
-        ], 404);
-      }
-
-      // Check if order came from API (can only update API orders)
-      $orderSource = OrderSource::where('order_id', $order->IDOrder)
-        ->where('warehouse_id', $warehouseId)
-        ->first();
-
-      if ($orderSource && $orderSource->source_type !== OrderSource::SOURCE_API) {
-        return response()->json([
-          'error' => 'Cannot update non-API order',
-          'source_type' => $orderSource->source_type
-        ], 403);
-      }
-
-      // Get status ID
-      $statusId = DB::table('OrderStatus')->where('Name', $request->status)->value('IDOrderStatus');
-      if (!$statusId) {
-        return response()->json([
-          'error' => 'Invalid status',
-          'status' => $request->status
-        ], 400);
-      }
-
-      // Update order status
-      DB::table('Orders')
-        ->where('IDOrder', $order->IDOrder)
-        ->update([
-          'IDOrderStatus' => $statusId,
-          'Modified' => now()
-        ]);
-
-      LogOrder::create([
-        'IDWarehouse' => $warehouseId,
-        'number' => $order->_OrdersTempString8 ?? $order->IDOrder,
-        'type' => 18,
-        'message' => "Status changed to: {$request->status} via API by client: {$client->name}"
-      ]);
-
-      return response()->json([
-        'success' => true,
-        'data' => [
-          'order_id' => $order->IDOrder,
-          'status' => $request->status,
-          'updated_at' => now()->toISOString()
-        ]
-      ]);
-    } catch (\Exception $e) {
-      Log::error('API updateOrderStatus failed', [
-        'client_id' => $client->id,
-        'warehouse_id' => $warehouseId,
-        'order_id' => $orderId,
-        'error' => $e->getMessage()
-      ]);
-
-      return response()->json([
-        'error' => 'Internal server error',
-        'message' => 'Failed to update order status'
+        'message' => 'Failed to upsert order: ' . $e->getMessage()
       ], 500);
     }
   }

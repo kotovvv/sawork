@@ -16,7 +16,6 @@
 Все таблицы API создаются в основной базе данных (MSSQL) для упрощения работы с заказами:
 
 -   `api_clients` - управление API клиентами
--   `order_sources` - отслеживание источника заказов
 
 **Важно**: Используются адаптированные типы данных для MSSQL:
 
@@ -26,46 +25,38 @@
 
 ### 1. Модели
 
--   `ApiClient` - управление API клиентами
--   `OrderSource` - отслеживание источника заказов
+## Модели
+
+-   `ApiClient` - клиенты API с аутентификацией
 
 ### 2. Контроллеры
 
 -   `ClientApiController` - основной API для клиентов
 -   `ApiClientManagementController` - управление API клиентами (для админов)
 
-### 3. Middleware
-
 -   `ApiAuthentication` - аутентификация API запросов
-
-### 4. Команды
-
--   `ManageApiClient` - CLI команды для управления клиентами
 
 ## Шаги развертывания
 
 ### 1. Выполнить миграции
 
-```bash
 # Для основной базы данных (MSSQL)
-php artisan migrate
-```
 
-### 2. Зарегистрировать команду в Console/Kernel.php
+php artisan migrate
+
+````
 
 Добавить в `app/Console/Kernel.php`:
 
-```php
 protected $commands = [
     Commands\ManageApiClient::class,
 ];
-```
 
 ### 3. Создать демо API клиента (опционально)
 
 ```bash
 php artisan db:seed --class=ApiClientSeeder
-```
+````
 
 ### 4. Создать API клиента через команду
 
@@ -107,13 +98,8 @@ php artisan api:client regenerate --id=1
 https://your-domain.com/api/client/v1/
 ```
 
-### Аутентификация:
-
-Каждый запрос должен содержать заголовки:
-
-```
-X-API-Key: client_api_key
 X-API-Secret: client_api_secret
+
 ```
 
 ### Основные endpoints:
@@ -128,6 +114,7 @@ X-API-Secret: client_api_secret
 ### Административные endpoints:
 
 ```
+
 GET /api/admin/api-clients - список клиентов
 POST /api/admin/api-clients - создание клиента
 GET /api/admin/api-clients/{id} - детали клиента
@@ -135,12 +122,9 @@ PUT /api/admin/api-clients/{id} - обновление клиента
 DELETE /api/admin/api-clients/{id} - удаление клиента
 POST /api/admin/api-clients/{id}/regenerate - перегенерация ключей
 GET /api/admin/api-usage - статистика использования
+
 ```
 
-### CLI команды:
-
-```bash
-# Управление клиентами
 php artisan api:client create
 php artisan api:client list
 php artisan api:client show --id=1
@@ -169,6 +153,55 @@ php artisan api:client enable --id=1
 
 1. **API ключи** - двухфакторная аутентификация (key + secret)
 2. **IP whitelist** - ограничение по IP адресам
+
+# Инструкции по развертыванию API для клиентов
+
+## Использование
+
+### Ключи для клиентов
+
+В файле `.env` указываются ключи:
+
+```
+API_KEY_1=ключ_1
+API_KEY_1_WAREHOUSE=10
+API_KEY_2=ключ_2
+API_KEY_2_WAREHOUSE=11
+API_KEY_3=ключ_3
+API_KEY_3_WAREHOUSE=12
+```
+
+### Аутентификация
+
+Каждый запрос должен содержать заголовок:
+
+```
+X-API-Key: client_api_key
+```
+
+### Основные endpoints
+
+-   `GET /api/orders` — получить список заказов
+-   `POST /api/order` — создать или обновить заказ (upsert по external_order_id)
+
+### Пример запроса
+
+```bash
+curl -X POST https://your-domain.com/api/order \
+  -H "X-API-Key: ключ_1" \
+  -d '{...order data...}'
+```
+
+### Принцип работы
+
+-   Если заказ с таким `external_order_id` уже есть — обновляется
+-   Если нет — создаётся новый
+
+### Прочее
+
+-   Статус заказа меняется только с вашей стороны
+-   Нет отдельной таблицы клиентов, всё хранится в .env
+
 3. **Rate limiting** - ограничение количества запросов
 4. **Права доступа** - гранулярные разрешения
 5. **Ограничения по складам** - доступ только к разрешенным складам
