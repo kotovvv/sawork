@@ -147,7 +147,7 @@ Route::middleware(['jwt.verify'])->group(function () {
 // Client API routes (with API authentication)
 Route::prefix('client/v1')->middleware(['api.auth'])->group(function () {
     // Order management
-    Route::get('orders', [ClientApiController::class, 'getOrders'])->middleware('api.auth:orders.read');
+    Route::post('orders', [ClientApiController::class, 'getOrders'])->middleware('api.auth:orders.read');
     Route::post('order', [ClientApiController::class, 'upsertOrder'])->middleware('api.auth:orders.create');
 
     // Returns/Refunds API

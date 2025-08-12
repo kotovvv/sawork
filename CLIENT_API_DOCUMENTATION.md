@@ -1,46 +1,43 @@
-# Client API Documentation
+# Документация по API для клиентов
 
 ## Аутентификация
 
-Для доступа к API используется аутентификация по ключам. Каждый запрос должен содержать заголовки:
+Каждый запрос должен содержать заголовок:
 
 ```
 X-API-Key: your_api_key
-X-API-Secret: your_api_secret
 ```
 
 ## Базовый URL
 
 ```
-https://your-domain.com/api/client/v1/
+https://your-domain.com/api/
 ```
 
 ## Endpoints
 
-### 1. Получение заказов
+### Получение заказов
 
-**GET** `/orders`
+**GET** `/api/orders`
 
 Параметры:
 
--   `warehouse_id` (обязательный) - ID склада
--   `date_from` (опциональный) - Дата начала (YYYY-MM-DD)
--   `date_to` (опциональный) - Дата окончания (YYYY-MM-DD)
--   `status` (опциональный) - Статус заказа
--   `order_id` (опциональный) - ID заказа для поиска
--   `limit` (опциональный) - Лимит результатов (максимум 100, по умолчанию 50)
--   `offset` (опциональный) - Смещение для пагинации
+-   `date_from` (опционально) — дата начала (YYYY-MM-DD)
+-   `date_to` (опционально) — дата окончания (YYYY-MM-DD)
+-   `status` (опционально) — статус заказа
+-   `order_id` (опционально) — внешний ID заказа
+-   `limit` (опционально) — лимит (до 100, по умолчанию 50)
+-   `offset` (опционально) — смещение
 
-Пример запроса:
+Пример:
 
 ```bash
-curl -X GET "https://your-domain.com/api/client/v1/orders?warehouse_id=1&limit=10" \
-  -H "X-API-Key: your_api_key" \
-  -H "X-API-Secret: your_api_secret" \
-  -H "Content-Type: application/json"
+curl -X GET "https://your-domain.com/api/orders?limit=10" \
+    -H "X-API-Key: your_api_key" \
+    -H "Content-Type: application/json"
 ```
 
-Пример ответа:
+Ответ:
 
 ```json
 {
@@ -54,22 +51,9 @@ curl -X GET "https://your-domain.com/api/client/v1/orders?warehouse_id=1&limit=1
             "status": "W realizacji",
             "customer_name": "Jan Kowalski",
             "customer_email": "jan@example.com",
-            "source_type": "api",
             "external_order_id": "EXT_12345",
-            "details": {
-                "delivery_method": "Kurier",
-                "delivery_address": "ul. Przykładowa 123",
-                "delivery_city": "Warszawa",
-                "payment_method": "Przelew"
-            },
-            "products": [
-                {
-                    "product_name": "Przykładowy produkt",
-                    "ean": "1234567890123",
-                    "quantity": 2,
-                    "PriceGross": 99.99
-                }
-            ]
+            "details": { ... },
+            "products": [ ... ]
         }
     ],
     "meta": {
@@ -80,44 +64,51 @@ curl -X GET "https://your-domain.com/api/client/v1/orders?warehouse_id=1&limit=1
 }
 ```
 
-### 2. Создание заказа
+### Upsert заказа (создание/обновление)
 
-**POST** `/orders`
+**POST** `/api/order`
 
 Тело запроса:
 
 ```json
 {
-    "warehouse_id": 1,
     "external_order_id": "EXT_12345",
     "customer": {
         "name": "Jan Kowalski",
-        "email": "jan@example.com",
-        "phone": "+48123456789",
-        "company": "Firma ABC"
+        "email": "jan@example.com"
     },
     "delivery": {
         "fullname": "Jan Kowalski",
-        "address": "ul. Przykładowa 123",
+        "address": "ul. Примерная 123",
         "city": "Warszawa",
         "postcode": "00-001",
         "country_code": "PL",
-        "method": "Kurier",
-        "company": "Firma ABC"
+        "method": "Kurier"
     },
     "products": [
         {
             "ean": "1234567890123",
-            "name": "Przykładowy produkt",
+            "name": "Тестовый продукт",
             "quantity": 2,
-            "price_brutto": 99.99,
-            "tax_rate": 23
+            "price_brutto": 99.99
         }
     ],
     "payment_method": "Przelew",
     "delivery_price": 15.0,
-    "user_comments": "Komentarz klienta",
-    "admin_comments": "Komentarz administracyjny"
+    "user_comments": "Комментарий клиента"
+}
+```
+
+**Все поля, кроме `external_order_id`, опциональны.** Можно обновлять только нужные поля (например, только телефон, только адрес, только товары).
+
+Пример частичного обновления (только телефон):
+
+```json
+{
+    "external_order_id": "EXT_12345",
+    "customer": {
+        "phone": "+48123456789"
+    }
 }
 ```
 
@@ -135,82 +126,43 @@ curl -X GET "https://your-domain.com/api/client/v1/orders?warehouse_id=1&limit=1
 }
 ```
 
-### 3. Обновление статуса заказа
+### Получение возвратов
 
-**PATCH** `/orders/{orderId}/status`
-
-Параметры URL:
-
--   `orderId` - ID заказа (может быть внутренний ID, номер заказа или external_order_id)
-
-Тело запроса:
-
-```json
-{
-    "warehouse_id": 1,
-    "status": "Wysłane"
-}
-```
-
-Пример ответа:
-
-```json
-{
-    "success": true,
-    "data": {
-        "order_id": 12345,
-        "status": "Wysłane",
-        "updated_at": "2025-01-08T12:00:00Z"
-    }
-}
-```
-
-### 4. Получение возвратов
-
-**GET** `/returns`
-
-Параметры:
-
--   `warehouse_id` (обязательный) - ID склада
--   `order_id` (опциональный) - ID заказа
--   `date_from` (опциональный) - Дата начала
--   `date_to` (опциональный) - Дата окончания
+**GET /api/returns** — не используется (endpoint зарезервирован, функционал не реализован)
 
 ## Коды ошибок
 
--   `400` - Неверные параметры запроса
--   `401` - Неверные API ключи
--   `403` - Недостаточно прав или доступ к складу запрещен
--   `404` - Ресурс не найден
--   `429` - Превышен лимит запросов
--   `500` - Внутренняя ошибка сервера
+-   400 — Неверные параметры запроса
+-   401 — Неверный API-ключ
+-   403 — Нет доступа к складу
+-   404 — Заказ не найден
+-   409 — Заказ нельзя обновить в текущем статусе
+-   429 — Превышен лимит запросов
+-   500 — Внутренняя ошибка сервера
 
-## Лимиты и ограничения
+## Ограничения
 
--   Максимальное количество запросов: настраивается для каждого клиента (по умолчанию 1000/час)
--   Максимальное количество заказов в одном запросе: 100
--   Размер тела запроса: максимум 1MB
+-   Максимум 100 заказов за запрос
+-   Максимум 1000 запросов в час (по умолчанию)
+-   Размер тела запроса — до 1MB
+-   Обновлять можно только заказы в статусах: "Anulowany", "Nie wysyłać", "Nowe zamówienia", "W realizacji"
+-   Для upsert обязателен только `external_order_id`, остальные поля — опциональны
 
 ## Безопасность
 
--   Все запросы должны выполняться по HTTPS
--   API ключи должны храниться в безопасном месте
--   Возможно ограничение по IP адресам (настраивается)
+-   Все запросы — только по HTTPS
+-   Храните API-ключи в безопасном месте
+-   Для критичных клиентов можно настроить ограничение по IP
 
-## Webhook уведомления
+## Логирование
 
-При изменении статуса заказа система может отправлять уведомления на указанный webhook URL.
+-   Все операции логируются в таблице `log_orders` и Laravel logs
 
-Формат уведомления:
+## Техническая поддержка
 
-```json
-{
-    "event": "order.status_changed",
-    "order_id": 12345,
-    "external_order_id": "EXT_12345",
-    "warehouse_id": 1,
-    "old_status": "W realizacji",
-    "new_status": "Wysłane",
-    "timestamp": "2025-01-08T12:00:00Z"
-}
-```
+Для обращения укажите:
+
+-   внешний ID заказа
+-   время запроса
+-   текст ошибки
+-   пример запроса

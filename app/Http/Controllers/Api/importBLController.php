@@ -1146,10 +1146,19 @@ HAVING
         }
     }
 
-    private function writeProductsOrder($orderData, $IDOrder, $idMagazynu, $uwagi)
+    public function writeProductsOrder($orderData, $IDOrder, $idMagazynu, $uwagi)
     {
         foreach ($orderData['products'] as $product) {
 
+            // Проверяем наличие товара по EAN
+            $productExists = DB::table('Towar')
+                ->where('KodKreskowy', $product['ean'])
+                ->where('KodKreskowy', '!=', '')
+                ->where('IDMagazynu', $idMagazynu)
+                ->exists();
+            if (!$productExists) {
+                throw new \Exception("Product with EAN {$product['ean']} not found in warehouse {$idMagazynu}. Order cannot be processed.");
+            }
             try {
                 DB::statement(
                     "EXEC CreateOrderLine
@@ -1186,36 +1195,6 @@ HAVING
                 ]);
                 throw new \Exception("Error executing CreateOrderLine for product: {$product['name']}. Details: " . $e->getMessage());
             }
-            // If the product is not recognized, we change the order status to not ship in both systems and comment in BC
-
-            // Check the availability of goods in the database
-            $productExists = DB::table('Towar')->where('KodKreskowy', $product['ean'])->where('KodKreskowy', '!=', '')->where('IDMagazynu', $idMagazynu)->exists();
-            if (!$productExists) {
-                // If the product does not exist, add it to the database
-                try {
-                    if (env('APP_ENV') != 'local') {
-                        $parameters = [
-                            'order_id' => $orderData['order_id'],
-                            'status_id' => $this->BL->status_id_Nie_wysylac,
-                        ];
-                        $this->BL->setOrderStatus($parameters);
-                        $parameters = [
-                            'order_id' => $orderData['order_id'],
-                            'admin_comments' => 'Тowar ' . $product['ean'] . ' nie istnieje w bazie danych. Proszę o dodanie towaru do bazy danych.',
-                        ];
-                        $this->BL->setOrderFields($parameters);
-                    }
-                    $this->executeWithRetry(function () use ($IDOrder, $product) {
-                        DB::table('Orders')->where('IDOrder',  $IDOrder)->update([
-                            'IDOrderStatus' => 29, //Nie wysyłać
-                            'Remarks' => 'Тowar ' . $product['ean'] . ' nie istnieje w bazie danych. Proszę o dodanie towaru do bazy danych.',
-                        ]);
-                    });
-                } catch (\Exception $e) {
-                    Log::error("Error setting order status to 'Nie wysyłać' for order ID: {$IDOrder}. Product EAN: {$product['ean']}. Error: " . $e->getMessage());
-                    throw new \Exception("Error inserting product data: " . $e->getMessage());
-                }
-            }
         }
         if ($orderData['delivery_price'] > 0) {
             $id_delivery = DB::table('Towar')->where('Nazwa', 'Koszty transportu')->where('IDMagazynu', $idMagazynu)->value('IDTowaru');
@@ -1227,7 +1206,6 @@ HAVING
                         'Usluga' => 1,
                         'IDJednostkiMiary' => 1,
                         'IDGrupyTowarow' => DB::table('GrupyTowarow')->where('Nazwa', 'Wszystkie')->where('IDMagazynu', $idMagazynu)->value('IDGrupyTowarow'),
-
                     ]);
                     $id_delivery = DB::table('Towar')->where('Nazwa', 'Koszty transportu')->where('IDMagazynu', $idMagazynu)->value('IDTowaru');
                 }
@@ -1259,7 +1237,7 @@ HAVING
                 'Kod',
                 $orderData['delivery_country_code']
             )->value('IDKraju'),
-            'NIP' => $orderData['invoice_nip'],
+            'NIP' => $orderData['invoice_nip'] ?? null,
         ];
 
         // Checking the availability of the counterparty in the database

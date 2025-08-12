@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\LogOrder;
+use App\Http\Controllers\Api\importBLController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Crypt;
+use Carbon\Carbon;
+
+class ClientApiController extends Controller
+{
+    private $importBLController;
+
+    public function __construct()
+    {
+        // Используем обычный экземпляр importBLController
+        $this->importBLController = new importBLController();
+    }
+
+    /**
+     * Validate API key and warehouse access (config, settings, api_keys)
+     */
+    private function validateApiKey(Request $request, $IDWarehouse = null)
+    {
+        $apiKey = $request->header('X-API-Key') ?? $request->input('api_key');
+        // 1. Check API key in config first
+        $apiKeysConfig = config('app.api_keys', []);
+        if (!empty($apiKeysConfig)) {
+            if (!array_key_exists($apiKey, $apiKeysConfig)) {
+                // Not found in config, continue
+            } else {
+                if ($IDWarehouse !== null) {
+                    $keyWarehouse = intval($apiKeysConfig[$apiKey]);
+                    return $keyWarehouse === intval($IDWarehouse);
+                }
+                return true;
+            }
+        }
+
+        // 2. Check in settings table (encrypted tokens)
+        $settings = DB::table('settings')
+            ->where('key', 'api_token')
+            ->get();
+        foreach ($settings as $setting) {
+            try {
+                $decrypted = Crypt::decryptString($setting->value);
+                if ($decrypted === $apiKey) {
+                    if ($IDWarehouse !== null) {
+                        return intval($setting->warehouse_id) === intval($IDWarehouse);
+                    }
+                    return true;
+                }
+            } catch (\Exception $e) {
+                // ignore decryption errors
+            }
+        }
+
+        // 3. Check in api_keys table (legacy)
+        $query = DB::table('api_keys')
+            ->where('key', $apiKey)
+            ->where('active', 1);
+        if ($IDWarehouse !== null) {
+            $validKey = $query->where('warehouse_id', $IDWarehouse)->first();
+            return !empty($validKey);
+        }
+        return $query->exists();
+    }
+
+    // ...existing code...
+    // Вставьте сюда остальные методы класса ClientApiController
+}
