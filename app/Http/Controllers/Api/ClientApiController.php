@@ -166,27 +166,43 @@ class ClientApiController extends Controller
     public function upsertOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'external_order_id' => 'required|string',
-            'customer' => 'sometimes|array',
-            'customer.name' => 'sometimes|string',
-            'customer.email' => 'sometimes|email',
-            'customer.phone' => 'sometimes|string',
-            'delivery' => 'sometimes|array',
-            'delivery.fullname' => 'sometimes|string',
-            'delivery.address' => 'sometimes|string',
-            'delivery.city' => 'sometimes|string',
-            'delivery.postcode' => 'sometimes|string',
-            'delivery.country_code' => 'sometimes|string|size:2',
-            'delivery.method' => 'sometimes|string',
-            'products' => 'sometimes|array|min:1',
-            'products.*.ean' => 'sometimes|string',
-            'products.*.quantity' => 'sometimes|numeric|min:0.01',
-            'products.*.price_brutto' => 'nullable|numeric',
-            'products.*.tax_rate' => 'nullable|numeric',
-            'payment_method' => 'nullable|string',
-            'delivery_price' => 'nullable|numeric|min:0',
-            'user_comments' => 'nullable|string',
-            'admin_comments' => 'nullable|string'
+            'order_id' => 'required|string',
+            'status' => 'nullable|string',
+            'date_confirmed' => 'nullable|date',
+            'customer' => 'required|array',
+            'customer.name' => 'required|string',
+            'customer.email' => 'required|email',
+            'customer.phone' => 'nullable|string',
+            'customer.NIP' => 'nullable|string',
+            'delivery' => 'required|array',
+            'delivery.fullname' => 'required|string',
+            'delivery.company' => 'nullable|string',
+            'delivery.country_code' => 'required|string|size:2',
+            'delivery.country' => 'nullable|string',
+            'delivery.postcode' => 'required|string',
+            'delivery.state' => 'nullable|string',
+            'delivery.city' => 'required|string',
+            'delivery.street' => 'required|string',
+            'delivery.price' => 'nullable|numeric|min:0',
+            'delivery.method' => 'required|string',
+            'delivery.method_id' => 'nullable|integer',
+            'delivery_point' => 'nullable|array',
+            'delivery_point.name' => 'nullable|string',
+            'delivery_point.id' => 'nullable|string',
+            'delivery_point.address' => 'nullable|string',
+            'delivery_point.postcode' => 'nullable|string',
+            'delivery_point.city' => 'nullable|string',
+            'products' => 'required|array|min:1',
+            'products.*.ean' => 'required|string',
+            'products.*.quantity' => 'required|numeric|min:0.01',
+            'products.*.price_brutto' => 'required|numeric|min:0',
+            'products.*.Remarks' => 'nullable|string',
+            'order_source' => 'nullable|string',
+            'order_source_id' => 'nullable|string',
+            'currency' => 'nullable|string',
+            'currency_rate' => 'nullable|numeric|min:0',
+            'payment_method_cod' => 'nullable|string',
+            'user_comments' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
@@ -209,14 +225,14 @@ class ClientApiController extends Controller
             // Check if order exists by external_order_id and warehouse
             $existingOrder = DB::table('Orders')
                 ->where('IDWarehouse', $warehouseId)
-                ->where('_OrdersTempString8', $request->external_order_id)
+                ->where('_OrdersTempString8', $request->order_id)
                 ->first();
 
             $orderData = $this->transformApiOrderToBaseLinkerFormat($request->all());
             $customerId = $this->importBLController->findOrCreateKontrahent($orderData, $warehouseId);
-            $uwagi = 'API Order - External ID: ' . $request->external_order_id . ' ' . ($request->user_comments ?: $request->admin_comments ?: '');
+            $uwagi = 'API Order - External ID: ' . $request->order_id . ' ' . ($request->user_comments ?: $request->admin_comments ?: '');
             $orderDate = now()->format('Y-m-d H:i:s');
-            $orderStatus = 'W realizacji';
+            $orderStatus = $request->status ?? '';
             $paymentType = DB::table('PaymentTypes')->where('Name', $request->payment_method ?? 'Przelew')->value('IDPaymentType');
             $idTransport = DB::table('RodzajTransportu')->where('Nazwa', $request->delivery['method'])->value('IDRodzajuTransportu');
             if (!$idTransport) {
@@ -244,13 +260,15 @@ class ClientApiController extends Controller
                         'current_status' => $currentStatus
                     ], 409);
                 }
+                // Удаляем все товары из заказа
+                DB::table('OrderLines')->where('IDOrder', $existingOrder->IDOrder)->delete();
                 // Update existing order
                 DB::table('Orders')->where('IDOrder', $existingOrder->IDOrder)->update([
                     'IDAccount' => $customerId,
                     'Modified' => $orderDate,
-                    'IDOrderStatus' => DB::table('OrderStatus')->where('Name', $orderStatus)->value('IDOrderStatus'),
+                    'IDOrderStatus' => $orderStatus !== '' ? DB::table('OrderStatus')->where('Name', $orderStatus)->value('IDOrderStatus') : $existingOrder->IDOrderStatus,
                     '_OrdersTempString7' => 'API_' . $warehouseId,
-                    '_OrdersTempString8' => $request->external_order_id,
+                    '_OrdersTempString8' => $request->order_id,
                     '_OrdersTempString9' => 'API_CLIENT_' . $warehouseId
                 ]);
                 // Update order details and products
@@ -261,14 +279,23 @@ class ClientApiController extends Controller
                     'IDWarehouse' => $warehouseId,
                     'number' => $existingOrder->IDOrder,
                     'type' => 16,
-                    'message' => "API Order updated by client: API_{$warehouseId}, external_order_id: {$request->external_order_id}"
+                    'message' => "API Order updated by client: API_{$warehouseId}, external_order_id: {$request->order_id}"
                 ]);
+                if ($orderStatus != $currentStatus) {
+                    LogOrder::create([
+                        'IDWarehouse' => $warehouseId,
+                        'number' => $existingOrder->IDOrder,
+                        'type' => 18,
+                        'object_id' => $orderStatus,
+                        'message' => "API Order status changed by client: API_{$warehouseId}, external_order_id: {$request->order_id}, from: {$currentStatus}, to: {$orderStatus}"
+                    ]);
+                }
                 return response()->json([
                     'success' => true,
                     'data' => [
                         'order_id' => $existingOrder->IDOrder,
                         'order_number' => $existingOrder->Number,
-                        'external_order_id' => $request->external_order_id,
+                        'external_order_id' => $request->order_id,
                         'status' => $orderStatus,
                         'updated' => true
                     ]
@@ -302,7 +329,7 @@ class ClientApiController extends Controller
                 $this->importBLController->writeProductsOrder($orderData, $IDOrder, $warehouseId, $uwagi);
                 DB::table('Orders')->where('IDOrder', $IDOrder)->update([
                     '_OrdersTempString7' => 'API_' . $warehouseId,
-                    '_OrdersTempString8' => $request->external_order_id,
+                    '_OrdersTempString8' => $request->order_id,
                     '_OrdersTempString9' => 'API_CLIENT_' . $warehouseId
                 ]);
                 DB::commit();
@@ -310,14 +337,14 @@ class ClientApiController extends Controller
                     'IDWarehouse' => $warehouseId,
                     'number' => $IDOrder,
                     'type' => 1,
-                    'message' => "API Order created by client: API_{$warehouseId}, external_order_id: {$request->external_order_id}"
+                    'message' => "API Order created by client: API_{$warehouseId}, external_order_id: {$request->order_id}"
                 ]);
                 return response()->json([
                     'success' => true,
                     'data' => [
                         'order_id' => $IDOrder,
                         'order_number' => $Number,
-                        'external_order_id' => $request->external_order_id,
+                        'external_order_id' => $request->order_id,
                         'status' => $orderStatus,
                         'created' => true
                     ]
@@ -387,39 +414,57 @@ class ClientApiController extends Controller
      */
     private function transformApiOrderToBaseLinkerFormat(array $apiData)
     {
+        $statusID = [
+            "Anulowany" => "33",
+            "Nie wysyłać" => "29",
+            "Nowe zamówienia" => "16",
+            "W realizacji" => "23",
+            "Kompletowanie" => "42",
+            "Do wysłania" => "17",
+            "Wysłane" => "25"
+        ];
         return [
-            'order_id' => 'API_' . uniqid(),
-            'date_add' => now()->timestamp,
-            'date_confirmed' => now()->timestamp,
-            'order_status_id' => 23, // W realizacji
-            'currency' => 'PLN',
-            'payment_method' => $apiData['payment_method'] ?? 'Przelew',
-            'payment_method_cod' => false,
-            'payment_done' => '0',
+            'order_status_id' => $statusID[$apiData['status']],
+            'date_confirmed' => $apiData['date_confirmed'] ?? null,
+            'currency' =>  $apiData['currency'],
+            'currency_rate' =>  $apiData['currency_rate'] ?? 1,
+            'name' => $apiData['customer']['name'],
+            'email' => $apiData['customer']['email'],
+            'phone' => $apiData['customer']['phone'] ?? '',
+
             'delivery_method' => $apiData['delivery']['method'],
-            'delivery_price' => $apiData['delivery_price'] ?? 0,
+            'delivery_method_id' => $apiData['delivery']['method_id'] ?? '',
+
+            'delivery_price' => $apiData['delivery']['price'] ?? 0,
             'delivery_fullname' => $apiData['delivery']['fullname'],
             'delivery_company' => $apiData['delivery']['company'] ?? '',
-            'delivery_address' => $apiData['delivery']['address'],
+            'delivery_address' => $apiData['delivery']['street'] ?? '',
             'delivery_city' => $apiData['delivery']['city'],
             'delivery_postcode' => $apiData['delivery']['postcode'],
             'delivery_country_code' => $apiData['delivery']['country_code'],
-            'delivery_country' => $this->getCountryName($apiData['delivery']['country_code']),
+
+            'delivery_point_id' => $apiData['delivery_point']['id'] ?? null,
+            'delivery_point_name' => $apiData['delivery_point']['name'] ?? null,
+            'delivery_point_address' => $apiData['delivery_point']['address'] ?? null,
+            'delivery_point_postcode' => $apiData['delivery_point']['postcode'] ?? null,
+            'delivery_point_city' => $apiData['delivery_point']['city'] ?? null,
+
+            'invoice_nip' => $apiData['customer']['NIP'] ?? '',
             'invoice_fullname' => $apiData['customer']['name'],
             'invoice_company' => $apiData['customer']['company'] ?? '',
-            'invoice_address' => $apiData['delivery']['address'], // Use delivery address if invoice not provided
+            'invoice_address' => $apiData['delivery']['address'] ?? '', // Use delivery address if invoice not provided
             'invoice_city' => $apiData['delivery']['city'],
             'invoice_postcode' => $apiData['delivery']['postcode'],
             'invoice_country_code' => $apiData['delivery']['country_code'],
-            'invoice_country' => $this->getCountryName($apiData['delivery']['country_code']),
-            'email' => $apiData['customer']['email'],
-            'phone' => $apiData['customer']['phone'] ?? '',
+
+            'payment_method_cod' => $apiData['payment_method_cod'] ?? 0,
+
             'user_comments' => $apiData['user_comments'] ?? '',
             'admin_comments' => $apiData['admin_comments'] ?? '',
             'user_login' => 'API',
-            'external_order_id' => $apiData['external_order_id'] ?? '',
+            'external_order_id' => $apiData['order_id'] ?? '',
             'order_source' => 'API',
-            'order_source_id' => 0,
+            'order_source_id' => $apiData['order_source_id'] ?? '',
             'products' => $this->transformApiProducts($apiData['products'])
         ];
     }
@@ -432,21 +477,98 @@ class ClientApiController extends Controller
                 'ean' => $product['ean'],
                 'quantity' => $product['quantity'],
                 'price_brutto' => $product['price_brutto'],
-                'tax_rate' => $product['tax_rate'] ?? 23
+                'Remarks' => $product['Remarks'] ?? '',
+                'tax_rate' => $product['tax_rate'] ?? 23 // безопасно, по умолчанию 23
             ];
         }, $apiProducts);
     }
 
-    private function getCountryName($countryCode)
-    {
-        $countries = [
-            'PL' => 'Polska',
-            'DE' => 'Niemcy',
-            'CZ' => 'Czechy',
-            'SK' => 'Słowacja',
-            'UA' => 'Ukraina'
-        ];
+    /**
+     * Get journal list (event log) for orders, similar to BaseLinker getJournalList
+     * Endpoint: POST /api/orders/journal
+     * Request params:
+     *   - last_log_id (optional, int)
+     *   - order_id (optional, string)
+     *   - type (optional, int) 18 status change
 
-        return $countries[$countryCode] ?? $countryCode;
+     */
+    public function getJournalList(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'type' => 'nullable|array',
+            'last_log_id' => 'nullable|integer',
+            'order_id' => 'nullable|string'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'error' => 'Validation failed',
+                'details' => $validator->errors()
+            ], 400);
+        }
+
+        $warehouseId = \App\Services\WarehouseApiKeyService::getWarehouseByApiKey($request);
+        if (!$warehouseId) {
+            return response()->json([
+                'error' => 'Invalid API key or warehouse not found'
+            ], 401);
+        }
+        $offset = $request->offset ?? 0;
+
+        try {
+            $query = LogOrder::query()
+                ->where('IDWarehouse', $warehouseId);
+
+
+            if ($request->order_id) {
+                $query->where('number', $request->order_id);
+            } else {
+                if ($request->type) {
+                    $query->where('type', $request->type);
+                }
+                if ($request->last_log_id && is_numeric($request->last_log_id)) {
+                    $query->where('id', '>', $request->last_log_id);
+                } else {
+                    $query->where('created_at', '>=', Carbon::now()->subDays(3));
+                }
+            }
+
+            $total = $query->count();
+            $logs = $query->orderByDesc('created_at')
+
+                ->get();
+
+            $result = [];
+            foreach ($logs as $log) {
+                $result[] = [
+                    'last_log_id' => $log->id,
+                    'order_id' => $log->number,
+                    'type' => $log->type,
+                    'message' => $log->message,
+                    'created_at' => $log->created_at,
+                    'object_id' => $log->object_id
+                ];
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $result,
+                'meta' => [
+
+                    'count' => count($result),
+                    'total' => $total
+                ]
+            ]);
+        } catch (\Exception $e) {
+            Log::error('API getJournalList failed', [
+                'IDWarehouse' => $warehouseId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            return response()->json([
+                'error' => 'Internal server error',
+                'message' => 'Failed to retrieve journal list'
+            ], 500);
+        }
     }
 }

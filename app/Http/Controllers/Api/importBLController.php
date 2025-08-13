@@ -26,20 +26,6 @@ class importBLController extends Controller
     private $BL;
     private $warehouse = '';
 
-
-
-
-    public function __construct($warehouseId = null, $orderId = null)
-    {
-
-        if ($warehouseId && $orderId) {
-
-            $this->importSingleOrder($warehouseId, $orderId);
-        } else {
-            $this->runAll();
-        }
-    }
-
     public function importSingleOrder($warehouseId, $orderId)
     {
         // Получаем sklad_token только для нужного склада
@@ -64,7 +50,7 @@ class importBLController extends Controller
         }
     }
 
-    private function runAll()
+    public function runAll()
     {
         $this->warehouses = $this->getAllWarehouses();
 
@@ -337,6 +323,7 @@ class importBLController extends Controller
                     ['IDWarehouse' => $param['a_warehouse']->warehouse_id, 'order_id' => $IDOrder],
                     [
                         'currency' => $orderData['currency'] ?? null,
+                        'currency_rate' => $orderData['currency_rate'] ?? 1,
                         'order_source' => $orderData['order_source'] ?? null,
                         'order_source_id' => $orderData['order_source_id'] ?? null,
                         'payment_method' => $orderData['payment_method'] ?? null,
@@ -1117,6 +1104,7 @@ HAVING
                     'delivery_city' => $orderData['delivery_city'] ?? null,
                     'delivery_state' => $orderData['delivery_state'] ?? null,
                     'delivery_postcode' => $orderData['delivery_postcode'] ?? null,
+                    'delivery_country' => $orderData['delivery_country'] ?? null,
                     'delivery_country_code' => $orderData['delivery_country_code'] ?? null,
                     'delivery_point_id' => $orderData['delivery_point_id'] ?? null,
                     'delivery_point_name' => $orderData['delivery_point_name'] ?? null,
@@ -1131,7 +1119,6 @@ HAVING
                     'invoice_state' => $orderData['invoice_state'] ?? null,
                     'invoice_postcode' => $orderData['invoice_postcode'] ?? null,
                     'invoice_country_code' => $orderData['invoice_country_code'] ?? null,
-                    'delivery_country' => $orderData['delivery_country'] ?? null,
                     'invoice_country' => $orderData['invoice_country'] ?? null,
                     'updated_at' => now(),
                     'created_at' => now(),
@@ -1227,7 +1214,7 @@ HAVING
     {
         // Extracting counterparty data from an order
         $contractorData = [
-            'Nazwa' => $orderData['delivery_fullname'],
+            'Nazwa' => $orderData['name'] ?? $orderData['delivery_fullname'],
             'Email' => $orderData['email'],
             'Telefon' => $orderData['phone'],
             'KodPocztowy' => $orderData['delivery_postcode'],
@@ -1245,10 +1232,7 @@ HAVING
             ->where('Nazwa', $contractorData['Nazwa'])
             ->where('Email', $contractorData['Email'])
             ->where('Telefon', $contractorData['Telefon'])
-            ->where('KodPocztowy', $contractorData['KodPocztowy'])
-            ->where('Miejscowosc', $contractorData['Miejscowosc'])
-            ->where('UlicaLokal', $contractorData['UlicaLokal'])
-
+            ->where('IDWarehouse', $idMagazynu)
             ->first();
 
         if ($existingContractor) {
@@ -1266,6 +1250,7 @@ HAVING
                 'NazwaAdresuDostawy' => $contractorData['Nazwa'],
                 'Email' => $contractorData['Email'],
                 'Telefon' => $contractorData['Telefon'],
+                'NIP' => $contractorData['NIP'],
                 'TelefonDostawy' => $contractorData['Telefon'],
                 'KodPocztowy' => $contractorData['KodPocztowy'],
                 'KodPocztowyDostawy' => $contractorData['KodPocztowy'],

@@ -151,7 +151,7 @@ Route::prefix('client/v1')->middleware(['api.auth'])->group(function () {
     Route::post('order', [ClientApiController::class, 'upsertOrder'])->middleware('api.auth:orders.create');
 
     // Returns/Refunds API
-    Route::get('returns', [ClientApiController::class, 'getOrderReturns'])->middleware('api.auth:returns.read');
+    Route::post('getJournalList', [ClientApiController::class, 'getJournalList'])->middleware('api.auth:returns.read');
 
     // Deliveries API (placeholder for future implementation)
     Route::get('deliveries', function () {
