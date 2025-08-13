@@ -22,10 +22,9 @@ class ApiAuthentication
             ], 401);
         }
 
-        // Check API key from .env
-        $clientConfig = $this->validateApiKey($apiKey);
-
-        if (!$clientConfig) {
+        // Check API key from WarehouseApiKeyService
+        $warehouseId = \App\Services\WarehouseApiKeyService::getWarehouseByApiKey($request);
+        if (!$warehouseId) {
             return response()->json([
                 'error' => 'Invalid API key'
             ], 401);
@@ -43,7 +42,10 @@ class ApiAuthentication
         RateLimiter::hit($rateLimitKey, 3600); // 1 hour window
 
         // Add client info to request
-        $request->attributes->set('api_client', $clientConfig);
+        $request->attributes->set('api_client', [
+            'api_key' => $apiKey,
+            'warehouse_id' => $warehouseId
+        ]);
 
         return $next($request);
     }
@@ -53,23 +55,7 @@ class ApiAuthentication
      */
     private function validateApiKey($apiKey)
     {
-        // Check each configured API key
-        $keyIndex = 1;
-        while (config("app.api_key_{$keyIndex}")) {
-            $configuredKey = config("app.api_key_{$keyIndex}");
-            $warehouseId = config("app.api_key_{$keyIndex}_warehouse");
-
-            if ($configuredKey === $apiKey) {
-                return [
-                    'api_key' => $apiKey,
-                    'warehouse_id' => $warehouseId,
-                    'key_index' => $keyIndex
-                ];
-            }
-
-            $keyIndex++;
-        }
-
+        // Deprecated: now handled by WarehouseApiKeyService
         return null;
     }
 }

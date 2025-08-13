@@ -23,33 +23,6 @@ class ClientApiController extends Controller
     }
 
     /**
-     * Validate API key and warehouse access (config, settings, api_keys)
-     */
-    private function validateApiKey(Request $request, $IDWarehouse = null)
-    {
-        $apiKey = $request->header('X-API-Key') ?? $request->input('api_key');
-
-        // Check in settings table (encrypted tokens)
-        $settings = DB::table('settings')
-            ->where('key', 'api_token')
-            ->get();
-        foreach ($settings as $setting) {
-            try {
-                $decrypted = Crypt::decryptString($setting->value);
-                if ($decrypted === $apiKey) {
-                    if ($IDWarehouse !== null) {
-                        return intval($setting->warehouse_id) === intval($IDWarehouse);
-                    }
-                    return true;
-                }
-            } catch (\Exception $e) {
-                // ignore decryption errors
-            }
-        }
-    }
-
-
-    /**
      * Get orders from the system
      */
     public function getOrders(Request $request)
