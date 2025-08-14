@@ -139,7 +139,7 @@ class ClientApiController extends Controller
     public function upsertOrder(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'order_id' => 'required|string',
+            'external_id' => 'required|string',
             'status' => 'nullable|string',
             'date_confirmed' => 'nullable|date',
             'customer' => 'required|array',
@@ -171,11 +171,11 @@ class ClientApiController extends Controller
             'products.*.price_brutto' => 'required|numeric|min:0',
             'products.*.Remarks' => 'nullable|string',
             'order_source' => 'nullable|string',
-            'order_source_id' => 'nullable|string',
+            //'order_source_id' => 'nullable|string',
             'currency' => 'nullable|string',
             'currency_rate' => 'nullable|numeric|min:0',
             'payment_method_cod' => 'nullable|string',
-            'user_comments' => 'nullable|string'
+            'comments' => 'nullable|string'
         ]);
 
         if ($validator->fails()) {
@@ -198,12 +198,12 @@ class ClientApiController extends Controller
             // Check if order exists by external_order_id and warehouse
             $existingOrder = DB::table('Orders')
                 ->where('IDWarehouse', $warehouseId)
-                ->where('_OrdersTempString8', $request->order_id)
+                ->where('_OrdersTempString8', $request->external_id)
                 ->first();
 
             $orderData = $this->transformApiOrderToBaseLinkerFormat($request->all());
             $customerId = $this->importBLController->findOrCreateKontrahent($orderData, $warehouseId);
-            $uwagi = 'API Order - External ID: ' . $request->order_id . ' ' . ($request->user_comments ?: $request->admin_comments ?: '');
+            $uwagi = 'API Order - External ID: ' . $request->external_id . ' ' . ($request->comments ?: $request->comments ?: '');
             $orderDate = now()->format('Y-m-d H:i:s');
             $orderStatus = $request->status ?? '';
             $paymentType = DB::table('PaymentTypes')->where('Name', $request->payment_method ?? 'Przelew')->value('IDPaymentType');
@@ -241,7 +241,7 @@ class ClientApiController extends Controller
                     'Modified' => $orderDate,
                     'IDOrderStatus' => $orderStatus !== '' ? DB::table('OrderStatus')->where('Name', $orderStatus)->value('IDOrderStatus') : $existingOrder->IDOrderStatus,
                     '_OrdersTempString7' => 'API_' . $warehouseId,
-                    '_OrdersTempString8' => $request->order_id,
+                    '_OrdersTempString8' => $request->external_id,
                     '_OrdersTempString9' => 'API_CLIENT_' . $warehouseId
                 ]);
                 // Update order details and products
@@ -252,7 +252,7 @@ class ClientApiController extends Controller
                     'IDWarehouse' => $warehouseId,
                     'number' => $existingOrder->IDOrder,
                     'type' => 16,
-                    'message' => "API Order updated by client: API_{$warehouseId}, external_order_id: {$request->order_id}"
+                    'message' => "API Order updated by client: API_{$warehouseId}, external_order_id: {$request->external_id}"
                 ]);
                 if ($orderStatus != $currentStatus) {
                     LogOrder::create([
@@ -260,7 +260,7 @@ class ClientApiController extends Controller
                         'number' => $existingOrder->IDOrder,
                         'type' => 18,
                         'object_id' => $orderStatus,
-                        'message' => "API Order status changed by client: API_{$warehouseId}, external_order_id: {$request->order_id}, from: {$currentStatus}, to: {$orderStatus}"
+                        'message' => "API Order status changed by client: API_{$warehouseId}, external_order_id: {$request->external_id}, from: {$currentStatus}, to: {$orderStatus}"
                     ]);
                 }
                 return response()->json([
@@ -268,7 +268,7 @@ class ClientApiController extends Controller
                     'data' => [
                         'order_id' => $existingOrder->IDOrder,
                         'order_number' => $existingOrder->Number,
-                        'external_order_id' => $request->order_id,
+                        'external_order_id' => $request->external_id,
                         'status' => $orderStatus,
                         'updated' => true
                     ]
@@ -302,7 +302,7 @@ class ClientApiController extends Controller
                 $this->importBLController->writeProductsOrder($orderData, $IDOrder, $warehouseId, $uwagi);
                 DB::table('Orders')->where('IDOrder', $IDOrder)->update([
                     '_OrdersTempString7' => 'API_' . $warehouseId,
-                    '_OrdersTempString8' => $request->order_id,
+                    '_OrdersTempString8' => $request->external_id,
                     '_OrdersTempString9' => 'API_CLIENT_' . $warehouseId
                 ]);
                 DB::commit();
@@ -310,14 +310,14 @@ class ClientApiController extends Controller
                     'IDWarehouse' => $warehouseId,
                     'number' => $IDOrder,
                     'type' => 1,
-                    'message' => "API Order created by client: API_{$warehouseId}, external_order_id: {$request->order_id}"
+                    'message' => "API Order created by client: API_{$warehouseId}, external_order_id: {$request->external_id}"
                 ]);
                 return response()->json([
                     'success' => true,
                     'data' => [
                         'order_id' => $IDOrder,
                         'order_number' => $Number,
-                        'external_order_id' => $request->order_id,
+                        'external_order_id' => $request->external_id,
                         'status' => $orderStatus,
                         'created' => true
                     ]
@@ -406,7 +406,7 @@ class ClientApiController extends Controller
             'phone' => $apiData['customer']['phone'] ?? '',
 
             'delivery_method' => $apiData['delivery']['method'],
-            'delivery_method_id' => $apiData['delivery']['method_id'] ?? '',
+            //'delivery_method_id' => $apiData['delivery']['method_id'] ?? '',
 
             'delivery_price' => $apiData['delivery']['price'] ?? 0,
             'delivery_fullname' => $apiData['delivery']['fullname'],
@@ -435,9 +435,9 @@ class ClientApiController extends Controller
             'user_comments' => $apiData['user_comments'] ?? '',
             'admin_comments' => $apiData['admin_comments'] ?? '',
             'user_login' => 'API',
-            'external_order_id' => $apiData['order_id'] ?? '',
+            'external_order_id' => $apiData['external_id'] ?? '',
             'order_source' => 'API',
-            'order_source_id' => $apiData['order_source_id'] ?? '',
+            //'order_source_id' => $apiData['order_source_id'] ?? '',
             'products' => $this->transformApiProducts($apiData['products'])
         ];
     }
