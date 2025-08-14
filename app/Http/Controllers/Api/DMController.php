@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Crypt;
 use Carbon\Carbon;
 use Exception;
 
@@ -20,15 +21,13 @@ class DMController extends Controller
             $data = $request->all();
             $IDWarehouse = $data['IDWarehouse'];
             $products = $data['products']; // Array of products from Excel
-
+            // ...existing code...
             // Add debugging to see what we're receiving
             Log::info('Raw request data received', [
                 'data_keys' => array_keys($data),
                 'products_count' => count($products ?? []),
                 'sample_product' => $products[0] ?? null
             ]);
-
-
 
             $response = [
                 'status' => 'success',
@@ -78,7 +77,6 @@ class DMController extends Controller
                 // Only towar, karton, paleta are allowed - no new units created
             }
 
-
             return response()->json($response);
         } catch (Exception $e) {
             Log::error('Error in checkProducts: ' . $e->getMessage(), [
@@ -92,6 +90,31 @@ class DMController extends Controller
                 'message' => 'Błąd podczas sprawdzania produktów: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Get and decrypt warehouse API token from settings table
+     * @param int $IDWarehouse
+     * @return string|null
+     */
+    public function getWarehouseToken($IDWarehouse)
+    {
+        $setting = DB::table('settings')
+            ->where('warehouse_id', $IDWarehouse)
+            ->where('key', 'api_token')
+            ->first();
+        if ($setting && !empty($setting->value)) {
+            try {
+                return Crypt::decryptString($setting->value);
+            } catch (\Exception $e) {
+                Log::error('Błąd deszyfrowania tokenu magazynu', [
+                    'warehouse_id' => $IDWarehouse,
+                    'error' => $e->getMessage()
+                ]);
+                return null;
+            }
+        }
+        return null;
     }
 
     /**
@@ -159,7 +182,7 @@ class DMController extends Controller
                 }
 
                 // Skip empty rows
-                if (empty($product['Nazwa']) && empty($product['EAN']) && empty($product['SKU'])) {
+                if (empty($product['Nazwa']) && empty($product['EAN']) && empty($product['jednostka'])) {
                     continue;
                 }
 
@@ -939,117 +962,6 @@ class DMController extends Controller
      */
     private function getWarehouseByApiKey(Request $request)
     {
-        $apiKey = $request->header('X-API-Key') ?? $request->input('api_key');
-
-        Log::info('API Key validation attempt', [
-            'api_key_provided' => !empty($apiKey),
-            'api_key_length' => $apiKey ? strlen($apiKey) : 0,
-            'headers' => $request->headers->all(),
-            'request_params' => $request->all()
-        ]);
-
-        if (empty($apiKey)) {
-            Log::warning('No API key provided in request');
-            return null;
-        }
-
-        // Check API key in config first
-        $apiKeysConfig = config('app.api_keys', []);
-
-        Log::info('Checking API keys config', [
-            'config_keys_count' => count($apiKeysConfig),
-            'config_keys' => array_keys($apiKeysConfig),
-            'provided_key' => $apiKey
-        ]);
-
-        if (!empty($apiKeysConfig)) {
-            // Remove null keys from config (when env variables are not set)
-            $filteredConfig = array_filter($apiKeysConfig, function ($key) {
-                return !is_null($key);
-            }, ARRAY_FILTER_USE_KEY);
-
-            Log::info('Filtered API keys config', [
-                'filtered_keys' => array_keys($filteredConfig)
-            ]);
-
-            // Check if API key exists in config and return warehouse ID
-            if (array_key_exists($apiKey, $filteredConfig)) {
-                $warehouseId = intval($filteredConfig[$apiKey]);
-                Log::info('API key found in config', [
-                    'api_key' => $apiKey,
-                    'warehouse_id' => $warehouseId
-                ]);
-                return $warehouseId;
-            }
-
-            Log::warning('API key not found in config', [
-                'provided_key' => $apiKey,
-                'available_keys' => array_keys($filteredConfig)
-            ]);
-            return null;
-        }
-
-        // If no config keys, check database
-        $apiKeyRecord = DB::table('api_keys')
-            ->where('key', $apiKey)
-            ->where('active', 1)
-            ->first();
-
-        if ($apiKeyRecord) {
-            Log::info('API key found in database', [
-                'api_key' => $apiKey,
-                'warehouse_id' => $apiKeyRecord->warehouse_id
-            ]);
-            return intval($apiKeyRecord->warehouse_id);
-        }
-
-        Log::warning('API key not found in database', [
-            'provided_key' => $apiKey
-        ]);
-        return null;
-    }
-
-    /**
-     * Validate API key and warehouse access
-     */
-    private function validateApiKey(Request $request, $IDWarehouse = null)
-    {
-        $apiKey = $request->header('X-API-Key') ?? $request->input('api_key');
-
-        if (empty($apiKey)) {
-            return false;
-        }
-
-        // Check API key in config first
-        $apiKeysConfig = config('app.api_keys', []);
-
-        if (!empty($apiKeysConfig)) {
-            // Check if API key exists in config
-            if (!array_key_exists($apiKey, $apiKeysConfig)) {
-                return false;
-            }
-
-            // If warehouse ID is provided, check if it matches the key's warehouse
-            if ($IDWarehouse !== null) {
-                $keyWarehouse = intval($apiKeysConfig[$apiKey]);
-                return $keyWarehouse === intval($IDWarehouse);
-            }
-
-            return true; // Valid API key
-        }
-
-        // If no config keys, check database
-        $query = DB::table('api_keys')
-            ->where('key', $apiKey)
-            ->where('active', 1);
-
-        if ($IDWarehouse !== null) {
-            // Check if API key has access to specific warehouse
-            $validKey = $query->where('warehouse_id', $IDWarehouse)->first();
-            return !empty($validKey);
-        }
-
-        // Just check if API key exists and is active
-        return $query->exists();
+        return \App\Services\WarehouseApiKeyService::getWarehouseByApiKey($request);
     }
 }

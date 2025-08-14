@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ForTTNController;
 use App\Http\Controllers\Api\BaseLinkerController;
 use App\Http\Controllers\Api\DMController;
+use App\Http\Controllers\Api\ClientApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -138,6 +139,24 @@ Route::middleware(['jwt.verify'])->group(function () {
     Route::post('addProductToDatabase', [\App\Http\Controllers\Api\DMController::class, 'addProductToDatabase']);
 
     Route::post('downloadPdfs', [SendPDF::class, 'downloadPdfs']);
+
+    // API Client Management (Admin only)
+    Route::prefix('admin')->group(function () {});
+});
+
+// Client API routes (with API authentication)
+Route::prefix('client/v1')->middleware(['api.auth'])->group(function () {
+    // Order management
+    Route::post('orders', [ClientApiController::class, 'getOrders'])->middleware('api.auth:orders.read');
+    Route::post('order', [ClientApiController::class, 'upsertOrder'])->middleware('api.auth:orders.create');
+
+    // Returns/Refunds API
+    Route::post('getJournalList', [ClientApiController::class, 'getJournalList'])->middleware('api.auth:returns.read');
+
+    // Deliveries API (placeholder for future implementation)
+    Route::get('deliveries', function () {
+        return response()->json(['message' => 'Deliveries API coming soon']);
+    })->middleware('api.auth:deliveries.read');
 });
 
 // Public API routes (no authentication required)

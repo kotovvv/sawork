@@ -26,20 +26,6 @@ class importBLController extends Controller
     private $BL;
     private $warehouse = '';
 
-
-
-
-    public function __construct($warehouseId = null, $orderId = null)
-    {
-
-        if ($warehouseId && $orderId) {
-
-            $this->importSingleOrder($warehouseId, $orderId);
-        } else {
-            $this->runAll();
-        }
-    }
-
     public function importSingleOrder($warehouseId, $orderId)
     {
         // Получаем sklad_token только для нужного склада
@@ -64,7 +50,7 @@ class importBLController extends Controller
         }
     }
 
-    private function runAll()
+    public function runAll()
     {
         $this->warehouses = $this->getAllWarehouses();
 
@@ -337,6 +323,7 @@ class importBLController extends Controller
                     ['IDWarehouse' => $param['a_warehouse']->warehouse_id, 'order_id' => $IDOrder],
                     [
                         'currency' => $orderData['currency'] ?? null,
+                        'currency_rate' => $orderData['currency_rate'] ?? 1,
                         'order_source' => $orderData['order_source'] ?? null,
                         'order_source_id' => $orderData['order_source_id'] ?? null,
                         'payment_method' => $orderData['payment_method'] ?? null,
@@ -1010,7 +997,7 @@ HAVING
                 'IDWarehouse' => $idMagazynu,
                 'number' => $orderData['order_id'],
                 'type' => 3,
-                'message' => "CreateOrder: {$orderData['order_id']}."
+                'message' => "CreateOrder from BaseLinker: {$orderData['order_id']}."
             ]);
             // проверить на наличие ошибок в заказа
             //если заказ в статусе реализация и не заполнено поле deliveryMethod - меняем статус невысылач с uvagi
@@ -1117,6 +1104,7 @@ HAVING
                     'delivery_city' => $orderData['delivery_city'] ?? null,
                     'delivery_state' => $orderData['delivery_state'] ?? null,
                     'delivery_postcode' => $orderData['delivery_postcode'] ?? null,
+                    'delivery_country' => $orderData['delivery_country'] ?? null,
                     'delivery_country_code' => $orderData['delivery_country_code'] ?? null,
                     'delivery_point_id' => $orderData['delivery_point_id'] ?? null,
                     'delivery_point_name' => $orderData['delivery_point_name'] ?? null,
@@ -1131,7 +1119,6 @@ HAVING
                     'invoice_state' => $orderData['invoice_state'] ?? null,
                     'invoice_postcode' => $orderData['invoice_postcode'] ?? null,
                     'invoice_country_code' => $orderData['invoice_country_code'] ?? null,
-                    'delivery_country' => $orderData['delivery_country'] ?? null,
                     'invoice_country' => $orderData['invoice_country'] ?? null,
                     'updated_at' => now(),
                     'created_at' => now(),
@@ -1146,10 +1133,19 @@ HAVING
         }
     }
 
-    private function writeProductsOrder($orderData, $IDOrder, $idMagazynu, $uwagi)
+    public function writeProductsOrder($orderData, $IDOrder, $idMagazynu, $uwagi)
     {
         foreach ($orderData['products'] as $product) {
 
+            // Проверяем наличие товара по EAN
+            $productExists = DB::table('Towar')
+                ->where('KodKreskowy', $product['ean'])
+                ->where('KodKreskowy', '!=', '')
+                ->where('IDMagazynu', $idMagazynu)
+                ->exists();
+            if (!$productExists) {
+                throw new \Exception("Product with EAN {$product['ean']} not found in warehouse {$idMagazynu}. Order cannot be processed.");
+            }
             try {
                 DB::statement(
                     "EXEC CreateOrderLine
@@ -1186,36 +1182,6 @@ HAVING
                 ]);
                 throw new \Exception("Error executing CreateOrderLine for product: {$product['name']}. Details: " . $e->getMessage());
             }
-            // If the product is not recognized, we change the order status to not ship in both systems and comment in BC
-
-            // Check the availability of goods in the database
-            $productExists = DB::table('Towar')->where('KodKreskowy', $product['ean'])->where('KodKreskowy', '!=', '')->where('IDMagazynu', $idMagazynu)->exists();
-            if (!$productExists) {
-                // If the product does not exist, add it to the database
-                try {
-                    if (env('APP_ENV') != 'local') {
-                        $parameters = [
-                            'order_id' => $orderData['order_id'],
-                            'status_id' => $this->BL->status_id_Nie_wysylac,
-                        ];
-                        $this->BL->setOrderStatus($parameters);
-                        $parameters = [
-                            'order_id' => $orderData['order_id'],
-                            'admin_comments' => 'Тowar ' . $product['ean'] . ' nie istnieje w bazie danych. Proszę o dodanie towaru do bazy danych.',
-                        ];
-                        $this->BL->setOrderFields($parameters);
-                    }
-                    $this->executeWithRetry(function () use ($IDOrder, $product) {
-                        DB::table('Orders')->where('IDOrder',  $IDOrder)->update([
-                            'IDOrderStatus' => 29, //Nie wysyłać
-                            'Remarks' => 'Тowar ' . $product['ean'] . ' nie istnieje w bazie danych. Proszę o dodanie towaru do bazy danych.',
-                        ]);
-                    });
-                } catch (\Exception $e) {
-                    Log::error("Error setting order status to 'Nie wysyłać' for order ID: {$IDOrder}. Product EAN: {$product['ean']}. Error: " . $e->getMessage());
-                    throw new \Exception("Error inserting product data: " . $e->getMessage());
-                }
-            }
         }
         if ($orderData['delivery_price'] > 0) {
             $id_delivery = DB::table('Towar')->where('Nazwa', 'Koszty transportu')->where('IDMagazynu', $idMagazynu)->value('IDTowaru');
@@ -1227,7 +1193,6 @@ HAVING
                         'Usluga' => 1,
                         'IDJednostkiMiary' => 1,
                         'IDGrupyTowarow' => DB::table('GrupyTowarow')->where('Nazwa', 'Wszystkie')->where('IDMagazynu', $idMagazynu)->value('IDGrupyTowarow'),
-
                     ]);
                     $id_delivery = DB::table('Towar')->where('Nazwa', 'Koszty transportu')->where('IDMagazynu', $idMagazynu)->value('IDTowaru');
                 }
@@ -1249,7 +1214,7 @@ HAVING
     {
         // Extracting counterparty data from an order
         $contractorData = [
-            'Nazwa' => $orderData['delivery_fullname'],
+            'Nazwa' => $orderData['name'] ?? $orderData['delivery_fullname'],
             'Email' => $orderData['email'],
             'Telefon' => $orderData['phone'],
             'KodPocztowy' => $orderData['delivery_postcode'],
@@ -1259,7 +1224,7 @@ HAVING
                 'Kod',
                 $orderData['delivery_country_code']
             )->value('IDKraju'),
-            'NIP' => $orderData['invoice_nip'],
+            'NIP' => $orderData['invoice_nip'] ?? null,
         ];
 
         // Checking the availability of the counterparty in the database
@@ -1267,10 +1232,7 @@ HAVING
             ->where('Nazwa', $contractorData['Nazwa'])
             ->where('Email', $contractorData['Email'])
             ->where('Telefon', $contractorData['Telefon'])
-            ->where('KodPocztowy', $contractorData['KodPocztowy'])
-            ->where('Miejscowosc', $contractorData['Miejscowosc'])
-            ->where('UlicaLokal', $contractorData['UlicaLokal'])
-
+            ->where('IDWarehouse', $idMagazynu)
             ->first();
 
         if ($existingContractor) {
@@ -1288,6 +1250,7 @@ HAVING
                 'NazwaAdresuDostawy' => $contractorData['Nazwa'],
                 'Email' => $contractorData['Email'],
                 'Telefon' => $contractorData['Telefon'],
+                'NIP' => $contractorData['NIP'],
                 'TelefonDostawy' => $contractorData['Telefon'],
                 'KodPocztowy' => $contractorData['KodPocztowy'],
                 'KodPocztowyDostawy' => $contractorData['KodPocztowy'],

@@ -38,7 +38,8 @@ class Kernel extends ConsoleKernel
             $schedule->call(
                 function () {
                     try {
-                        new importBLController();
+                        $importController = new importBLController();
+                        $importController->runAll();
                     } catch (\Exception $e) {
                         Log::error('Scheduled importBLController failed: ' . $e->getMessage());
                     }

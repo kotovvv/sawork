@@ -189,20 +189,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
-    | API Keys
+    | API Configuration
     |--------------------------------------------------------------------------
     |
-    | API keys with warehouse mapping configuration.
-    | Format: 'api_key' => warehouse_id
+    | API keys with warehouse mapping.
     |
     */
 
-    'api_keys' => [
-        env('API_KEY_1') => env('API_KEY_1_WAREHOUSE', 1), // Maps to warehouse 1
-        env('API_KEY_2') => env('API_KEY_2_WAREHOUSE', 2), // Maps to warehouse 2
-        env('API_KEY_3') => env('API_KEY_3_WAREHOUSE', 3), // Maps to warehouse 3
-        // Add more API keys as needed
-        // 'your-api-key-here' => 1, // Direct warehouse ID mapping
-    ],
+    // API Key 1
+    'api_key_1' => env('API_KEY_1'),
+    'api_key_1_warehouse' => env('API_KEY_1_WAREHOUSE'),
+
+    // API Key 2
+    'api_key_2' => env('API_KEY_2'),
+    'api_key_2_warehouse' => env('API_KEY_2_WAREHOUSE'),
+
+    // API Key 3
+    'api_key_3' => env('API_KEY_3'),
+    'api_key_3_warehouse' => env('API_KEY_3_WAREHOUSE'),
 
 ];

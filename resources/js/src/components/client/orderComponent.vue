@@ -51,7 +51,8 @@
                       {{ delivery.currency || "" }}</v-chip
                     >
                     <span class="me-2"
-                      >z {{ sumDoc }} {{ delivery.currency || "" }}</span
+                      >z {{ parseFloat(sumDoc).toFixed(2) }}
+                      {{ delivery.currency || "" }}</span
                     >
                     <!-- <v-btn icon size="small" class="me-2">
                             <v-icon>mdi-cached</v-icon>
