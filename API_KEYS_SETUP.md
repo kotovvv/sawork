@@ -4,6 +4,7 @@
 
 This API allows clients to create, update, and retrieve orders in the Fulstor warehouse system. Authentication is performed via an API key.
 URL: https://panel.fulstor.pl
+
 ---
 
 ## Authentication
@@ -18,14 +19,13 @@ URL: https://panel.fulstor.pl
 ### 1. Create/Update Order (Upsert)
 
 -   **POST** `/api/client/v1/order`
--   **Description:** Creates a new order or updates an existing order by `order_id`.
+-   **Description:** Creates a new order or updates an existing order by `external_id`.
 -   **Request Body:**
 
 ```json
 {
-    "order_id": "string 50 (required)",
-    "status": "string (optional)",
-    "date_confirmed": "YYYY-MM-DD HH:MM:SS (optional)",
+    "external_id": "string 50 (required)",
+    "status": "string (required)",
     "customer": {
         "name": "string 200 (required)",
         "email": "string 200(required)",
@@ -49,30 +49,81 @@ URL: https://panel.fulstor.pl
             "postcode": "string (optional)",
             "city": "string (optional)"
         },
-        "method": "string (required)",
-        "method_id": "integer (optional)"
+        "method": "string (required)"
     },
     "products": [
         {
             "ean": "string (required)",
-            "quantity": "number (required, min 0.01)",
-            "price_brutto": "number (required, min 0)",
+            "quantity": "number (required, min 1)",
+            "price_brutto": "number (required, min 0.01)",
             "tax_rate": 23,
             "Remarks": "string (optional)"
         }
     ],
     "order_source": "string (optional)",
-    "order_source_id": "string (optional)",
-    "currency": "string (optional)",
+    "currency": "string (required)",
     "currency_rate": "number (optional)",
     "payment_method_cod": "string 1 (optional) Flag indicating whether the type of payment is COD (cash on delivery): '1' - yes, '0' - no",
-    "user_comments": "string (optional)"
+    "date_confirmed": "(required) Date created document",
+    "comments": "string (optional)"
+}
+```
+
+-   **Example**
+
+```json
+{
+    "external_id": "12345667",
+    "status": "Nie wysyłać",
+    "customer": {
+        "name": "Fulstor2",
+        "email": "Fulstor2@example.com",
+        "phone": "+480123456772",
+        "NIP": ""
+    },
+    "delivery": {
+        "fullname": "Fulstorw",
+        "company": "Fulstor",
+        "country_code": "PL",
+        "country": "Poland",
+        "postcode": "01001",
+
+        "state": "",
+        "city": "Krakow",
+        "street": "ul. Centralna 10",
+
+        "price": 50,
+
+        "point": {
+            "name": "Fulstorw",
+            "id": "1111111",
+            "address": "ul. Centralna 10",
+            "postcode": "01001",
+            "city": "Krakow"
+        },
+        "method": "DPD"
+    },
+    "products": [
+        {
+            "ean": "4823089360478",
+            "quantity": 2,
+            "price_brutto": 21.99,
+            "Remarks": "Some text",
+            "tax_rate": 23
+        }
+    ],
+    "order_source": "B2B",
+    "currency": "PLN",
+    "currency_rate": 1,
+    "payment_method_cod": "0",
+    "date_confirmed": "2025-08-01",
+    "comments": "Zadzwoń przed dostawą"
 }
 ```
 
 -   **Response:**
-    -   On create: `{ success: true, data: { order_id, order_number, external_order_id, status, created: true } }`
-    -   On update: `{ success: true, data: { order_id, order_number, external_order_id, status, updated: true } }`
+    -   On create: `{ success: true, data: { order_id, order_number, external_id, status, created: true } }`
+    -   On update: `{ success: true, data: { order_id, order_number, external_id, status, updated: true } }`
     -   On error: `{ error: "...", details: "..." }`
 -   **Notes:**
     -   If the order exists, all products are overwritten (old products are deleted, new ones are added).
@@ -87,7 +138,7 @@ URL: https://panel.fulstor.pl
     -   `date_from` (optional, date)
     -   `date_to` (optional, date)
     -   `status` (optional, string)
-    -   `order_id` (optional, string)
+    -   `external_id` (optional, string)
     -   `limit` (optional, integer, max 100)
     -   `offset` (optional, integer)
 -   **Response:**
@@ -129,14 +180,14 @@ URL: https://panel.fulstor.pl
 
 ```json
 {
-    "order_id": "string (optional)",
+    "order_id": "integer (optional) in the system Fulstor ",
     "type": "integer (optional)",
     "last_log_id": "integer (optional)"
 }
 ```
 
 -   **Parameters:**
-    -   `order_id` — order number (if specified, all events for this order are returned)
+    -   `order_id` — order number in the system Fulstor (if specified, all events for this order are returned)
     -   `type` — type of event (e.g. 18 - change of status)
     -   `last_log_id` — return events with an id greater than the specified id
 -   **Response:**

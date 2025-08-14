@@ -242,6 +242,20 @@ class OrderController extends Controller
                     $orderUpdateData['Remarks'] = $updateData['remarks'];
                 }
                 if (isset($updateData['status'])) {
+                    $current_status = DB::table('Orders')
+                        ->where('IDOrder', $orderId)
+                        ->where('IDWarehouse', $warehouseId)
+                        ->value('IDOrderStatus');
+                    if ($current_status !== $updateData['status']) {
+                        //TODO: Add logic to handle status change, e.g., logging or triggering events
+                        /* LogOrder::create([
+                                'IDOrder' => $orderId,
+                                'IDWarehouse' => $warehouseId,
+                                'OldStatus' => $current_status,
+                                'NewStatus' => $updateData['status'],
+                                'ChangedAt' => now()
+                            ]); */
+                    }
                     $orderUpdateData['IDOrderStatus'] = $updateData['status'];
                 }
 
