@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Models\Collect;
+use App\Models\LogOrder;
 
 class OrderController extends Controller
 {
@@ -247,14 +248,13 @@ class OrderController extends Controller
                         ->where('IDWarehouse', $warehouseId)
                         ->value('IDOrderStatus');
                     if ($current_status !== $updateData['status']) {
-                        //TODO: Add logic to handle status change, e.g., logging or triggering events
-                        /* LogOrder::create([
-                                'IDOrder' => $orderId,
-                                'IDWarehouse' => $warehouseId,
-                                'OldStatus' => $current_status,
-                                'NewStatus' => $updateData['status'],
-                                'ChangedAt' => now()
-                            ]); */
+                        LogOrder::create([
+                            'IDWarehouse' => $warehouseId,
+                            'number' => $orderId,
+                            'type' => 18,
+                            'object_id' => $updateData['status'],
+                            'message' => "Order status changed from: {$current_status}, to: {$updateData['status']}"
+                        ]);
                     }
                     $orderUpdateData['IDOrderStatus'] = $updateData['status'];
                 }
