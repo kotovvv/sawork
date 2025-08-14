@@ -2,8 +2,8 @@
 
 ## Overview
 
-This API allows clients to create, update, and retrieve orders in the Fulstor warehouse system. Authentication is performed via an API key, securely stored and validated against the warehouse settings table.
-
+This API allows clients to create, update, and retrieve orders in the Fulstor warehouse system. Authentication is performed via an API key.
+URL: https://panel.fulstor.pl
 ---
 
 ## Authentication
@@ -35,22 +35,22 @@ This API allows clients to create, update, and retrieve orders in the Fulstor wa
     "delivery": {
         "fullname": "string 200 (required)",
         "company": "string (optional)",
-        "country_code": "string (required, 2 chars)",
+        "country_code": "string (optional, 2 chars)",
         "country": "string (optional)",
-        "postcode": "string 20 (required)",
+        "postcode": "string 20 (optional)",
         "state": "string (optional)",
         "city": "string (required)",
-        "street": "string (required)",
+        "street": "string (optional)",
         "price": "number (optional)",
+        "point": {
+            "name": "string (optional)",
+            "id": "string (optional)",
+            "address": "string (optional)",
+            "postcode": "string (optional)",
+            "city": "string (optional)"
+        },
         "method": "string (required)",
         "method_id": "integer (optional)"
-    },
-    "delivery_point": {
-        "name": "string (optional)",
-        "id": "string (optional)",
-        "address": "string (optional)",
-        "postcode": "string (optional)",
-        "city": "string (optional)"
     },
     "products": [
         {
@@ -135,7 +135,7 @@ This API allows clients to create, update, and retrieve orders in the Fulstor wa
 }
 ```
 
--   **Параметры:**
+-   **Parameters:**
     -   `order_id` — order number (if specified, all events for this order are returned)
     -   `type` — type of event (e.g. 18 - change of status)
     -   `last_log_id` — return events with an id greater than the specified id
@@ -161,7 +161,7 @@ This API allows clients to create, update, and retrieve orders in the Fulstor wa
 }
 ```
 
--   **Примеры использования:**
+-   **Examples of use:**
     -   Get all order events: `{ "order_id": "12345" }`
     -   Get only status changes for the last 3 days: `{ "type": 18 }`
     -   Get events after a certain id: `{ "last_log_id": 100 }`
