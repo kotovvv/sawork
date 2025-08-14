@@ -77,10 +77,16 @@ class OrderController extends Controller
                 ->where('IDWarehouse', $data['IDWarehouse'])
                 ->first();
             $res['products'] = $this->getOrderProducts([$data['IDOrder']]);
-            $res['client'] = DB::table('Kontrahent')->where('IDKontrahenta', $res['order']->IDAccount)->first();
+            $res['client'] = DB::table('Kontrahent')
+                ->where('IDKontrahenta', $res['order']->IDAccount)
+                ->first();
             $res['statuses'] = DB::table('OrderStatus')->select('Name as title', 'IDOrderStatus as value')->get();
 
             $delivery = DB::connection('second_mysql')->table('order_details')->where('order_id', $data['IDOrder'])->where('IDWarehouse', $data['IDWarehouse'])->first();
+            if ($delivery) {
+                $delivery->delivery_country = DB::table('Kraj')->where('kod', $delivery->delivery_country_code)->value('Nazwa');
+                $delivery->invoice_country = DB::table('Kraj')->where('kod', $delivery->invoice_country_code)->value('Nazwa');
+            }
             if ($delivery) {
                 $res['delivery'] = $delivery;
             } else {
