@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Collect;
+use App\Models\LogOrder;
 
 class CollectController extends Controller
 {
@@ -1327,6 +1328,13 @@ class CollectController extends Controller
     public function setStatus($order, $status_name)
     {
         $idsatus = DB::table('OrderStatus')->where('Name', $status_name)->value('IDOrderStatus');
+        LogOrder::create([
+            'IDOrder' => $order['IDOrder'],
+            'IDWarehouse' => $order['IDWarehouse'],
+            'status' => $status_name,
+            'message' => "Order status changed to: {$status_name}",
+            'created_at' => Carbon::now(),
+        ]);
         DB::table('Orders')->where('IDOrder', $order['IDOrder'])->update(['IDOrderStatus' => $idsatus]);
         $IDWarehouse = $order['IDWarehouse'];
         $token = $this->getToken($IDWarehouse);
