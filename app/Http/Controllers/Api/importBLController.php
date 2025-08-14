@@ -623,6 +623,7 @@ class importBLController extends Controller
                     'IDWarehouse' => $param['a_warehouse']->warehouse_id,
                     'number' => $param['a_log']['order_id'],
                     'type' => 18,
+                    'object_id' => $newOrderStatusBLName,
                     'message' => 'Status zmieniony na: ' . $newOrderStatusBLName . ' od statusu w Lomag: ' . $OrderStatusLMName . ' dla zamówienia: ' . $param['a_log']['order_id'] . ' Log ID: ' . $param['a_log']['log_id']
                 ]);
 

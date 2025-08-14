@@ -248,12 +248,18 @@ class OrderController extends Controller
                         ->where('IDWarehouse', $warehouseId)
                         ->value('IDOrderStatus');
                     if ($current_status !== $updateData['status']) {
+                        $current_status_name = DB::table('OrderStatus')
+                            ->where('IDOrderStatus', $current_status)
+                            ->value('Name');
+                        $new_status_name = DB::table('OrderStatus')
+                            ->where('IDOrderStatus', $updateData['status'])
+                            ->value('Name');
                         LogOrder::create([
                             'IDWarehouse' => $warehouseId,
                             'number' => $orderId,
                             'type' => 18,
-                            'object_id' => $updateData['status'],
-                            'message' => "Order status changed from: {$current_status}, to: {$updateData['status']}"
+                            'object_id' => $new_status_name,
+                            'message' => "Order status changed from: {$current_status_name}, to: {$new_status_name}"
                         ]);
                     }
                     $orderUpdateData['IDOrderStatus'] = $updateData['status'];
