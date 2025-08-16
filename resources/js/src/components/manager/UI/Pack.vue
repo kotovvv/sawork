@@ -603,7 +603,7 @@ export default {
       axios
         .post("/api/deleteTTN", {
           IDOrder: this.transOrders[this.indexTransOrders].IDOrder,
-          nttn: ttnNumber,
+          package_number: ttnNumber,
         })
         .then((response) => {
           this.getOrderPackProducts(

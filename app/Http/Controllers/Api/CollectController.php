@@ -1479,19 +1479,24 @@ class CollectController extends Controller
 
     public function deleteTTN(Request $request)
     {
-        // TODO: при удалении ТТН нужно удалить этот TTN и в BL
-        // упаковка должна выглядеть так как до ТТН те выбраны все товары в для создания текущей ТТН
-        // BL status должен быть "Kompletowanie"
+        // when deleting a TTN it is necessary to delete this TTN also in BL
+        // packaging should look like before the TTN if all goods are selected to create the current TTN.
+        // BL status should be "Kompletowanie"
 
 
         $IDOrder = (int)$request->IDOrder;
-        $IDWarehouse = DB::table('Orders')
+        $orderData = DB::table('Orders')
             ->where('IDOrder', $IDOrder)
-            ->value('IDWarehouse');
-        $package_number = $request->nttn;
+            ->select('IDWarehouse', DB::raw('CAST(_OrdersTempDecimal2 AS INTEGER) as Nr_Baselinker'))
+            ->first();
 
-        $existingTtn = Collect::query()->where('IDOrder', $IDOrder)->value('ttn');
-        $existingPack = Collect::query()->where('IDOrder', $IDOrder)->value('pack');
+        $IDWarehouse = $orderData->IDWarehouse;
+        $Nr_Baselinker = $orderData->Nr_Baselinker;
+        $package_number = $request->package_number;
+
+        $collectData = Collect::query()->where('IDOrder', $IDOrder)->first(['ttn', 'pack']);
+        $existingTtn = $collectData->ttn ?? null;
+        $existingPack = $collectData->pack ?? null;
 
         if ($existingTtn) {
             // Decode ttn JSON
@@ -1507,6 +1512,13 @@ class CollectController extends Controller
             if ($existingPack) {
                 if (is_string($existingPack)) {
                     $packArray = json_decode($existingPack, true);
+                    if (is_object($existingPack)) {
+                        $existingPack = (array)$existingPack;
+                    }
+
+                    if (is_array($packArray) && count($packArray) > 0 && isset($packArray[0]['products']) && count($packArray[0]['products']) > 0) {
+                        return response()->json(['message' => 'Usunięcie nie jest możliwe, dopóki istnieją zeskanowane towary']);
+                    }
                 }
             }
 
@@ -1528,8 +1540,21 @@ class CollectController extends Controller
                         if ($token) {
                             try {
                                 $BL = new BaseLinkerController($token);
-                                //TODO: delete $package_number in BL and remove from order
+                                // delete $package_number in BL and remove from order
+                                $BL->deletePackage([
+                                    'package_id' => $package_id,
+                                    'package_number' => $package_number,
+                                    'courier_code' => $courier_code,
+                                    'force_delete' => true,
+                                ]);
+                                $BL->setOrderStatus([
+                                    'order_id' => $Nr_Baselinker,
+                                    'status_id' => $BL->getStatusId('Kompletowanie'),
+                                ]);
+                                DB::table('Orders')->where('IDOrder', $IDOrder)->update(['IDOrderStatus' => 42, '_OrdersTempString2' => '']);
                             } catch (\Exception $e) {
+                                Log::error('BaseLinker delete package failed for order ' . $Nr_Baselinker . ': ' . $e->getMessage());
+                                return response()->json(['error' => 'BaseLinker error: ' . $e->getMessage()], 500);
                             }
                         }
                     }
@@ -1552,13 +1577,18 @@ class CollectController extends Controller
                 $ttnJson = json_encode($existingTtn);
                 $packJson = json_encode($packArray);
 
-                Collect::query()->where('IDOrder', $IDOrder)->update([
-                    'ttn' => $ttnJson,
-                    'pack' => $packJson
-                ]);
+                try {
+                    Collect::query()->where('IDOrder', $IDOrder)->update([
+                        'ttn' => $ttnJson,
+                        'pack' => $packJson
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to update collect table for order ' . $IDOrder . ': ' . $e->getMessage());
+                    return response()->json(['error' => 'Database update failed: ' . $e->getMessage()], 500);
+                }
             }
         }
-        return response()->json(['status' => 'success']);
+        return response()->json(['message' => 'Packages updated successfully']);
     }
 
 
