@@ -1332,6 +1332,7 @@ class CollectController extends Controller
         LogOrder::create([
             'IDOrder' => $order['IDOrder'],
             'IDWarehouse' => $order['IDWarehouse'],
+            'number' => $order['IDOrder'],
             'status' => $status_name,
             'message' => "Order status changed to: {$status_name}",
             'created_at' => Carbon::now(),
