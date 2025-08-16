@@ -1542,7 +1542,7 @@ class CollectController extends Controller
                             try {
                                 $BL = new BaseLinkerController($token);
                                 // delete $package_number in BL and remove from order
-                                $BL->deletePackage([
+                                $BL->deleteCourierPackage([
                                     'package_id' => $package_id,
                                     'package_number' => $package_number,
                                     'courier_code' => $courier_code,
