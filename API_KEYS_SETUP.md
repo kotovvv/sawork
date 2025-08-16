@@ -35,12 +35,15 @@ URL: https://panel.fulstor.pl
     "delivery": {
         "fullname": "string 200 (required)",
         "company": "string (optional)",
+        "phone": "string (required)",
         "country_code": "string (optional, 2 chars)",
-        "country": "string (optional)",
         "postcode": "string 20 (optional)",
+        "country": "string (optional)",
         "state": "string (optional)",
-        "city": "string (required)",
+        "city": "string (optional)",
         "street": "string (optional)",
+        "house_number": "string (optional)",
+        "apartment": "string (optional)",
         "price": "number (optional)",
         "point": {
             "name": "string (optional)",
@@ -84,13 +87,16 @@ URL: https://panel.fulstor.pl
     "delivery": {
         "fullname": "Fulstorw",
         "company": "Fulstor",
+        "phone": "+48123456789",
+
         "country_code": "PL",
         "country": "Poland",
         "postcode": "01001",
-
         "state": "",
         "city": "Krakow",
-        "street": "ul. Centralna 10",
+        "street": "ul. Centralna",
+        "house_number": "15",
+        "apartment": "23",
 
         "price": 50,
 

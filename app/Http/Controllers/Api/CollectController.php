@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Collect;
 use App\Models\LogOrder;
+use App\Models\ForTtn;
 
 class CollectController extends Controller
 {
@@ -1446,28 +1447,149 @@ class CollectController extends Controller
         return response()->json(['status' => 'error']);
     }
 
+    public function getCourierCode($IDOrder)
+    {
+        $IDWarehouse = DB::table('Orders')
+            ->where('IDOrder', $IDOrder)
+            ->value('IDWarehouse');
+        $delivery = DB::connection('second_mysql')->table('order_details')
+            ->select('order_source', 'order_source_id', 'delivery_method')
+            ->where('order_id', $IDOrder)
+            ->where('IDWarehouse', $IDWarehouse)
+            ->first();
+
+        if (!$delivery) {
+            return ['error' => 'Delivery information not found'];
+        }
+
+        $forttn = ForTtn::where('id_warehouse', $IDWarehouse)
+            ->where('order_source', $delivery->order_source)
+            ->where('order_source_id', $delivery->order_source_id)
+            ->where('delivery_method',  $delivery->delivery_method)
+            ->where('courier_code', '!=', '')
+            ->where('account_id', '>', 0)
+            ->select('courier_code', 'account_id')
+            ->first();
+
+        if (!$forttn) {
+            return ['error' => 'Courier/account not found'];
+        }
+
+        return  $forttn->courier_code;
+    }
+
     public function deleteTTN(Request $request)
     {
-        // TODO: при удалении ТТН нужно удалить этот TTN и в BL
-        // упаковка должна выглядеть так как до ТТН те выбраны все товары в для создания текущей ТТН
-        // BL status должен быть "Kompletowanie"
+        // when deleting a TTN it is necessary to delete this TTN also in BL
+        // packaging should look like before the TTN if all goods are selected to create the current TTN.
+        // BL status should be "Kompletowanie"
 
 
         $IDOrder = (int)$request->IDOrder;
-        $nttn =  $request->nttn;
-        $existingTtn = Collect::query()->where('IDOrder', $IDOrder)->value('ttn');
-        if ($existingTtn) {
+        $orderData = DB::table('Orders')
+            ->where('IDOrder', $IDOrder)
+            ->select('IDWarehouse', DB::raw('CAST(_OrdersTempDecimal2 AS INTEGER) as Nr_Baselinker'))
+            ->first();
 
+        $IDWarehouse = $orderData->IDWarehouse;
+        $Nr_Baselinker = $orderData->Nr_Baselinker;
+        $package_number = $request->package_number;
+
+        $collectData = Collect::query()->where('IDOrder', $IDOrder)->first(['ttn', 'pack']);
+        $existingTtn = $collectData->ttn ?? null;
+        $existingPack = $collectData->pack ?? null;
+
+        if ($existingTtn) {
+            // Decode ttn JSON
+            if (is_string($existingTtn)) {
+                $existingTtn = json_decode($existingTtn, true);
+            }
             if (is_object($existingTtn)) {
                 $existingTtn = (array)$existingTtn;
             }
+
+            // Decode pack JSON
+            $packArray = [];
+            if ($existingPack) {
+                if (is_string($existingPack)) {
+                    $packArray = json_decode($existingPack, true);
+                    if (is_object($existingPack)) {
+                        $existingPack = (array)$existingPack;
+                    }
+
+                    if (is_array($packArray) && count($packArray) > 0 && isset($packArray[0]['products']) && count($packArray[0]['products']) > 0) {
+                        return response()->json(['message' => 'Usunięcie nie jest możliwe, dopóki istnieją zeskanowane towary']);
+                    }
+                }
+            }
+
+            // Initialize pack if empty
+            if (empty($packArray)) {
+                $packArray = [['products' => [], 'lastUpdate' => Carbon::now()->format('Y-m-d H:i:s')]];
+            }
+
             if (is_array($existingTtn)) {
-                unset($existingTtn[$nttn]);
-                $ttn = json_encode($existingTtn);
-                Collect::query()->where('IDOrder', $IDOrder)->update(['ttn' => $ttn]);
+                // Find package by package_number and extract products
+                if (isset($existingTtn[$package_number]) && isset($existingTtn[$package_number]['products'])) {
+                    $productsToAdd = $existingTtn[$package_number]['products'];
+                    $package_id = $existingTtn[$package_number]['package_id'] ?? null;
+                    $courier_code = $existingTtn[$package_number]['courier_code'] ?? $this->getCourierCode($IDOrder);
+
+                    if (env('APP_ENV') != 'local') {
+                        $token = $this->getToken($IDWarehouse);
+
+                        if ($token) {
+                            try {
+                                $BL = new BaseLinkerController($token);
+                                // delete $package_number in BL and remove from order
+                                $BL->deletePackage([
+                                    'package_id' => $package_id,
+                                    'package_number' => $package_number,
+                                    'courier_code' => $courier_code,
+                                    'force_delete' => true,
+                                ]);
+                                $BL->setOrderStatus([
+                                    'order_id' => $Nr_Baselinker,
+                                    'status_id' => $BL->getStatusId('Kompletowanie'),
+                                ]);
+                                DB::table('Orders')->where('IDOrder', $IDOrder)->update(['IDOrderStatus' => 42, '_OrdersTempString2' => '']);
+                            } catch (\Exception $e) {
+                                Log::error('BaseLinker delete package failed for order ' . $Nr_Baselinker . ': ' . $e->getMessage());
+                                return response()->json(['error' => 'BaseLinker error: ' . $e->getMessage()], 500);
+                            }
+                        }
+                    }
+
+                    // Add products to pack[0]['products']
+                    if (!isset($packArray[0]['products'])) {
+                        $packArray[0]['products'] = [];
+                    }
+
+                    $packArray[0]['products'] = array_merge($packArray[0]['products'], $productsToAdd);
+
+                    // Update pack[0]['lastUpdate']
+                    $packArray[0]['lastUpdate'] = Carbon::now()->format('Y-m-d H:i:s');
+                }
+
+                // Remove package from ttn
+                unset($existingTtn[$package_number]);
+
+                // Update both fields in database
+                $ttnJson = json_encode($existingTtn);
+                $packJson = json_encode($packArray);
+
+                try {
+                    Collect::query()->where('IDOrder', $IDOrder)->update([
+                        'ttn' => $ttnJson,
+                        'pack' => $packJson
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to update collect table for order ' . $IDOrder . ': ' . $e->getMessage());
+                    return response()->json(['error' => 'Database update failed: ' . $e->getMessage()], 500);
+                }
             }
         }
-        return response()->json(['status' => 'success']);
+        return response()->json(['message' => 'Packages updated successfully']);
     }
 
 

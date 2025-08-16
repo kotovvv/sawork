@@ -55,10 +55,22 @@ export default {
   },
   methods: {
     changeCounter(product) {},
-    deleteTTN(ttnNumber) {},
+    deleteTTN(ttnNumber) {
+      axios
+        .post("/api/deleteTTN", {
+          package_number: ttnNumber,
+          IDOrder: this.order.IDOrder,
+        })
+        .then((response) => {
+          this.message = response.data.message || "TTN deleted successfully";
+        })
+        .catch((error) => {
+          // handle error
+          this.error = error.response?.data?.message || "Error deleting TTN";
+          console.error("Delete error:", error);
+        });
+    },
     printTTN(ttnNumber) {
-      console.log("IDOrder", this.order.IDOrder);
-      console.log("TTN Number", ttnNumber);
       axios
         .post("/api/print", {
           doc: "label",
