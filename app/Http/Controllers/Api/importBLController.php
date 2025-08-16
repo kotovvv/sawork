@@ -454,9 +454,6 @@ class importBLController extends Controller
     private function changePackageOrder($param)
     {
         $createdParcelID = $param['a_log']['object_id'];
-        // TODO: есть ли TTN в Collect
-        // если есть? то ничего не делаем
-        // иначе проверяем в возвратах, иначе просто записываем
 
         $o_order = DB::table('Orders')
             ->where('_OrdersTempDecimal2', $param['a_log']['order_id'])
@@ -1102,6 +1099,10 @@ HAVING
                     'delivery_fullname' => $orderData['delivery_fullname'] ?? null,
                     'delivery_company' => $orderData['delivery_company'] ?? null,
                     'delivery_address' => $orderData['delivery_address'] ?? null,
+                    'delivery_phone' => $orderData['delivery_phone'] ?? null,
+                    'delivery_street' => $orderData['delivery_street'] ?? null,
+                    'delivery_house_number' => $orderData['delivery_house_number'] ?? null,
+                    'delivery_apartment' => $orderData['delivery_apartment'] ?? null,
                     'delivery_city' => $orderData['delivery_city'] ?? null,
                     'delivery_state' => $orderData['delivery_state'] ?? null,
                     'delivery_postcode' => $orderData['delivery_postcode'] ?? null,

@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cache;
 use App\Models\Collect;
 use App\Models\LogOrder;
+use App\Models\ForTtn;
 
 class CollectController extends Controller
 {
@@ -1445,6 +1446,37 @@ class CollectController extends Controller
         return response()->json(['status' => 'error']);
     }
 
+    public function getCourierCode($IDOrder)
+    {
+        $IDWarehouse = DB::table('Orders')
+            ->where('IDOrder', $IDOrder)
+            ->value('IDWarehouse');
+        $delivery = DB::connection('second_mysql')->table('order_details')
+            ->select('order_source', 'order_source_id', 'delivery_method')
+            ->where('order_id', $IDOrder)
+            ->where('IDWarehouse', $IDWarehouse)
+            ->first();
+
+        if (!$delivery) {
+            return ['error' => 'Delivery information not found'];
+        }
+
+        $forttn = ForTtn::where('id_warehouse', $IDWarehouse)
+            ->where('order_source', $delivery->order_source)
+            ->where('order_source_id', $delivery->order_source_id)
+            ->where('delivery_method',  $delivery->delivery_method)
+            ->where('courier_code', '!=', '')
+            ->where('account_id', '>', 0)
+            ->select('courier_code', 'account_id')
+            ->first();
+
+        if (!$forttn) {
+            return ['error' => 'Courier/account not found'];
+        }
+
+        return  $forttn->courier_code;
+    }
+
     public function deleteTTN(Request $request)
     {
         // TODO: при удалении ТТН нужно удалить этот TTN и в BL
@@ -1453,17 +1485,77 @@ class CollectController extends Controller
 
 
         $IDOrder = (int)$request->IDOrder;
-        $nttn =  $request->nttn;
-        $existingTtn = Collect::query()->where('IDOrder', $IDOrder)->value('ttn');
-        if ($existingTtn) {
+        $IDWarehouse = DB::table('Orders')
+            ->where('IDOrder', $IDOrder)
+            ->value('IDWarehouse');
+        $package_number = $request->nttn;
 
+        $existingTtn = Collect::query()->where('IDOrder', $IDOrder)->value('ttn');
+        $existingPack = Collect::query()->where('IDOrder', $IDOrder)->value('pack');
+
+        if ($existingTtn) {
+            // Decode ttn JSON
+            if (is_string($existingTtn)) {
+                $existingTtn = json_decode($existingTtn, true);
+            }
             if (is_object($existingTtn)) {
                 $existingTtn = (array)$existingTtn;
             }
+
+            // Decode pack JSON
+            $packArray = [];
+            if ($existingPack) {
+                if (is_string($existingPack)) {
+                    $packArray = json_decode($existingPack, true);
+                }
+            }
+
+            // Initialize pack if empty
+            if (empty($packArray)) {
+                $packArray = [['products' => [], 'lastUpdate' => Carbon::now()->format('Y-m-d H:i:s')]];
+            }
+
             if (is_array($existingTtn)) {
-                unset($existingTtn[$nttn]);
-                $ttn = json_encode($existingTtn);
-                Collect::query()->where('IDOrder', $IDOrder)->update(['ttn' => $ttn]);
+                // Find package by package_number and extract products
+                if (isset($existingTtn[$package_number]) && isset($existingTtn[$package_number]['products'])) {
+                    $productsToAdd = $existingTtn[$package_number]['products'];
+                    $package_id = $existingTtn[$package_number]['package_id'] ?? null;
+                    $courier_code = $existingTtn[$package_number]['courier_code'] ?? $this->getCourierCode($IDOrder);
+
+                    if (env('APP_ENV') != 'local') {
+                        $token = $this->getToken($IDWarehouse);
+
+                        if ($token) {
+                            try {
+                                $BL = new BaseLinkerController($token);
+                                //TODO: delete $package_number in BL and remove from order
+                            } catch (\Exception $e) {
+                            }
+                        }
+                    }
+
+                    // Add products to pack[0]['products']
+                    if (!isset($packArray[0]['products'])) {
+                        $packArray[0]['products'] = [];
+                    }
+
+                    $packArray[0]['products'] = array_merge($packArray[0]['products'], $productsToAdd);
+
+                    // Update pack[0]['lastUpdate']
+                    $packArray[0]['lastUpdate'] = Carbon::now()->format('Y-m-d H:i:s');
+                }
+
+                // Remove package from ttn
+                unset($existingTtn[$package_number]);
+
+                // Update both fields in database
+                $ttnJson = json_encode($existingTtn);
+                $packJson = json_encode($packArray);
+
+                Collect::query()->where('IDOrder', $IDOrder)->update([
+                    'ttn' => $ttnJson,
+                    'pack' => $packJson
+                ]);
             }
         }
         return response()->json(['status' => 'success']);

@@ -293,4 +293,12 @@ class BaseLinkerController extends Controller
         $response = $this->sendRequest('getOrderReturns', $parameters);
         return $response;
     }
+    public function deleteCourierPackage($parameters)
+    {
+        if (!isset($parameters['courier_code']) || !isset($parameters['package_id']) || !isset($parameters['package_number'])) {
+            throw new \InvalidArgumentException('The "courier_code", "package_id" and "package_number" are required.');
+        }
+        $response = $this->sendRequest('deleteCourierPackage', $parameters);
+        return $response;
+    }
 }
