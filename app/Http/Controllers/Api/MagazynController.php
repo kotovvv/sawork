@@ -217,25 +217,37 @@ class MagazynController extends Controller
         $loc_names = DB::table('WarehouseLocations')
             ->where('IDMagazynu', $idwarehouse)
             ->where('TypLocations', 3)
-            ->pluck('IDWarehouseLocation', 'LocationCode')
+            ->get()
+            ->groupBy('LocationCode')
+            ->map(function ($locations) {
+                return $locations->pluck('IDWarehouseLocation')->toArray();
+            })
             ->toArray();
 
-        foreach ($loc_names as $loc_name => $loc_id) {
-            $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
-            $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
-            $result = DB::select($query, [$loc_id, $date, $param]);
-            $resultString = $result[0]->Stock ?? null;
-            $array = [];
+        foreach ($loc_names as $loc_name => $loc_ids) {
+            foreach ($loc_ids as $loc_id) {
+                $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
+                $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
+                $result = DB::select($query, [$loc_id, $date, $param]);
+                $resultString = $result[0]->Stock ?? null;
+                $array = [];
 
-            if ($resultString) {
-                $pairs = explode(', ', $resultString);
-                foreach ($pairs as $pair) {
-                    list($key, $value) = explode(': ', $pair);
-                    $array[$key] = (int) $value;
+                if ($resultString) {
+                    $pairs = explode(', ', $resultString);
+                    foreach ($pairs as $pair) {
+                        list($key, $value) = explode(': ', $pair);
+                        $array[$key] = (int) $value;
+                    }
+                    if (!isset($productsInLocation[$loc_name])) {
+                        $productsInLocation[$loc_name] = [];
+                    }
+                    foreach ($array as $key => $value) {
+                        $productsInLocation[$loc_name][$key] = ($productsInLocation[$loc_name][$key] ?? 0) + $value;
+                    }
                 }
-                $productsInLocation[$loc_name] = $array;
             }
         }
+        //dd($productsInLocation);
         return $productsInLocation;
     }
 

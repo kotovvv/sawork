@@ -328,25 +328,25 @@ class ComingController extends Controller
     }
 
 
-    private function getProductsInLocation($IDWarehouseLocation)
-    {
-        $date = Carbon::now()->format('Y/m/d H:i:s');
+    // private function getProductsInLocation($IDWarehouseLocation)
+    // {
+    //     $date = Carbon::now()->format('Y/m/d H:i:s');
 
-        $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
-        $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
-        $result = DB::select($query, [$IDWarehouseLocation, $date, $param]);
-        $resultString = $result[0]->Stock ?? null;
-        $array = [];
+    //     $param = 1; // 0 = Nazvanie, 1 = KodKreskowy
+    //     $query = "SELECT dbo.StockInLocation(?, ?, ?) AS Stock";
+    //     $result = DB::select($query, [$IDWarehouseLocation, $date, $param]);
+    //     $resultString = $result[0]->Stock ?? null;
+    //     $array = [];
 
-        if ($resultString) {
-            $pairs = explode(', ', $resultString);
-            foreach ($pairs as $pair) {
-                list($key, $value) = explode(': ', $pair);
-                $array[$key] = (int) $value;
-            }
-        }
-        return $array;
-    }
+    //     if ($resultString) {
+    //         $pairs = explode(', ', $resultString);
+    //         foreach ($pairs as $pair) {
+    //             list($key, $value) = explode(': ', $pair);
+    //             $array[$key] = (int) $value;
+    //         }
+    //     }
+    //     return $array;
+    // }
 
     private function setReady($IDRuchuMagazynowego, $ready)
     {
